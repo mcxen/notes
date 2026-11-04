@@ -1,0 +1,27 @@
+// The app's collections, declared before anything opens one.
+import "../schema";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./app/App";
+import { ErrorBoundary } from "./app/ErrorBoundary";
+import { UiProvider } from "./app/ui-context";
+import { WorkspaceProvider } from "./app/workspace-context";
+import "./styles/index.css";
+
+/* Two boundaries, so a render error never leaves a blank window. One inside
+   the workspace, around what draws it: the workspace stays open behind the
+   message and goes on saving what was written. One outside everything, for
+   an error in the workspace itself: Try again opens it afresh. */
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <ErrorBoundary>
+      <WorkspaceProvider>
+        <ErrorBoundary>
+          <UiProvider>
+            <App />
+          </UiProvider>
+        </ErrorBoundary>
+      </WorkspaceProvider>
+    </ErrorBoundary>
+  </StrictMode>,
+);

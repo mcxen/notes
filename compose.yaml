@@ -1,0 +1,6 @@
+services:
+  notes:
+    build: .
+    ports:
+      - "127.0.0.1:8870:8080"
+    restart: unless-stopped

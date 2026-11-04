@@ -1,0 +1,13 @@
+Notes — source attribution
+
+The editor and UI are adapted from Terminus Notes (@terminus/notes),
+published by Terminus, upstream version 0.0.1. Source was retrieved on
+November 3, 2026 through an existing @adrian-pierce/notes fork.
+
+Standalone changes replace the host SDK, identity, database, files, routing,
+fonts and service integration with personal local storage and standard web
+APIs, and add backup/restore, tests and packaging.
+
+No app license was included in the upstream source snapshot. This notice is
+attribution only, is not a license, and does not grant rights in upstream
+code. No LICENSE file has been added. Dependencies keep their own licenses.
