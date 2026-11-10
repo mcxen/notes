@@ -1,52 +1,124 @@
 # Notes
 
-A standalone, personal notes app with a block editor, nested pages, databases, backlinks, graph views, attachments, history, and light/dark themes. Runs entirely in your browser with IndexedDB storage. No accounts, API keys, SDK host, or cloud backend required.
+A personal notes app for the desktop: a block editor, nested pages, databases,
+backlinks, graph views, attachments, history and light/dark themes. The
+interface is a web page in the system's own webview (WKWebView on macOS,
+WebKitGTK on Linux, WebView2 on Windows); the app is written with
+[MyGo](https://github.com/egoist/mygo), in Go, so it is one small binary.
 
-## Run locally
+Notes live in a **vault**: a folder you choose. Each page is one JSON file,
+attachments are plain files, and nothing else is needed. A vault can also be
+kept in a WebDAV or SMB folder, which then syncs with the copy on this
+computer.
 
-Requires Node.js 24 or newer.
+## Layout
+
+```
+main.go              starts the app (frontend.Run)
+mygo.json            name, identifier, version, and the frontend's build commands
+frontend/            the windows, menus, the services the page calls, the vault:// scheme
+internal/vault/      records in memory, JSON files on disk, external changes, backup import
+internal/sync/       manifest, sync rounds, three-way merge of pages
+internal/storage/    remote folders: WebDAV, SMB, and a local folder (for tests)
+internal/settings/   recent vaults and remote folders, in settings.json
+web/                 the React interface (src/), and its tests and build
+```
+
+The web app keeps the same record model as before. In the desktop app, its
+records are saved to the vault by the Go service; in a plain browser (`npm run
+dev` in `web/`) they stay in IndexedDB, which is useful for working on the
+interface alone.
+
+## Download
+
+Installers for macOS, Windows and Linux are on the
+[releases page](https://github.com/mcxen/notes/releases). The macOS app is
+signed ad hoc and not notarized: open it with right-click › Open the first
+time. The Windows installer is not code-signed.
+
+## Run it
+
+Requires Go 1.27.3 or newer and Node.js 24 or newer.
 
 ```sh
+go tool mygo dev         # the app, with the web app's dev server
+go tool mygo build       # a packaged app in build/
+```
+
+Browser-only development:
+
+```sh
+cd web
 npm ci
-npm run dev
+npm run dev              # http://127.0.0.1:8870, notes kept in the browser
 ```
 
-Open **http://127.0.0.1:8870**. Keep using that exact address: browser storage belongs to an origin, so changing the hostname, protocol, or port opens a separate notebook.
+## Vault format
 
-For a production build served locally:
+```
+MyVault/
+├── pages/<page id>.json        the page and all of its paragraphs
+├── attachments/...             files, as they were uploaded
+└── .notes/
+    ├── vault.json              format version and vault id
+    ├── workspace.json          preferences and the list of roots
+    ├── history/<page>/<id>.json  checkpoints of a page
+    └── conflicts/              the other version of a page after a sync conflict
+```
+
+Files are written with the same bytes every time for the same content, and a
+save replaces the file in one step. Changes made to the folder by other
+programs (or by a sync tool) are merged in record by record; a paragraph or
+field with changes not yet saved keeps this window's value.
+
+## Sync
+
+**File › Connect to a Remote Folder…** keeps a vault in a WebDAV folder (for
+example Nextcloud, Synology or Jianguoyun) or an SMB share. The folder is
+copied into a working copy on this computer, which is what the window edits,
+and the two are synced:
+
+- a few seconds after an edit, every five minutes, when the window gains focus,
+  and on **File › Sync Now** (⇧⌘S / Ctrl+Shift+S);
+- a page both sides changed is merged paragraph by paragraph and field by
+  field; where the same field changed on both sides, this computer's value
+  is kept and the other version is saved under `.notes/conflicts/`;
+- any other file changed on both sides is kept twice, the second copy named
+  `name (冲突 device date).ext`;
+- a deletion moves the file to a `.trash/<date>/` folder on the side that
+  does not have it, rather than removing it.
+
+Passwords go to the system's credential store (Keychain, Credential Manager,
+Secret Service), never to the settings file. The settings window (⌘,) shows
+each remote vault's last sync, its recent syncs, the files sync moved out of
+the way (with Restore), and the conflicts it kept.
+
+## Tests
+
+`go build -tags e2e` adds MyGo's automation plugin, so a running app can be
+driven and captured with `mygo-automation` (`MYGO_AUTOMATION=<socket>`).
 
 ```sh
-npm run build
-npm start
+go vet ./...
+CGO_ENABLED=0 go test ./...
+cd web && npm test && npm run build
 ```
 
-Stop the development server before starting the production server on the same port. Both use the same address and notebook storage.
+The Go tests use temporary folders, and a WebDAV server running in-process.
+The SMB adapter is not yet tested against a live server.
 
-## Docker
+## Not in this version
 
-```sh
-docker compose up --build -d
-```
-
-Open **http://127.0.0.1:8870**. To stop: `docker compose down`. The container serves static files; notes are stored in the browser, not the container. Use backups to move your notebook between browsers or machines.
-
-## Data and backups
-
-Notes, settings, page history, and attachments are stored in this browser's IndexedDB database. Data survives reloads and server restarts. Clearing site data, using a different browser profile, or losing access to the browser can remove your notebook. Private browsing may discard it when the session ends.
-
-Use **Settings → Download backup** to export all records and attachments as JSON. Use **Settings → Restore backup…** to restore it. Restore replaces the current notebook after confirmation. Keep a backup before restoring or moving to another address. Backup files contain your notebook and attachments in readable form; store them appropriately.
-
-This version is for personal use. It does not provide accounts, cloud sync, sharing, invitations, remote agents, or collaborative text merging. Open tabs on the same origin refresh one another's changes; concurrent edits to the same field use the last committed write. Link cards do not request remote metadata. Embedded content and linked images may contact their respective providers when displayed; the core app has no external service requirement.
-
-## Development
-
-```sh
-npm run typecheck
-npm test
-npm run build
-```
-
-The included tests cover page trees, persistent records, concurrent field patches, binary attachment backups, and rejection of malformed restore data. The build output in `dist/` can be served from any static web server; use localhost or HTTPS so browser storage is available. The Vite development and preview commands bind only to loopback.
+- Signing, notarization and automatic updates are not configured. A tag
+  `v<version>` (matching `mygo.json`) builds and publishes a release through
+  `.github/workflows/release.yml`.
+- Search and Markdown export are not built.
+- The sync interval is fixed at five minutes.
+- A browser backup can be imported into a vault from the sidebar menu (Import
+  browser backup…). The desktop app does not export backups yet.
+- The macOS windows were checked on a running app. Windows and Linux windows,
+  and real WebDAV services other than the in-process test server, have not
+  been checked on those systems. The SMB adapter has no live test yet.
 
 ## Provenance and license status
 

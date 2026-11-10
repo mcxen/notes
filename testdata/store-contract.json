@@ -1,0 +1,58 @@
+{
+  "scenarios": [
+    {
+      "name": "a page with paragraphs, a patch and a removed paragraph",
+      "writes": [
+        {"action": "put", "collection": "pages", "id": "p_1", "value": {"id": "p_1", "title": "Hello", "parent_id": "p_root"}},
+        {"action": "put", "collection": "blocks", "id": "3_p_1_b_1", "value": {"page": "p_1", "kind": "text", "order": 1, "content": [{"text": "one"}]}},
+        {"action": "put", "collection": "blocks", "id": "3_p_1_b_2", "value": {"page": "p_1", "kind": "todo", "order": 2, "checked": false}},
+        {"action": "patch", "collection": "blocks", "id": "3_p_1_b_2", "patch": {"checked": true}},
+        {"action": "patch", "collection": "pages", "id": "p_1", "patch": {"title": "Renamed", "parent_id": null}},
+        {"action": "delete", "collection": "blocks", "id": "3_p_1_b_1"}
+      ],
+      "expect": [
+        {"collection": "pages", "id": "p_1", "value": {"id": "p_1", "title": "Renamed"}},
+        {"collection": "blocks", "id": "3_p_1_b_2", "value": {"page": "p_1", "kind": "todo", "order": 2, "checked": true}}
+      ],
+      "absent": [
+        {"collection": "blocks", "id": "3_p_1_b_1"}
+      ]
+    },
+    {
+      "name": "patches merge nested objects and keep the rest",
+      "writes": [
+        {"action": "put", "collection": "pages", "id": "p_2", "value": {"id": "p_2", "meta": {"a": 1, "b": {"c": "x"}}, "icon": "📘"}},
+        {"action": "patch", "collection": "pages", "id": "p_2", "patch": {"meta": {"b": {"d": "y"}, "a": null}}}
+      ],
+      "expect": [
+        {"collection": "pages", "id": "p_2", "value": {"id": "p_2", "meta": {"b": {"c": "x", "d": "y"}}, "icon": "📘"}}
+      ],
+      "absent": []
+    },
+    {
+      "name": "a checkpoint kept in parts, with one part removed",
+      "writes": [
+        {"action": "put", "collection": "versions", "id": "5_p_2_v_1", "value": {"page": "p_2", "version": "v_1", "generation": "g", "created_at": "2026-11-10", "part": 0, "parts": 2, "payload": "{\"a\":"}},
+        {"action": "put", "collection": "versions", "id": "5_p_2_v_1.part.1", "value": {"page": "p_2", "version": "v_1", "generation": "g", "created_at": "2026-11-10", "part": 1, "parts": 2, "payload": "1}"}},
+        {"action": "delete", "collection": "versions", "id": "5_p_2_v_1.part.1"}
+      ],
+      "expect": [
+        {"collection": "versions", "id": "5_p_2_v_1", "value": {"page": "p_2", "version": "v_1", "generation": "g", "created_at": "2026-11-10", "part": 0, "parts": 2, "payload": "{\"a\":"}}
+      ],
+      "absent": [
+        {"collection": "versions", "id": "5_p_2_v_1.part.1"}
+      ]
+    },
+    {
+      "name": "workspace settings put and then patched",
+      "writes": [
+        {"action": "put", "collection": "workspace_settings", "id": "preferences", "value": {"theme": "light", "sidebar_collapsed": false}},
+        {"action": "patch", "collection": "workspace_settings", "id": "preferences", "patch": {"theme": "dark"}}
+      ],
+      "expect": [
+        {"collection": "workspace_settings", "id": "preferences", "value": {"theme": "dark", "sidebar_collapsed": false}}
+      ],
+      "absent": []
+    }
+  ]
+}

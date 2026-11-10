@@ -4,3 +4,7 @@ dist/
 .env*
 .DS_Store
 *.log
+
+# MyGo build output and dev bundles
+build/
+.mygo/

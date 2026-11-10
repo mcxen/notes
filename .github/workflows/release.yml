@@ -1,0 +1,134 @@
+name: Desktop Release
+
+# A tag v<version> builds the app for macOS, Windows and Linux and publishes
+# the installers as a GitHub release. The tag must match mygo.json's version.
+# There are no automatic updates yet (no `updates` in mygo.json), so the
+# builds run without -upload and the publish job attaches what they made.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Check the release version
+        if: github.ref_type == 'tag'
+        run: test "$GITHUB_REF_NAME" = "v$(jq -r .version mygo.json)"
+      - run: go vet ./...
+      - run: CGO_ENABLED=0 go test -count=1 ./...
+      - run: GOOS=windows CGO_ENABLED=0 go vet ./...
+      - run: npm ci --ignore-scripts
+        working-directory: web
+      - run: npm test
+        working-directory: web
+
+  build:
+    name: Build ${{ matrix.platform }}
+    needs: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: darwin/universal, directory: darwin-universal, os: macos-latest }
+          - { platform: windows/amd64, directory: windows-amd64, os: windows-latest }
+          - { platform: windows/arm64, directory: windows-arm64, os: windows-latest }
+          - { platform: linux/amd64, directory: linux-amd64, os: ubuntu-latest }
+          - { platform: linux/arm64, directory: linux-arm64, os: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # mygo build runs buildCommand (npm --prefix web run build), which needs
+      # the web app's dependencies.
+      - run: npm ci --ignore-scripts
+        working-directory: web
+      # -sign - signs the macOS app ad hoc: the repository has no Developer ID
+      # yet, so the app is not notarized.
+      - name: Build
+        run: go tool mygo build -platform "${{ matrix.platform }}" -sign -
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.directory }}
+          if-no-files-found: error
+          path: |
+            build/${{ matrix.directory }}/*.dmg
+            build/${{ matrix.directory }}/*-setup-*.exe
+            build/${{ matrix.directory }}/*.deb
+            build/${{ matrix.directory }}/*.tar.gz
+
+  publish:
+    name: Publish GitHub Release
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          version="$(jq -r .version mygo.json)"
+          mkdir out
+          find artifacts -type f -exec mv {} out/ \;
+          (cd out && sha256sum * > SHA256SUMS)
+          ls -la out
+          for want in "notes-$version.dmg" "notes-setup-$version-amd64.exe" "notes-setup-$version-arm64.exe" \
+                      "notes_${version}_amd64.deb" "notes_${version}_arm64.deb"; do
+            test -s "out/$want" || { echo "::error::missing $want" >&2; exit 1; }
+          done
+          notes="$RUNNER_TEMP/notes.md"
+          cat > "$notes" <<EOF
+          Notes $version: a desktop notes app whose notebook is a vault folder (one JSON file per page), kept on this computer or synced with a WebDAV folder or an SMB share.
+
+          ## Download
+
+          | System | File |
+          |---|---|
+          | macOS (Apple silicon and Intel) | \`notes-$version.dmg\` |
+          | Windows x64 / ARM64 | \`notes-setup-$version-amd64.exe\` / \`notes-setup-$version-arm64.exe\` |
+          | Linux x64 / ARM64 | \`notes_${version}_amd64.deb\`, \`notes-$version-linux-*.tar.gz\` |
+
+          ## Before you install
+
+          - The macOS app is signed ad hoc and not notarized. After dragging it to Applications, open it with right-click › Open the first time, or run \`xattr -dr com.apple.quarantine /Applications/Notes.app\`.
+          - The Windows installer is not code-signed: SmartScreen may ask you to confirm (More info › Run anyway).
+          - This version does not update itself. Download the next release to update.
+          EOF
+          gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --title "Notes $GITHUB_REF_NAME" --notes-file "$notes"
