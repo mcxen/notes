@@ -11,7 +11,7 @@ import { blockDefinition } from "./block-registry";
 import { ColorMenu } from "./ColorMenu";
 import { MARKS } from "./marks";
 import { isWebLink } from "../../core/inline-content";
-import { t } from "../../i18n";
+import { t, tp } from "../../i18n";
 
 export interface FormatState {
   anchor: AnchorRect;
@@ -181,7 +181,7 @@ export function FormatToolbar({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setTurnOpen((open) => !open)}
               >
-                {state.ranges.length} paragraphs
+                {tp(state.ranges.length, "{n} paragraph", "{n} paragraphs")}
                 <ChevronDown size={13} />
               </button>
             )}

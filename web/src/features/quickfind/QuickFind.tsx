@@ -102,7 +102,7 @@ export function QuickFind() {
               <span className="menu__label"><Marked text={pageName(hit.page)} marks={markRanges(pageName(hit.page), words)} /></span>
               {hit.excerpt ? <span className="menu__description"><Marked text={hit.excerpt.text} marks={excerptMarks(hit.excerpt)} /></span> : null}
             </span>
-            {hit.lines > 1 ? <span className="quickfind__crumb">{hit.lines} matches</span> : hit.crumb ? <span className="quickfind__crumb">{hit.crumb}</span> : null}
+            {hit.lines > 1 ? <span className="quickfind__crumb">{t("{n} matches", { n: hit.lines })}</span> : hit.crumb ? <span className="quickfind__crumb">{hit.crumb}</span> : null}
           </button>
         )) : (
           <div className="slash__empty">{query.trim() ? `No pages match “${query.trim()}”` : "No pages yet"}</div>

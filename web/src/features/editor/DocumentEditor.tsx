@@ -173,7 +173,7 @@ import { blockTyping } from "./useBlockTyping";
 import { spaceOfPage } from "../../core/page-tree";
 import { followHref } from "./RichField";
 import { RemoteCarets } from "./RemoteCarets";
-import { t } from "../../i18n";
+import { t, tp } from "../../i18n";
 
 /* The icon and cover pickers are loaded the first time one opens. */
 const IconPicker = lazy(() => import("./IconPicker").then((module) => ({ default: module.IconPicker })));
@@ -2575,7 +2575,7 @@ export function DocumentEditor({
                 onClick={() => setBacklinksOpen((open) => !open)}
               >
                 <ArrowUpRight size={15} />
-                {backlinks.length} backlink{backlinks.length === 1 ? "" : "s"}
+                {tp(backlinks.length, "{n} backlink", "{n} backlinks")}
               </button>
               {backlinksOpen ? (
                 <ul className="doc__backlinks-list">

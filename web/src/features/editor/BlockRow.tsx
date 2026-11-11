@@ -173,7 +173,7 @@ function RowMark({
         <button
           type="button"
           className="block__page-refs"
-          aria-label={`${count} backlink${count === 1 ? "" : "s"} to ${label}`}
+          aria-label={t("{n} backlinks to {name}", { n: count, name: label })}
           onClick={(event) => onCount(rectOf(event.currentTarget))}
         >
           {count > 99 ? "99+" : count}

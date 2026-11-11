@@ -832,7 +832,7 @@ export const SimpleTable = memo(function SimpleTable({
                   type="button"
                   className={`stbl__grip stbl__grip--row ${menuRowIndex === gripRow ? "is-active" : ""} ${lifted ? "is-held" : ""}`}
                   style={{ top: rowBoxes[gripRow].top + rowBoxes[gripRow].height / 2 }}
-                  aria-label={`Row ${gripRow + 1} options`}
+                  aria-label={t("Row {n} options", { n: gripRow + 1 })}
                   aria-haspopup="menu"
                   onPointerDown={(event) => gripDown(event, "row", gripRow)}
                   onPointerMove={gripMove}
@@ -855,7 +855,7 @@ export const SimpleTable = memo(function SimpleTable({
                   type="button"
                   className={`stbl__grip stbl__grip--column ${menuColumnIndex === gripColumn ? "is-active" : ""} ${lifted ? "is-held" : ""}`}
                   style={{ left: lefts[gripColumn] + widths[gripColumn] / 2 }}
-                  aria-label={`Column ${gripColumn + 1} options`}
+                  aria-label={t("Column {n} options", { n: gripColumn + 1 })}
                   aria-haspopup="menu"
                   onPointerDown={(event) => gripDown(event, "column", gripColumn)}
                   onPointerMove={gripMove}

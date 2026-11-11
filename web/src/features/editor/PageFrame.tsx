@@ -3,7 +3,7 @@ import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { Tooltip } from "../../components/Tooltip";
 import { rectOf, type AnchorRect } from "../../hooks/useAnchoredPosition";
 import { PageIcon } from "./block-registry";
-import { t } from "../../i18n";
+import { t, tp } from "../../i18n";
 
 /** A page drawn in another — a block, a page or a database shown here — and
  *  marked as a page is wherever one stands: its mark at the start of its
@@ -132,7 +132,7 @@ export function PageFrame({
           type="button"
           className="page-frame__refs"
           contentEditable={false}
-          aria-label={`${references} backlink${references === 1 ? "" : "s"} to this block`}
+          aria-label={tp(references, "{n} backlink to this block", "{n} backlinks to this block")}
           onClick={(event) => onReferences(rectOf(event.currentTarget))}
         >
           {references > 99 ? "99+" : references}

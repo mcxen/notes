@@ -163,6 +163,17 @@ export const Notebooks = {
     return call("Notebooks.Look");
   },
   /**
+   * SetTheme makes the app's appearance the theme a window's page shows. The page
+   * draws itself from the theme it keeps (Light, Dark or the system's), but the
+   * window's material (the translucent sidebar), the title bar's buttons and the
+   * native windows follow the app's appearance, which is the system's unless it is
+   * set: without this a vault kept in Dark under a light system had a dark page
+   * beside a light sidebar. The window that has the focus decides.
+   */
+  setTheme(theme: string): Promise<void> {
+    return call("Notebooks.SetTheme", theme);
+  },
+  /**
    * Snapshot returns the records of the vault, once, when the window opens: all
    * but the pages' history.
    */

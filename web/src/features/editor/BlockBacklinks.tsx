@@ -34,9 +34,9 @@ export function BlockBacklinks({
 }) {
   return (
     <Popover open anchor={anchor} placement="bottom-start" label={t("Backlinks")} group="page-menu" onDismiss={onClose}>
-      <MenuList label={`Backlinks to ${name}`} autoFocus className="block-backlinks">
+      <MenuList label={t("Backlinks to {name}", { name })} autoFocus className="block-backlinks">
         <div className="menu__section-title block-backlinks__title">
-          {references.length} backlink{references.length === 1 ? "" : "s"} to {name}
+          {t("{n} backlinks to {name}", { n: references.length, name })}
         </div>
         {references.map((reference) => {
           const page = pages[reference.pageId];

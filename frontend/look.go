@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"context"
+	"errors"
 	"runtime"
 
 	"github.com/egoist/mygo"
@@ -49,4 +50,32 @@ func (a *appActions) applyTranslucency() {
 		w.SetVibrancy(vibrancyFor(st))
 		w.Page().Reload()
 	}
+}
+
+// themeSource reads the theme a page asks for: "system", "light" or "dark".
+func themeSource(theme string) (mygo.ThemeSource, bool) {
+	switch theme {
+	case "system", "":
+		return mygo.ThemeSystem, true
+	case "light":
+		return mygo.ThemeLight, true
+	case "dark":
+		return mygo.ThemeDark, true
+	}
+	return "", false
+}
+
+// SetTheme makes the app's appearance the theme a window's page shows. The page
+// draws itself from the theme it keeps (Light, Dark or the system's), but the
+// window's material (the translucent sidebar), the title bar's buttons and the
+// native windows follow the app's appearance, which is the system's unless it is
+// set: without this a vault kept in Dark under a light system had a dark page
+// beside a light sidebar. The window that has the focus decides.
+func (n *Notebooks) SetTheme(ctx context.Context, theme string) error {
+	source, ok := themeSource(theme)
+	if !ok {
+		return errors.New("unknown theme " + theme)
+	}
+	mygo.Theme.SetSource(source)
+	return nil
 }

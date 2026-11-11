@@ -19,7 +19,7 @@ import {
 } from "../editor/file-store";
 import { ImageViewer, useFileUrl } from "../editor/MediaBlocks";
 import { MAX_ROW_IMAGES, propertyName, rowImages } from "./database-model";
-import { t } from "../../i18n";
+import { t, tp } from "../../i18n";
 
 /* An Image property's pictures — Notion's Files & media, for pictures. Their
    bytes are stored the way an image block's are (`stageFile`: with the row,
@@ -448,7 +448,7 @@ export function ImageProperty({
           {files.length ? (
             <ul
               className="img-prop__list"
-              aria-label={`${files.length} image${files.length === 1 ? "" : "s"}`}
+              aria-label={tp(files.length, "{n} image", "{n} images")}
               onDragOver={(event) => { if (dragPath) event.preventDefault(); }}
               onDrop={(event) => {
                 if (!dragPath) return;

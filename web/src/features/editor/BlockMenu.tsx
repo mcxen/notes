@@ -7,7 +7,7 @@ import { normalizeSimpleTable } from "../../core/simple-table";
 import type { Block, BlockKind, ContentColor } from "../../core/types";
 import { blockDefinition } from "./block-registry";
 import { ColorMenu } from "./ColorMenu";
-import { t } from "../../i18n";
+import { t, tp } from "../../i18n";
 
 const TURN_INTO: BlockKind[] = [
   "text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered",
@@ -81,7 +81,7 @@ export function BlockMenu({
     <>
       <Popover open anchor={anchor} placement="bottom-start" label={t("Paragraph actions")} group="block-menu" onDismiss={onClose}>
         <MenuList label={t("Paragraph actions")} autoFocus>
-          {several ? <div className="menu__section-title">{blocks.length} paragraphs</div> : null}
+          {several ? <div className="menu__section-title">{tp(blocks.length, "{n} paragraph", "{n} paragraphs")}</div> : null}
           {/* A table's own switches first, as at the top of Notion's. */}
           {table && headers && onTableHeader ? (
             <>

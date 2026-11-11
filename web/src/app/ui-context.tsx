@@ -7,6 +7,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { isMyGo } from "mygo-runtime";
+import { Notebooks } from "../platform/mygo";
 import { createId } from "../core/ids";
 import { ToastStack, type ToastMessage, type ToastTone } from "../components/Toast";
 import { useWorkspace } from "./workspace-context";
@@ -57,6 +59,22 @@ function useThemeAttribute(theme: string): void {
   }, [theme]);
 }
 
+/** The desktop app's own appearance follows the theme this window keeps, so that
+ *  what is not the page (the translucent sidebar's material, the window's
+ *  buttons, the native windows) is dark when the page is. A vault kept in Dark
+ *  under a light system used to show a dark page beside a light sidebar. The
+ *  window that has the focus decides, so each re-asserts its theme when it gets
+ *  it. */
+function useAppAppearance(theme: string): void {
+  useEffect(() => {
+    if (!isMyGo()) return;
+    const tell = () => { void Notebooks.setTheme(theme).catch(() => undefined); };
+    if (document.hasFocus()) tell();
+    window.addEventListener("focus", tell);
+    return () => window.removeEventListener("focus", tell);
+  }, [theme]);
+}
+
 export function UiProvider({ children }: { children: ReactNode }) {
   const { preferences } = useWorkspace();
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -66,6 +84,7 @@ export function UiProvider({ children }: { children: ReactNode }) {
   const [peekPageId, setPeekPageId] = useState<string | null>(null);
 
   useThemeAttribute(preferences.theme);
+  useAppAppearance(preferences.theme);
 
   const toast = useCallback((message: string, tone: ToastTone = "info") => {
     setToasts((current) => [...current.slice(-2), { id: createId("toast"), message, tone }]);
