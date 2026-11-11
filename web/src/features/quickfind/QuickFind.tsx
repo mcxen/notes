@@ -1,76 +1,40 @@
 import { Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Modal } from "../../components/Modal";
 import { imeComposing } from "../../core/keyboard";
-import { inlinePlainText, inlineReadableText } from "../../core/inline-content";
-import { tableCells, tableGrid } from "../../core/simple-table";
-import { readableDescriber } from "../editor/mentions";
-import { orderedBlocks, pageName } from "../../core/block-tree";
-import type { NotePage } from "../../core/types";
+import { pageName } from "../../core/block-tree";
 import { useWorkspace } from "../../app/workspace-context";
-import { pageAncestry } from "../../core/page-tree";
+import { markRanges, queryWords, quickFind, type Excerpt, type Hit } from "./search";
+import { requestReveal } from "./reveal";
 import { useUi } from "../../app/ui-context";
 import { useWorkspaceState } from "../../app/workspace-store";
 import { pageGlyph } from "../editor/block-registry";
 
-export interface Hit {
-  page: NotePage;
-  crumb: string;
-  excerpt?: string;
-}
+export { quickFind };
+export type { Hit };
 
-/** What ⌘K finds for `query`: names that start with it, then names that
- *  hold it, then pages a line of which holds it (that line, shortened) — at
- *  most 12, each with the pages above it. Without words, the eight pages
- *  changed last. Pages in the trash are never found. The window's agents
- *  find pages with it too (`findPages`). */
-export function quickFind(allPages: Record<string, NotePage>, query: string): Hit[] {
-  const normalized = query.trim().toLowerCase();
-  const pages = Object.values(allPages).filter((page) => !page.archived);
-  const describe = (page: NotePage): string => pageAncestry(allPages, page.id)
-    .slice(0, -1)
-    .map((item) => pageName(item))
-    .join(" / ");
-
-  if (!normalized) {
-    return pages
-      .toSorted((left, right) => right.updated_at.localeCompare(left.updated_at))
-      .slice(0, 8)
-      .map((page) => ({ page, crumb: describe(page) }));
-  }
-
-  const scored: Array<{ hit: Hit; rank: number }> = [];
-  // A mention is found — and shown — by the title it reads as.
-  const readable = readableDescriber((pageId) => {
-    const target = allPages[pageId];
-    return target ? pageName(target) : "";
+/** `text` with the ranges marked, as the page shows a match. */
+function Marked({ text, marks }: { text: string; marks: ReadonlyArray<readonly [number, number]> }) {
+  if (!marks.length) return <>{text}</>;
+  const parts: ReactNode[] = [];
+  let at = 0;
+  marks.forEach(([from, to], index) => {
+    if (from > at) parts.push(text.slice(at, from));
+    parts.push(<mark key={index} className="quickfind__mark">{text.slice(from, to)}</mark>);
+    at = to;
   });
-  for (const page of pages) {
-    // A block is a page, found by its name — or, unnamed, its first line.
-    const title = pageName(page).toLowerCase();
-    if (title.startsWith(normalized)) {
-      scored.push({ hit: { page, crumb: describe(page) }, rank: 0 });
-      continue;
-    }
-    if (title.includes(normalized)) {
-      scored.push({ hit: { page, crumb: describe(page) }, rank: 1 });
-      continue;
-    }
-    const match = orderedBlocks(page.block_tree)
-      // A table's words are its cells'.
-      .map((block) => (block.kind === "table"
-        ? tableCells(tableGrid(block.table)).flat().map(inlinePlainText).filter(Boolean).join(" · ")
-        : inlineReadableText(block.content, readable)))
-      .find((text) => text.toLowerCase().includes(normalized));
-    if (match) {
-      scored.push({ hit: { page, crumb: describe(page), excerpt: match.slice(0, 90) }, rank: 2 });
-    }
-  }
-  return scored.toSorted((left, right) => left.rank - right.rank).slice(0, 12).map((entry) => entry.hit);
+  if (at < text.length) parts.push(text.slice(at));
+  return <>{parts}</>;
 }
 
-/** ⌘K. Titles first, then the first line of body text that matches — enough to
- *  tell two similarly named pages apart without becoming a search product. */
+function excerptMarks(excerpt: Excerpt) {
+  return excerpt.marks;
+}
+
+/** ⌘K. Titles first, then the first line of body text that holds the words,
+ *  cut around them and marked, so that two similarly named pages can be told
+ *  apart; a press opens the page at that line. Several words must all be
+ *  there. */
 export function QuickFind() {
   const { selectPage } = useWorkspace();
   const { quickFindOpen, setQuickFindOpen } = useUi();
@@ -88,8 +52,10 @@ export function QuickFind() {
 
   const hits = useMemo<Hit[]>(() => (allPages ? quickFind(allPages, query) : []), [allPages, query]);
 
-  const open = (page: NotePage) => {
-    selectPage(page.id);
+  const words = useMemo(() => queryWords(query), [query]);
+  const open = (hit: Hit) => {
+    if (hit.blockId) requestReveal(hit.page.id, hit.blockId);
+    selectPage(hit.page.id);
     setQuickFindOpen(false);
   };
 
@@ -113,7 +79,7 @@ export function QuickFind() {
             }
             if (event.key === "Enter" && hits[active]) {
               event.preventDefault();
-              open(hits[active].page);
+              open(hits[active]);
             }
           }}
         />
@@ -128,14 +94,14 @@ export function QuickFind() {
             aria-selected={index === active}
             className={`menu__item ${index === active ? "is-active" : ""}`}
             onPointerMove={() => setActive(index)}
-            onClick={() => open(hit.page)}
+            onClick={() => open(hit)}
           >
             <span className="menu__icon" aria-hidden="true">{pageGlyph(hit.page)}</span>
             <span className="menu__copy">
-              <span className="menu__label">{pageName(hit.page)}</span>
-              {hit.excerpt ? <span className="menu__description">{hit.excerpt}</span> : null}
+              <span className="menu__label"><Marked text={pageName(hit.page)} marks={markRanges(pageName(hit.page), words)} /></span>
+              {hit.excerpt ? <span className="menu__description"><Marked text={hit.excerpt.text} marks={excerptMarks(hit.excerpt)} /></span> : null}
             </span>
-            {hit.crumb ? <span className="quickfind__crumb">{hit.crumb}</span> : null}
+            {hit.lines > 1 ? <span className="quickfind__crumb">{hit.lines} matches</span> : hit.crumb ? <span className="quickfind__crumb">{hit.crumb}</span> : null}
           </button>
         )) : (
           <div className="slash__empty">{query.trim() ? `No pages match “${query.trim()}”` : "No pages yet"}</div>

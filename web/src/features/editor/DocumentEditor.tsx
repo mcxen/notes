@@ -71,6 +71,9 @@ import { CoverImage, settleCover, useHomedCovers } from "./CoverImage";
 import { ImageViewer } from "./MediaBlocks";
 import { rememberCodeLanguage } from "./code-highlight";
 import { BlockMenu } from "./BlockMenu";
+import { SelectionBar } from "./SelectionBar";
+import { clearReveal, onReveal, peekReveal } from "../quickfind/reveal";
+import { copyBlocksAsImage } from "./copy-image";
 import { BlockRow, type BlockActions, type LinkLine } from "./BlockRow";
 import {
   appendFragment,
@@ -773,6 +776,51 @@ export function DocumentEditor({
     execute(deleteBlocks(tree, ids, createId("block")), undefined, options.cut ? { cut: ids } : {});
     setBlockSelection(fallback ? { anchor: fallback, focus: fallback } : null);
   }, [execute, rows, tree]);
+
+  /** Copies paragraphs as a picture: the selected blocks, or the ones a text
+   *  selection touches. */
+  const copyAsImage = useCallback((ids: readonly string[]) => {
+    const root = blocksRef.current;
+    if (!root || !ids.length) return;
+    copyBlocksAsImage(root, ids).then(
+      () => toast("Copied as image", "success"),
+      (reason: unknown) => toast(`Could not copy as image: ${reason instanceof Error ? reason.message : String(reason)}`, "error"),
+    );
+  }, [toast]);
+
+  // A search hit opens the page at the line that matched: scrolled to, and lit
+  // for a moment. The wish is taken once the line is on screen.
+  const showFound = useCallback(() => {
+    const blockId = peekReveal(page.id);
+    const element = blockId ? blocksRef.current?.querySelector<HTMLElement>(`[data-block-id="${CSS.escape(blockId)}"]`) : null;
+    if (!element) return;
+    clearReveal();
+    element.scrollIntoView({ block: "center" });
+    element.classList.add("is-found");
+    window.setTimeout(() => element.classList.remove("is-found"), 1800);
+  }, [page.id]);
+  useEffect(() => {
+    showFound();
+    return onReveal(showFound);
+  }, [rows, showFound]);
+
+  // ⌘⇧C: copy as image — the selected blocks, else the paragraphs of the text
+  // selection. It is left alone in the title and other fields.
+  useEffect(() => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.key.toLowerCase() !== "c" || imeComposing(event)) return;
+      const root = blocksRef.current;
+      if (!root) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, .pop")) return;
+      const ids = selectedIds.length ? [...selectedIds] : selectedBlockRanges(root).map((range) => range.blockId);
+      if (!ids.length) return;
+      event.preventDefault();
+      copyAsImage(ids);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [copyAsImage, selectedIds]);
 
   /** Whether blocks can become a database: one table, or lines of a list
    *  standing side by side. */
@@ -2212,6 +2260,16 @@ export function DocumentEditor({
           onPoint={(index) => setCardOffer((current) => current && { ...current, index })}
         />
       ) : null}
+      {selectedIds.length > 1 && !blockMenu ? (
+        <SelectionBar
+          count={selectedIds.length}
+          readOnly={readOnly}
+          onCopy={() => document.execCommand("copy")}
+          onCopyImage={() => copyAsImage(selectedIds)}
+          onDelete={() => deleteSelected(selectedIds)}
+          onClear={() => setBlockSelection(null)}
+        />
+      ) : null}
       {blockMenu ? (
         <BlockMenu
           anchor={blockMenu.anchor}
@@ -2227,6 +2285,7 @@ export function DocumentEditor({
           }}
           onColor={(color) => executeOnBlocks(colorBlocks(tree, blockMenu.ids, color))}
           onMoveTo={() => openMoveTo(blockMenu.ids)}
+          onCopyImage={() => copyAsImage(blockMenu.ids)}
           onMakeBlock={() => {
             makeBlock(blockMenu.ids);
             setBlockSelection(null);

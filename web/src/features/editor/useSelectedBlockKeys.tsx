@@ -120,7 +120,7 @@ export function useSelectedBlockKeys(editor: Editor): void {
       // A menu acting on the selection and a Shift+click growing it keep it;
       // anything else lets it go.
       const target = event.target as Element | null;
-      if (event.shiftKey || target?.closest(".pop")) return;
+      if (event.shiftKey || target?.closest(".pop, .selection-bar")) return;
       /* A press on a selected block keeps the selection until it is known
          what it is: one that moves carries the blocks away (the editor's
          block move), one let go where it began is a click into the block,

@@ -9000,3 +9000,216 @@ html.translucent .app-main {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── Vault switcher (the foot of the sidebar, desktop app) ─────────────── */
+
+.vault-switch {
+  display: inline-flex;
+  min-width: 0;
+  height: 28px;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vault-switch:hover,
+.vault-switch.is-on {
+  background: var(--fill-hover, var(--fill-active));
+  color: var(--ink);
+}
+
+.vault-switch--compact {
+  width: 32px;
+  flex: none;
+  justify-content: center;
+  padding: 0;
+}
+
+.vault-switch__mark {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  place-items: center;
+  border-radius: 5px;
+  background: var(--fill-active);
+  color: var(--ink-2);
+}
+
+.vault-switch__name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vault-switch__chevron {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.vault-menu {
+  width: 280px;
+}
+
+.vault-menu__list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.vault-menu__filter {
+  width: calc(100% - 16px);
+  height: 28px;
+  margin: 2px 8px 6px;
+  padding: 0 8px;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.vault-menu__filter:focus {
+  border-color: var(--accent, var(--ink-3));
+}
+
+.vault-menu__empty,
+.vault-menu__error {
+  padding: 8px 12px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+.vault-menu__error {
+  color: var(--danger, #d44c47);
+}
+
+.vault-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.vault-row__main {
+  min-width: 0;
+  flex: 1;
+}
+
+.vault-row.is-current .menu__label {
+  font-weight: 600;
+}
+
+.vault-row__state {
+  flex: none;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+/* The arrow that opens the vault in a window of its own: it takes the place
+   of the state tag while the row is hovered or focused. */
+.vault-row__new {
+  position: absolute;
+  right: 6px;
+  display: none;
+  width: 24px;
+  height: 24px;
+}
+
+.vault-row:hover .vault-row__new,
+.vault-row:focus-within .vault-row__new {
+  display: inline-grid;
+}
+
+.vault-row:hover .vault-row__state,
+.vault-row:focus-within .vault-row__state {
+  visibility: hidden;
+}
+
+/* ── Selected paragraphs: the bar at the foot of the page ──────────────── */
+
+.selection-bar {
+  position: fixed;
+  z-index: 45;
+  bottom: 18px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: var(--shadow-pop);
+  transform: translateX(-50%);
+  --app-region: no-drag;
+}
+
+.selection-bar__count {
+  padding: 0 10px 0 8px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.selection-bar__btn {
+  display: inline-flex;
+  height: 28px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.selection-bar__btn--icon {
+  width: 28px;
+  justify-content: center;
+  padding: 0;
+}
+
+.selection-bar__btn:hover {
+  background: var(--fill-hover);
+  color: var(--ink);
+}
+
+.selection-bar__btn.is-danger:hover {
+  color: var(--danger, #d44c47);
+}
+
+@media (max-width: 560px) {
+  .selection-bar__btn span { display: none; }
+}
+
+/* A search hit: the words found, and the line a hit opens the page at. */
+.quickfind__mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: rgba(255, 212, 0, 0.35);
+  color: inherit;
+}
+
+.block.is-found {
+  animation: block-found 1.8s var(--e-out, ease-out);
+}
+
+@keyframes block-found {
+  0%, 55% { background: rgba(255, 212, 0, 0.28); }
+  100% { background: transparent; }
+}

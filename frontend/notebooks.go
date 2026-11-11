@@ -153,6 +153,17 @@ func (n *Notebooks) windows() []*mygo.Window {
 	return out
 }
 
+// openPaths is the set of folders whose vaults have a window.
+func (n *Notebooks) openPaths() map[string]bool {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	out := make(map[string]bool, len(n.byWindow))
+	for _, s := range n.byWindow {
+		out[s.vault.Info().Path] = true
+	}
+	return out
+}
+
 // byVaultID finds the open vault a vault:// address names.
 func (n *Notebooks) byVaultID(id string) *session {
 	n.mu.Lock()

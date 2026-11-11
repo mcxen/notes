@@ -27,6 +27,7 @@ func openVault(n *Notebooks, folder string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &session{vault: v, cancel: cancel}
 	s.window = mygo.NewWindow(windowOptions(v.Info()))
+	cascade(n, s.window)
 	n.add(s)
 	if cfg, ok := remoteOf(folder); ok {
 		s.remote = newRemoteSync(n, s, cfg)
@@ -47,6 +48,21 @@ func openVault(n *Notebooks, folder string) error {
 	})
 	go watch(ctx, n, s)
 	return nil
+}
+
+// cascade moves a new window down and right when it came up exactly over
+// another vault's, so that two windows are not taken for one.
+func cascade(n *Notebooks, w *mygo.Window) {
+	x, y := w.Position()
+	for moved := true; moved; {
+		moved = false
+		for _, other := range n.windows() {
+			if ox, oy := other.Position(); ox == x && oy == y {
+				x, y, moved = x+28, y+28, true
+			}
+		}
+	}
+	w.SetPosition(x, y)
 }
 
 // remoteOf is the remote folder a working copy syncs with, if it has one.

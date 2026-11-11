@@ -22,7 +22,7 @@ async function vaultUrl(path: string): Promise<string> {
   return `${origin}/${segments.join('/')}`;
 }
 
-async function base64Of(blob: Blob): Promise<string> {
+export async function base64Of(blob: Blob): Promise<string> {
   const bytes = new Uint8Array(await blob.arrayBuffer());
   let text = '';
   for (let start = 0; start < bytes.length; start += 8192) text += String.fromCharCode(...bytes.subarray(start, start + 8192));

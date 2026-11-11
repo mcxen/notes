@@ -99,6 +99,24 @@ export interface SyncState {
   downloaded: number;
 }
 
+/** VaultEntry is one vault in the sidebar's switcher. */
+export interface VaultEntry {
+  /** Path is the vault's folder: a remote vault's working copy. */
+  path: string;
+  /** Name is what the list shows: the folder's name, or the remote's address. */
+  name: string;
+  /** Detail is where it lives: the folder, or the remote's kind. */
+  detail: string;
+  /** Remote is true for a vault kept in a WebDAV or SMB folder. */
+  remote: boolean;
+  /** Open is true when some window shows it. */
+  open: boolean;
+  /** Current is true for the vault of the window that asked. */
+  current: boolean;
+  /** Missing is true when its folder is gone. */
+  missing: boolean;
+}
+
 export interface Write {
   action: string;
   collection: Collection;
@@ -114,6 +132,13 @@ export interface Write {
  * window that called it.
  */
 export const Notebooks = {
+  /**
+   * CopyImage puts a PNG, given as base64, on the system clipboard. The page
+   * draws the selected paragraphs; the clipboard is the system's to write.
+   */
+  copyImage(png: string): Promise<void> {
+    return call("Notebooks.CopyImage", png);
+  },
   /**
    * Disconnect stops a vault syncing with its remote folder and forgets the
    * folder and its password. The vault itself stays on this computer.
@@ -164,12 +189,27 @@ export const Notebooks = {
  */
 export const Connections = {
   /**
+   * ChooseVault asks for an existing vault folder and opens it in a window of
+   * its own.
+   */
+  chooseVault(): Promise<void> {
+    return call("Connections.ChooseVault");
+  },
+  /**
    * Connect keeps a vault in a remote folder. The folder is synced into a new
    * working copy on this machine, which is opened in a window. A remote folder
    * that already holds a vault brings that vault with it.
    */
   connect(req: ConnectRequest): Promise<string> {
     return call("Connections.Connect", req);
+  },
+  /** NewVault asks for an empty or new folder and makes it a vault. */
+  newVault(): Promise<void> {
+    return call("Connections.NewVault");
+  },
+  /** OpenConnect shows the form that keeps a vault in a remote folder. */
+  openConnect(): Promise<void> {
+    return call("Connections.OpenConnect");
   },
   /** OpenPicker shows the vault picker. */
   openPicker(): Promise<void> {
@@ -181,6 +221,22 @@ export const Connections = {
    */
   openSettings(page: string): Promise<void> {
     return call("Connections.OpenSettings", page);
+  },
+  /**
+   * OpenVault shows a vault from the list. Without newWindow it replaces the
+   * vault of the window that asked (the window closes once the vault is up);
+   * with it, the vault gets a window of its own and this one stays. A vault that
+   * is open already is brought forward, not opened twice.
+   */
+  openVault(path: string, newWindow: boolean): Promise<void> {
+    return call("Connections.OpenVault", path, newWindow);
+  },
+  /**
+   * Vaults lists the vaults the app knows, most recent first, with which ones
+   * are open and which one this window shows.
+   */
+  vaults(): Promise<VaultEntry[]> {
+    return call("Connections.Vaults");
   },
 } as const;
 

@@ -1,4 +1,4 @@
-import { ChevronRight, Columns3, Copy, CornerDownRight, CornerUpLeft, Database, Download, Group, Link, Link2, Palette, Replace, Rows3, Trash2 } from "lucide-react";
+import { ChevronRight, Columns3, Copy, ImageDown, CornerDownRight, CornerUpLeft, Database, Download, Group, Link, Link2, Palette, Replace, Rows3, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { MenuDivider, MenuItem, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
@@ -27,6 +27,7 @@ export function BlockMenu({
   onMoveTo,
   onMakeBlock,
   onCopyBlockLink,
+  onCopyImage,
   onReplace,
   onDownload,
   onTurnIntoDatabase,
@@ -45,6 +46,8 @@ export function BlockMenu({
   onMakeBlock(): void;
   /** Groups them into a block (unless they are one already) and copies its link. */
   onCopyBlockLink(): void;
+  /** The paragraphs as a picture on the clipboard. */
+  onCopyImage(): void;
   onReplace(): void;
   onDownload(): void;
   /** A list's lines, or a table, turned into a database — offered only when
@@ -93,6 +96,7 @@ export function BlockMenu({
           <MenuItem icon={<Copy size={16} />} label="Duplicate" hint="⌘D" onSelect={() => { onClose(); onDuplicate(); }} />
           <MenuItem icon={<CornerDownRight size={16} />} label="Move to" hint="⌘⇧P" onSelect={() => { onClose(); onMoveTo(); }} />
           <MenuItem icon={<Group size={16} />} label="Group" onSelect={() => { onClose(); onMakeBlock(); }} />
+          <MenuItem icon={<ImageDown size={16} />} label="Copy as image" hint="⌘⇧C" onSelect={() => { onClose(); onCopyImage(); }} />
           <MenuItem icon={<Link size={16} />} label="Copy link to block" onSelect={() => { onClose(); onCopyBlockLink(); }} />
           {media ? <MenuItem icon={<Replace size={16} />} label="Replace" onSelect={() => { onClose(); onReplace(); }} /> : null}
           {media?.file ? <MenuItem icon={<Download size={16} />} label="Download" onSelect={() => { onClose(); onDownload(); }} /> : null}

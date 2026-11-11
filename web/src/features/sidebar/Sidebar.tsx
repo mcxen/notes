@@ -41,6 +41,7 @@ import {
 } from "react";
 import { MenuDivider, MenuItem, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
+import { VaultSwitcher } from "./VaultSwitcher";
 import { personName, ProfileAvatar } from "../../components/ProfileAvatar";
 import { Tooltip } from "../../components/Tooltip";
 import { imeComposing } from "../../core/keyboard";
@@ -550,14 +551,19 @@ export function Sidebar() {
 
   const accountFoot = (
     <>
-      {/* An indicator, not a control: there are no account actions to hang off
-          it, so it announces who you are and nothing more. */}
-      <Tooltip label={vaultName ?? userName} placement="top-start">
-        <span className="sidebar__me" role="img" aria-label={vaultName ? `Vault: ${vaultName}` : "Local notebook — stored in this browser"}>
-          <ProfileAvatar src={platform?.bootstrap.user.avatarUrl} name={vaultName ?? userName} size={18} />
-        </span>
-      </Tooltip>
-      {vaultName ? <span className="sidebar__vault">{vaultName}</span> : null}
+      {vaultName ? (
+        /* The desktop app: the vault this window shows, and the way to another
+           (or to a window of its own for it). */
+        <VaultSwitcher name={vaultName} compact={railed} />
+      ) : (
+        /* An indicator, not a control: there are no account actions to hang
+           off it, so it announces who you are and nothing more. */
+        <Tooltip label={userName} placement="top-start">
+          <span className="sidebar__me" role="img" aria-label="Local notebook — stored in this browser">
+            <ProfileAvatar src={platform?.bootstrap.user.avatarUrl} name={userName} size={18} />
+          </span>
+        </Tooltip>
+      )}
       <Tooltip label="Trash" placement="top-start">
         <button type="button" ref={trashRef} className="icon-btn" aria-label="Trash" onClick={() => setTrashOpen(true)}>
           <Trash2 size={16} />
