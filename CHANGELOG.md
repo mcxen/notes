@@ -2,6 +2,7 @@
 
 ## 0.1.2
 
+- Copy as image: a photo among the words came out as a blank box. The pictures are now painted on the finished image directly, with their rounded corners, instead of going through the page renderer, which could not draw a large photo in a macOS web view.
 - Page outline, as in Notion: a column of short lines at a page's right edge, one for each heading (longer for a heading 1), the heading the page is at darker. Point at the lines to see the headings by name, press one to go there. It appears on pages with two or more headings that are wide enough for it, not beside the history panel or the side peek, and can be turned off in Settings › Appearance › Show the page outline.
 - Dark mode: choosing Dark (or Light) in a vault now sets the whole app's appearance, so the translucent sidebar, the window buttons and the Settings and picker windows go dark with the page. Before, a vault kept in Dark under a light system showed a dark page beside a light sidebar whose light text could not be read.
 - "Toggle Dark Appearance" now toggles what is shown. With the theme left to the system, the first press chose the dark the system already showed, and the second turned the page light under a still-dark sidebar with black text; the sidebar's quiet text and icons are also brighter in dark when the sidebar is translucent.
