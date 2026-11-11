@@ -70,11 +70,17 @@ func themeSource(theme string) (mygo.ThemeSource, bool) {
 // window's material (the translucent sidebar), the title bar's buttons and the
 // native windows follow the app's appearance, which is the system's unless it is
 // set: without this a vault kept in Dark under a light system had a dark page
-// beside a light sidebar. The window that has the focus decides.
+// beside a light sidebar. The window that has the focus decides: a window
+// that is not focused (one opened behind the others) is heard only while no
+// window has the focus, and says it again when it gets it.
 func (n *Notebooks) SetTheme(ctx context.Context, theme string) error {
 	source, ok := themeSource(theme)
 	if !ok {
 		return errors.New("unknown theme " + theme)
+	}
+	caller := mygo.CallerWindow(ctx)
+	if focused := mygo.FocusedWindow(); focused != nil && focused != caller {
+		return nil
 	}
 	mygo.Theme.SetSource(source)
 	return nil

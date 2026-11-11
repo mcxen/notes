@@ -168,7 +168,9 @@ export const Notebooks = {
    * window's material (the translucent sidebar), the title bar's buttons and the
    * native windows follow the app's appearance, which is the system's unless it is
    * set: without this a vault kept in Dark under a light system had a dark page
-   * beside a light sidebar. The window that has the focus decides.
+   * beside a light sidebar. The window that has the focus decides: a window
+   * that is not focused (one opened behind the others) is heard only while no
+   * window has the focus, and says it again when it gets it.
    */
   setTheme(theme: string): Promise<void> {
     return call("Notebooks.SetTheme", theme);

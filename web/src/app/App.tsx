@@ -53,9 +53,11 @@ export function App() {
     if (!isMyGo()) return;
     return events.viewCommand.on(command => {
       if (command === "sidebar") setPreference("sidebar_collapsed", !preferences.sidebar_collapsed);
-      else if (command === "dark") setPreference("theme", preferences.theme === "dark" ? "light" : "dark");
+      // Toggles what is shown: with the theme left to the system, the first press
+      // must not "choose" the dark the system already shows.
+      else if (command === "dark") setPreference("theme", document.documentElement.dataset.theme === "dark" ? "light" : "dark");
     });
-  }, [preferences.sidebar_collapsed, preferences.theme, setPreference]);
+  }, [preferences.sidebar_collapsed, setPreference]);
 
   /* A remote folder's sync tells the writer what needs their attention: the
      pages both sides changed, and a folder that could not be reached (once,

@@ -63,13 +63,13 @@ function useThemeAttribute(theme: string): void {
  *  what is not the page (the translucent sidebar's material, the window's
  *  buttons, the native windows) is dark when the page is. A vault kept in Dark
  *  under a light system used to show a dark page beside a light sidebar. The
- *  window that has the focus decides, so each re-asserts its theme when it gets
- *  it. */
+ *  window that has the focus decides (the desktop app ignores one that is not
+ *  focused), so each says its theme again when it gets the focus. */
 function useAppAppearance(theme: string): void {
   useEffect(() => {
     if (!isMyGo()) return;
     const tell = () => { void Notebooks.setTheme(theme).catch(() => undefined); };
-    if (document.hasFocus()) tell();
+    tell();
     window.addEventListener("focus", tell);
     return () => window.removeEventListener("focus", tell);
   }, [theme]);

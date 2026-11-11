@@ -8990,6 +8990,16 @@ html.translucent .app-main {
   background: var(--paper);
 }
 
+/* The material behind a translucent sidebar is a mid grey in dark, lighter than
+   the opaque sidebar the dark tokens were chosen for: the quiet inks of the
+   list, its tools and its foot would sit at about 3:1 on it. */
+html.translucent[data-theme="dark"] .sidebar {
+  --ink: rgba(255, 255, 255, 0.92);
+  --ink-2: rgba(255, 255, 255, 0.74);
+  --ink-3: rgba(255, 255, 255, 0.62);
+  --ink-4: rgba(255, 255, 255, 0.42);
+}
+
 /* The vault's name, at the foot of the sidebar, beside the avatar. */
 .sidebar__vault {
   min-width: 0;

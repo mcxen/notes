@@ -3,6 +3,7 @@
 ## 0.1.2
 
 - Dark mode: choosing Dark (or Light) in a vault now sets the whole app's appearance, so the translucent sidebar, the window buttons and the Settings and picker windows go dark with the page. Before, a vault kept in Dark under a light system showed a dark page beside a light sidebar whose light text could not be read.
+- "Toggle Dark Appearance" now toggles what is shown. With the theme left to the system, the first press chose the dark the system already showed, and the second turned the page light under a still-dark sidebar with black text; the sidebar's quiet text and icons are also brighter in dark when the sidebar is translucent.
 - Counts of paragraphs, backlinks and images, and the "matches" of search, were not translated.
 - Page history is kept within its limits (the newest 20 versions of a page, none older than 30 days, at most 10 MB), as the app always meant it to: until now nothing ever removed a version, and every version is a whole copy of its page, so a vault only grew. Versions past the limits are removed when the vault opens and as new ones are made.
 - A window no longer receives every page's history when it opens: a page's versions are read when the page is opened or its history is shown. A vault of 400 pages starts with about a seventh of the data.
