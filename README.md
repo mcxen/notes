@@ -26,18 +26,28 @@ computer.
 
 - **A block editor.** Type `/` for headings, to-dos, lists, quotes, callouts, code,
   tables, toggle lists and databases. Markdown shortcuts work as you type.
+
 - **Style many paragraphs at once.** Select several, and the bar at the foot of the
   page turns them into another kind, makes them bold, italic, underlined,
   struck through or code, and colours them.
+
 - **Toggle lists** that fold what is under them, kept with the page.
+
 - **A page outline.** Short lines at the page's right edge, one for each heading:
   point at them to read the headings, press one to go there.
+
 - **Pages inside pages**, links with `[[ ]]`, backlinks and a graph.
+
 - **Databases** as table, board, list, gallery and calendar views.
+
 - **History.** Every page keeps its recent versions; restore any of them.
+
 - **Copy as image**, with the pictures among the words.
+
 - **Light, dark or the system's**, and a translucent sidebar on macOS.
+
 - **Sync** with a WebDAV or SMB folder, merging pages paragraph by paragraph.
+
 - **Updates** from this repository's releases, signed.
 
 <p align="center">
@@ -121,11 +131,14 @@ and the two are synced:
 
 - a few seconds after an edit, every five minutes, when the window gains focus,
   and on **File › Sync Now** (⇧⌘S / Ctrl+Shift+S);
+
 - a page both sides changed is merged paragraph by paragraph and field by
   field; where the same field changed on both sides, this computer's value
   is kept and the other version is saved under `.notes/conflicts/`;
+
 - any other file changed on both sides is kept twice, the second copy named
   `name (冲突 device date).ext`;
+
 - a deletion moves the file to a `.trash/<date>/` folder on the side that
   does not have it, rather than removing it.
 
@@ -152,9 +165,12 @@ The SMB adapter is not yet tested against a live server.
 
 - The macOS app is not notarized and the Windows installer is not code-signed;
   updates are checked against a signing key instead (see Download).
+
 - The sync interval is fixed at five minutes.
+
 - A browser backup can be imported into a vault from the sidebar menu (Import
   browser backup…). The desktop app does not export backups yet.
+
 - The macOS windows were checked on a running app. Windows and Linux windows,
   and real WebDAV services other than the in-process test server, have not
   been checked on those systems. The SMB adapter has no live test yet.
@@ -164,3 +180,7 @@ The SMB adapter is not yet tested against a live server.
 Adapted from Terminus Notes, published by Terminus as `@terminus/notes`, version 0.0.1, retrieved through an existing fork. The original editor and UI code are retained with a new local persistence layer, local file storage, backup and restore, and standalone build scripts. This project is an independent adaptation and is not presented as the original author's work or an official release.
 
 No license was included with the original source, and none has been added here. See `NOTICE` for attribution; third-party dependencies retain their own licenses.
+
+
+
+Thanks To [LinuxDo](https://linux.do/) 
