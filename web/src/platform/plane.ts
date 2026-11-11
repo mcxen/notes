@@ -17,6 +17,9 @@ export class Plane {
   private stop: () => void = () => {};
   private refreshing = Promise.resolve();
   private closed = false;
+  /** The pages whose history has been read, for a store that keeps history out
+   *  of its snapshot (the desktop app's: it is most of a vault's bytes). */
+  private historyOf = new Map<string, Promise<void>>();
 
   private constructor(private readonly scope: string, private readonly store: RecordStore) {}
 
@@ -33,6 +36,37 @@ export class Plane {
       plane.stop();
       throw error;
     }
+  }
+
+  /** Whether the page's history is here: always, for a store that sends it all
+   *  in its snapshot, else once `loadHistory` has read it. */
+  hasHistory(pageId: string): boolean {
+    return !this.store.versions || this.historyOf.has(pageId);
+  }
+
+  /** Reads a page's history from the store, once. Reading again after the
+   *  page's history is here changes nothing. */
+  loadHistory(pageId: string): Promise<void> {
+    const read = this.store.versions;
+    if (!read || this.closed) return Promise.resolve();
+    let loading = this.historyOf.get(pageId);
+    if (!loading) {
+      loading = read.call(this.store, this.scope, pageId).then(rows => {
+        if (this.closed) return;
+        const versions = this.stored.versions as Map<string, RecordValue>;
+        for (const row of rows) {
+          // A version heard of meanwhile, or written by this window, is newer.
+          if (!versions.has(row.id)) versions.set(row.id, row.value as RecordValue);
+        }
+        this.project();
+      }, error => {
+        // Asked for again the next time: the page's history is not known yet.
+        this.historyOf.delete(pageId);
+        throw error;
+      });
+      this.historyOf.set(pageId, loading);
+    }
+    return loading;
   }
 
   watch(listener: (records: PlaneRecords) => void): () => void {
@@ -111,6 +145,7 @@ export class Plane {
         }
       }
       this.stored = next;
+      this.historyOf.clear();
       this.project();
     };
     this.refreshing = this.refreshing.then(run, run);

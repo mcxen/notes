@@ -16,6 +16,10 @@ export interface RowChange { collection: string; id: string; value: Record<strin
 export interface RecordStore {
   /** The saved records of one scope (the member's own is `personal`). */
   snapshot(scope: string): Promise<StoredRow[]>;
+  /** The history records of one page, for a store whose snapshot leaves
+   *  history out (the desktop app's). A store without it has them all in its
+   *  snapshot. */
+  versions?(scope: string, pageId: string): Promise<StoredRow[]>;
   /** Saves one write. Resolves to the record as saved, or null once it is removed. */
   write(scope: string, write: RecordWrite): Promise<Record<string, unknown> | null>;
   /** Calls `listener` when saved records change for another reason than this

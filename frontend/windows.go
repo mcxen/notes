@@ -31,7 +31,7 @@ func openVault(n *Notebooks, folder string) error {
 	n.add(s)
 	if cfg, ok := remoteOf(folder); ok {
 		s.remote = newRemoteSync(n, s, cfg)
-		go s.remote.loop(ctx)
+		goSafe("remote sync", func() { s.remote.loop(ctx) })
 		s.remote.Wake()
 	}
 	s.window.OnFocus(func() {
@@ -39,14 +39,14 @@ func openVault(n *Notebooks, folder string) error {
 			s.remote.Wake()
 		}
 	})
-	s.window.OnBlur(func() { go func() { _ = v.Flush() }() })
+	s.window.OnBlur(func() { goSafe("save", func() { _ = v.Flush() }) })
 	s.window.OnMaximize(func() { _ = WindowMaximized.Emit(s.window, true) })
 	s.window.OnUnmaximize(func() { _ = WindowMaximized.Emit(s.window, false) })
 	s.window.OnClosed(func() {
 		n.remove(s)
 		s.close()
 	})
-	go watch(ctx, n, s)
+	goSafe("folder watch", func() { watch(ctx, n, s) })
 	return nil
 }
 
@@ -120,10 +120,12 @@ func watch(ctx context.Context, n *Notebooks, s *session) {
 		if err != nil {
 			return
 		}
-		changes := reconcileEvents(s.vault, events)
-		if len(changes) > 0 {
-			_ = VaultChanged.Emit(s.window, vault.Changes{Changes: changes})
-		}
+		// A round that fails is skipped, and the watch goes on.
+		guard("folder watch round", func() {
+			if changes := reconcileEvents(s.vault, events); len(changes) > 0 {
+				_ = VaultChanged.Emit(s.window, vault.Changes{Changes: changes})
+			}
+		})
 	}
 }
 

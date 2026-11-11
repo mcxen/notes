@@ -46,8 +46,12 @@ export function HistoryPanel({
   onClose(): void;
   onPreview(page: NotePage | null): void;
 }) {
-  const { restoreVersion, rosters } = useWorkspace();
+  const { ensureHistory, restoreVersion, rosters } = useWorkspace();
   const { toast } = useUi();
+  // The page's versions come with the panel: the desktop app keeps history out of the workspace until it is shown.
+  useEffect(() => {
+    if (open && pageId) void ensureHistory(pageId).catch(() => undefined);
+  }, [ensureHistory, open, pageId]);
   const { mounted, shown } = useMountTransition(open && Boolean(pageId), PANEL_EXIT_MS);
   const page = useWorkspaceState((state) => (pageId ? state.pages[pageId] : undefined));
   const stored = useWorkspaceState((state) => (pageId ? state.versions[pageId] : undefined));

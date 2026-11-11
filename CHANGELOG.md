@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+- Page history is kept within its limits (the newest 20 versions of a page, none older than 30 days, at most 10 MB), as the app always meant it to: until now nothing ever removed a version, and every version is a whole copy of its page, so a vault only grew. Versions past the limits are removed when the vault opens and as new ones are made.
+- A window no longer receives every page's history when it opens: a page's versions are read when the page is opened or its history is shown. A vault of 400 pages starts with about a seventh of the data.
+- A fault in a background task (syncing, watching the folder, saving) is logged and the app goes on, instead of quitting with changes still in memory.
+
 ## 0.1.1
 
 - Chinese and English: Settings › General › Language (Automatic, English, 简体中文). The pages, the menus and the settings change at once; Automatic follows the system's language.

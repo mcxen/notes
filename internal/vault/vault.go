@@ -19,10 +19,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"sync"
@@ -121,6 +123,9 @@ type pageFile struct {
 
 type historyFile struct {
 	parts map[int]Record
+	// size is what the version's file held when it was read or written; 0
+	// until then.
+	size int
 }
 
 // Vault is an open notebook folder. Its methods are safe for concurrent use.
@@ -258,6 +263,9 @@ func (v *Vault) load() error {
 		}
 		v.sums[workspaceFile] = sha256.Sum256(data)
 	}
+	// What is past the history limits goes now, so that a vault does not carry
+	// versions nobody can reach: its files are removed at the first flush.
+	v.pruneAllHistoryLocked(time.Now())
 	return nil
 }
 
@@ -292,6 +300,7 @@ func (v *Vault) loadHistory() error {
 			if v.history[pageID] == nil {
 				v.history[pageID] = map[string]*historyFile{}
 			}
+			hf.size = len(data)
 			v.history[pageID][versionID] = hf
 			v.sums[rel] = sha256.Sum256(data)
 		}
@@ -375,6 +384,15 @@ func (v *Vault) Write(w Write) (Ack, error) {
 	}
 	v.set(ref, after)
 	v.dirty[ref.key()] = ref
+	switch {
+	case ref.Collection == Versions && after != nil:
+		pageID, _, _, _ := ParseHistoryRecordID(ref.ID)
+		v.pruneHistoryLocked(pageID, time.Now())
+	case ref.Collection == Pages && after == nil:
+		// A page deleted for good takes its history with it, whether or not the
+		// window had it loaded to delete.
+		v.forgetHistoryLocked(ref.ID)
+	}
 	v.scheduleFlushLocked()
 	return Ack{Value: v.get(ref)}, nil
 }
@@ -415,6 +433,16 @@ func (v *Vault) scheduleFlushLocked() {
 func (v *Vault) onTimer() {
 	v.mu.Lock()
 	defer v.mu.Unlock()
+	// A panic here would end the program with the writes still in memory: the
+	// save is tried again later instead.
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("vault: saving failed and will be tried again: %v\n%s", r, debug.Stack())
+			if v.timer == nil {
+				v.timer = time.AfterFunc(retryFlushDelay, v.onTimer)
+			}
+		}
+	}()
 	v.timer = nil
 	_ = v.flushLocked()
 }
@@ -468,6 +496,11 @@ func (v *Vault) writeFileLocked(rel string) error {
 	}
 	if err := writeAtomic(full, data); err != nil {
 		return err
+	}
+	if kind, pageID, versionID := classify(rel); kind == kindHistory {
+		if hf := v.history[pageID][versionID]; hf != nil {
+			hf.size = len(data)
+		}
 	}
 	v.sums[rel] = sha256.Sum256(data)
 	return nil
@@ -600,6 +633,7 @@ func (v *Vault) set(ref Ref, rec Record) {
 			v.history[pageID][versionID] = hf
 		}
 		hf.parts[part] = rec
+		hf.size = 0
 	case Settings:
 		if rec == nil {
 			delete(v.settings, ref.ID)

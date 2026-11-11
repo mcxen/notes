@@ -102,6 +102,9 @@ export interface WorkspaceContextValue {
   restorePage(pageId: string, options?: { select?: boolean }): void;
   deletePage(pageId: string): void;
   restoreVersion(pageId: string, version: PageVersion): void;
+  /** Reads a page's history, which the desktop app keeps out of the workspace
+   *  until it is wanted. Resolves at once where there is nothing to read. */
+  ensureHistory(pageId: string): Promise<void>;
   /** The space a shared page lives in — its own, or its shared parent's —
    *  created (and the page tree carried into it) the first time. */
   ensureShareSpace(pageId: string): Promise<string>;
@@ -552,6 +555,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     ]);
   }, [commit, document, platform]);
 
+  const checkpointRef = useRef<(pageId: string, summary: string) => boolean>(() => true);
   const checkpointPage = useCallback((pageId: string, summary: string) => {
     if (!document || !platform) return true;
     const page = document.state.pages[pageId];
@@ -560,11 +564,24 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     // a viewer's checkpoint would be turned away by the space.
     const spaceId = spaceOfPage(document.state.pages, pageId);
     if (spaceId && (!spaces[spaceId] || spaces[spaceId].role === "viewer")) return true;
+    // A checkpoint is judged against the page's last one, so the history is read
+    // first when it has not been; the checkpoint is made once it is.
+    if (!document.historyLoaded(pageId)) {
+      void document.ensureHistory(pageId).then(() => { checkpointRef.current(pageId, summary); }, () => undefined);
+      return true;
+    }
     const writes = versionWrites(pageId, document.state.versions[pageId], versionFor(page, platform, summary));
     if (!writes) return false;
     commit(writes);
     return true;
   }, [commit, document, platform, spaces]);
+  checkpointRef.current = checkpointPage;
+
+  const ensureHistory = useCallback((pageId: string) => (document ? document.ensureHistory(pageId) : Promise.resolve()), [document]);
+  // The page opened has its history read, so that it is there for the next checkpoint.
+  useEffect(() => {
+    if (selectedPageId) void ensureHistory(selectedPageId).catch(() => undefined);
+  }, [ensureHistory, selectedPageId]);
 
   useEffect(() => {
     const leaving = previousPageId.current;
@@ -852,6 +869,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     restorePage,
     deletePage,
     restoreVersion,
+    ensureHistory,
     ensureShareSpace,
     stopSharing,
     leaveShare,
@@ -892,6 +910,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     restorePage,
     deletePage,
     restoreVersion,
+    ensureHistory,
     ensureShareSpace,
     stopSharing,
     leaveShare,

@@ -123,3 +123,63 @@ describe('Plane over a record store', () => {
     await plane.close();
   });
 });
+
+describe('Plane history kept apart from the snapshot', () => {
+  /** A store as the desktop app's: its snapshot has no history, `versions` has a page's. */
+  function apartStore() {
+    const memory = memoryStore();
+    const history = new Map<string, StoredRow[]>([['page_a', [
+      { collection: 'versions', id: 'page_a_ver_1', value: { id: 'ver_1', page: 'page_a' } },
+      { collection: 'versions', id: 'page_a_ver_2', value: { id: 'ver_2', page: 'page_a' } },
+    ]]]);
+    let reads = 0;
+    let failNext = false;
+    const store: RecordStore = {
+      ...memory.store,
+      async versions(_scope, pageId) {
+        reads += 1;
+        if (failNext) { failNext = false; throw new Error('gone'); }
+        return (history.get(pageId) ?? []).map(row => ({ ...row }));
+      },
+    };
+    return { store, reads: () => reads, failNext: () => { failNext = true; } };
+  }
+  const ver = (id: string) => ({ collection: 'versions', id } as const);
+
+  it('has no history until a page asks, and reads it once', async () => {
+    const apart = apartStore();
+    const plane = await Plane.open(undefined, apart.store);
+    expect(plane.hasHistory('page_a')).toBe(false);
+    expect(plane.get(ver('page_a_ver_1'))).toBeUndefined();
+    await plane.loadHistory('page_a');
+    await plane.loadHistory('page_a');
+    expect(apart.reads()).toBe(1);
+    expect(plane.hasHistory('page_a')).toBe(true);
+    expect(plane.get(ver('page_a_ver_2'))).toEqual({ id: 'ver_2', page: 'page_a' });
+  });
+
+  it('keeps a version written here over the one read', async () => {
+    const apart = apartStore();
+    const plane = await Plane.open(undefined, apart.store);
+    await plane.write({ action: 'put', collection: 'versions', id: 'page_a_ver_2', value: { id: 'ver_2', page: 'page_a', created_at: 'newer' } });
+    await plane.loadHistory('page_a');
+    expect(plane.get(ver('page_a_ver_2'))).toEqual({ id: 'ver_2', page: 'page_a', created_at: 'newer' });
+  });
+
+  it('asks again after a failed read', async () => {
+    const apart = apartStore();
+    const plane = await Plane.open(undefined, apart.store);
+    apart.failNext();
+    await expect(plane.loadHistory('page_a')).rejects.toThrow('gone');
+    expect(plane.hasHistory('page_a')).toBe(false);
+    await plane.loadHistory('page_a');
+    expect(plane.hasHistory('page_a')).toBe(true);
+  });
+
+  it('has everything at once for a store that sends history in its snapshot', async () => {
+    const memory = memoryStore();
+    const plane = await Plane.open(undefined, memory.store);
+    expect(plane.hasHistory('page_a')).toBe(true);
+    await plane.loadHistory('page_a');
+  });
+});

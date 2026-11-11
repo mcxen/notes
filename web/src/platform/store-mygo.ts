@@ -18,6 +18,11 @@ export const mygoStore: RecordStore = {
     const snapshot = await Notebooks.snapshot();
     return snapshot.records.map(row => ({ collection: row.collection, id: row.id, value: row.value }));
   },
+  async versions(scope, pageId) {
+    if (scope !== PERSONAL) return [];
+    const rows = await Notebooks.versions(pageId);
+    return rows.map(row => ({ collection: row.collection, id: row.id, value: row.value }));
+  },
   async write(_scope, write) {
     const ack = await Notebooks.write(vaultWrite(write));
     return ack.value ?? null;

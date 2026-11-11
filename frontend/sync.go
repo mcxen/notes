@@ -90,8 +90,17 @@ func (r *remoteSync) loop(ctx context.Context) {
 		case <-ticker.C:
 		case <-r.wake:
 		}
-		// A failure is reported through SyncStates, so the result is not needed.
-		_, _ = r.Run(ctx)
+		// A failure is reported through SyncStates, so the result is not needed. A
+		// round that panics is reported the same way, and the loop goes on.
+		guard("sync", func() {
+			defer func() {
+				if p := recover(); p != nil {
+					emitSync(r.s, SyncState{Status: "refused", Message: fmt.Sprint("sync failed: ", p)})
+					panic(p)
+				}
+			}()
+			_, _ = r.Run(ctx)
+		})
 	}
 }
 

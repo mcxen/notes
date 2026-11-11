@@ -57,13 +57,25 @@ func (n *Notebooks) Info(ctx context.Context) (vault.Info, error) {
 	return s.vault.Info(), nil
 }
 
-// Snapshot returns every record of the vault, once, when the window opens.
+// Snapshot returns the records of the vault, once, when the window opens: all
+// but the pages' history.
 func (n *Notebooks) Snapshot(ctx context.Context) (vault.Snapshot, error) {
 	s, err := n.callerSession(ctx)
 	if err != nil {
 		return vault.Snapshot{}, err
 	}
-	return s.vault.Snapshot(), nil
+	// Without the pages' history: it is most of a vault's bytes, and a window
+	// asks for one page's at a time (Versions).
+	return s.vault.SnapshotWithoutHistory(), nil
+}
+
+// Versions returns the history records of one page: its versions, by part.
+func (n *Notebooks) Versions(ctx context.Context, pageID string) ([]vault.Row, error) {
+	s, err := n.callerSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.vault.VersionsOf(pageID), nil
 }
 
 // Write applies one record change and returns the record as it now is. A

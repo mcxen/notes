@@ -180,6 +180,19 @@ export class WorkspaceDocument {
     if (notify) this.notify();
   }
 
+  /** Whether a page's history is here. The desktop app sends it apart from the
+   *  workspace, and `ensureHistory` reads it. */
+  historyLoaded(pageId: string): boolean {
+    return this.planes.get(PERSONAL)?.hasHistory(pageId) ?? true;
+  }
+
+  /** Reads a page's history when the store keeps it apart: before the page is
+   *  checkpointed (a checkpoint is judged against the last one) or its
+   *  history shown. */
+  async ensureHistory(pageId: string): Promise<void> {
+    await this.planes.get(PERSONAL)?.loadHistory(pageId);
+  }
+
   /** Starts reading a space: one this member just shared a page into, or one
    *  that has been shared with them since the window opened. */
   async addSpace(spaceId: string): Promise<void> {

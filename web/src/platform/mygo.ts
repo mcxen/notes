@@ -162,13 +162,20 @@ export const Notebooks = {
   look(): Promise<Look> {
     return call("Notebooks.Look");
   },
-  /** Snapshot returns every record of the vault, once, when the window opens. */
+  /**
+   * Snapshot returns the records of the vault, once, when the window opens: all
+   * but the pages' history.
+   */
   snapshot(): Promise<Snapshot> {
     return call("Notebooks.Snapshot");
   },
   /** SyncNow syncs this window's vault now and returns what changed. */
   syncNow(): Promise<Report> {
     return call("Notebooks.SyncNow");
+  },
+  /** Versions returns the history records of one page: its versions, by part. */
+  versions(pageID: string): Promise<Row[]> {
+    return call("Notebooks.Versions", pageID);
   },
   /**
    * Write applies one record change and returns the record as it now is. A
