@@ -1,6 +1,5 @@
 import {
   ChevronDown,
-  Copy,
   CornerLeftUp,
   Edit3,
   Eye,
@@ -23,7 +22,6 @@ import type { NotePage, Person, SpaceMember } from "../../core/types";
 import { useWorkspace } from "../../app/workspace-context";
 import { pageAncestry } from "../../core/page-tree";
 import { useUi } from "../../app/ui-context";
-import { useCopyPageLink } from "../../hooks/useCopyPageLink";
 import { useWorkspaceState } from "../../app/workspace-store";
 
 type InviteRole = "admin" | "editor" | "viewer";
@@ -76,7 +74,6 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
     selectPage,
   } = useWorkspace();
   const { toast, requestShare } = useUi();
-  const copyPageLink = useCopyPageLink();
   const [query, setQuery] = useState("");
   const [role, setRole] = useState<InviteRole>("editor");
   const [suggestions, setSuggestions] = useState<Person[]>([]);
@@ -303,16 +300,6 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
           </section>
         ) : null}
       </div>
-
-      <footer className="share__access">
-        <button
-          type="button"
-          className="btn btn--outline"
-          onClick={() => copyPageLink(page.id)}
-        >
-          <Copy size={14} />Copy link
-        </button>
-      </footer>
 
       {canLeave || canStop ? (
         <div className="share__exit">

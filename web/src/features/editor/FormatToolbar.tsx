@@ -1,4 +1,4 @@
-import { Baseline, ChevronDown, Database, Group, Link, Link2 } from "lucide-react";
+import { Baseline, ChevronDown, Database, Group, Link2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Popover } from "../../components/Popover";
 import { imeComposing } from "../../core/keyboard";
@@ -103,7 +103,6 @@ export function FormatToolbar({
   onSetLink,
   onColor,
   onMakeBlock,
-  onCopyBlockLink,
   onClose,
   onReturn,
 }: {
@@ -117,7 +116,6 @@ export function FormatToolbar({
   onSetLink(href: string | undefined): void;
   onColor(color: ContentColor | undefined): void;
   onMakeBlock(): void;
-  onCopyBlockLink(): void;
   onClose(): void;
   /** Puts the caret back on the words the toolbar was opened for — after
    *  the link box, which took it, is left with Escape. */
@@ -233,16 +231,6 @@ export function FormatToolbar({
               onClick={onMakeBlock}
             >
               <Group size={15} />
-            </button>
-            <button
-              type="button"
-              className="icon-btn"
-              aria-label="Copy link to block"
-              title="Copy link to block"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={onCopyBlockLink}
-            >
-              <Link size={15} />
             </button>
           </div>
         </div>

@@ -230,7 +230,7 @@ export function repaintMentions(root: HTMLElement, describe: DescribeMention): v
 }
 
 /** The page a pasted link points at, when it is a link to a page of this
- *  workspace — "Copy link" on a page or a block, which is a page. */
+ *  workspace — a link to a page, or to a block, which is a page. */
 export function pageFromLink(text: string, pages: Record<string, NotePage>, here: Pick<Location, "origin" | "pathname">): string | null {
   let url: URL;
   try {

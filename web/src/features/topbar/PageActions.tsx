@@ -3,7 +3,6 @@ import {
   Copy,
   CornerDownRight,
   CornerUpLeft,
-  Link,
   MoreHorizontal,
   MoveHorizontal,
   Redo2,
@@ -24,7 +23,6 @@ import { useUi } from "../../app/ui-context";
 import { LAND_EVENT, requestLanding } from "../editor/landing";
 import { MoveToMenu } from "../editor/MoveToMenu";
 import { PAGE_FONTS, pageFont } from "../editor/page-decoration";
-import { useCopyPageLink } from "../../hooks/useCopyPageLink";
 import { sameItems, usePage, useWorkspaceState } from "../../app/workspace-store";
 
 /* What a page's bar offers for the page it names: Share, the star, and the
@@ -36,7 +34,6 @@ import { sameItems, usePage, useWorkspaceState } from "../../app/workspace-store
    place in the page it is shown in. */
 export function PageActions({
   page,
-  link = false,
   onHistory,
   widthOption = false,
   moveShortcut = false,
@@ -44,8 +41,6 @@ export function PageActions({
   page: NotePage;
   /** Too narrow for the word: Share is an icon. */
   compact: boolean;
-  /** Copy link as a button of its own, as Notion's side peek has it. */
-  link?: boolean;
   /** The page's history, where this bar's page can show it. */
   onHistory?: () => void;
   /** Full width, for a page in the page pane; a peek has its own width. */
@@ -122,8 +117,6 @@ export function PageActions({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [moveShortcut, toast]);
 
-  const copyPageLink = useCopyPageLink();
-  const copyLink = () => copyPageLink(page.id);
   /** Back to the page a block is shown in, landed on it there — by that
    *  page's editor in the page pane: the one open already, or the one that
    *  opens. From the side peek, the peek goes. */
@@ -137,13 +130,6 @@ export function PageActions({
 
   return (
     <>
-      {link ? (
-        <Tooltip label="Copy link">
-          <button type="button" className="icon-btn" aria-label="Copy link" onClick={copyLink}>
-            <Link size={16} />
-          </button>
-        </Tooltip>
-      ) : null}
       <Tooltip label={favorite ? "Remove from favorites" : "Add to favorites"}>
         <button
           type="button"
@@ -196,7 +182,6 @@ export function PageActions({
               ))}
             </div>
           ) : null}
-          <MenuItem icon={<Link size={16} />} label="Copy link" onSelect={() => { setMoreAnchor(null); copyLink(); }} />
           {shownIn ? (
             <MenuItem
               icon={<CornerUpLeft size={16} />}

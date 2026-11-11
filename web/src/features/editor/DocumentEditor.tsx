@@ -148,7 +148,6 @@ import {
 } from "./selection";
 import { slashCommands, SlashMenu } from "./SlashMenu";
 import { InlineDatabase } from "../database/InlineDatabase";
-import { useCopyPageLink } from "../../hooks/useCopyPageLink";
 import { usePages, useWorkspaceStore } from "../../app/workspace-store";
 import { useMedia } from "./useMedia";
 import { useFormatToolbar } from "./useFormatToolbar";
@@ -1404,7 +1403,6 @@ export function DocumentEditor({
     return result.pageId;
   }, [execute, flashFrame, tree]);
 
-  const copyPageLink = useCopyPageLink();
 
   /** A block's grip picks the whole block up; the block itself is what the
    *  pointer carries. */
@@ -2290,11 +2288,6 @@ export function DocumentEditor({
             makeBlock(blockMenu.ids);
             setBlockSelection(null);
           }}
-          onCopyBlockLink={() => {
-            const made = makeBlock(blockMenu.ids);
-            setBlockSelection(null);
-            if (made) copyPageLink(made);
-          }}
           onReplace={() => {
             const block = tree.by_id[blockMenu.ids[0]];
             if (block) pickFile(block);
@@ -2322,7 +2315,6 @@ export function DocumentEditor({
             references={linksOf(pageId).length}
             onClose={() => setPageMenu(null)}
             onOpen={() => followLink(pageId)}
-            onCopyLink={() => copyPageLink(pageId)}
             onBacklinks={() => setBacklinksFor({ id: pageId, anchor: pageMenu.anchor })}
             {...shown}
           />
@@ -2371,10 +2363,6 @@ export function DocumentEditor({
             ? () => convertToDatabase(format.ranges.map((range) => range.blockId))
             : undefined}
           onMakeBlock={() => makeBlock(format.ranges.map((range) => range.blockId), format.ranges)}
-          onCopyBlockLink={() => {
-            const made = makeBlock(format.ranges.map((range) => range.blockId), format.ranges);
-            if (made) copyPageLink(made);
-          }}
           onSetLink={(href) => applyMark("link", href)}
           onColor={(color) => applyMark("color", color)}
           onClose={() => setFormat(null)}

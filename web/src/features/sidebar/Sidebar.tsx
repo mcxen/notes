@@ -56,7 +56,6 @@ import { pageName } from "../../core/block-tree";
 import { pageAncestry } from "../../core/page-tree";
 import { buildTree, linkedFromOutside, sameListing, SORT_LABELS, type PageTree } from "./tree";
 import { useWorkspaceState } from "../../app/workspace-store";
-import { useCopyPageLink } from "../../hooks/useCopyPageLink";
 import { capitalized } from "../../core/title";
 import { pageGlyph } from "../editor/block-registry";
 import { TrashMenu } from "./TrashMenu";
@@ -411,7 +410,6 @@ export function Sidebar() {
 
   const menuPage = rowMenu ? pages[rowMenu.pageId] : null;
 
-  const copyPageLink = useCopyPageLink();
 
   /* Sharing is the point of this page, so it is created and handed straight to
      the Share dialog. */
@@ -874,7 +872,6 @@ export function Sidebar() {
               label={isFavorite(menuPage.id) ? "Remove from favorites" : "Add to favorites"}
               onSelect={() => { toggleFavorite(menuPage.id); setRowMenu(null); }}
             />
-            <MenuItem icon={<Link size={16} />} label="Copy link" onSelect={() => { copyPageLink(menuPage.id); setRowMenu(null); }} />
             {menuEditable ? (
               <>
                 <MenuItem icon={<Copy size={16} />} label="Duplicate" onSelect={() => { duplicatePage(menuPage.id); setRowMenu(null); }} />

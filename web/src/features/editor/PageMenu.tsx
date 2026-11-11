@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChevronsDownUp, ChevronsUpDown, CircleMinus, Copy, CornerDownRight, ExternalLink, Link, Lock, PencilLine, Smile, Trash2, Ungroup, UserPlus } from "lucide-react";
+import { ArrowUpRight, ChevronsDownUp, ChevronsUpDown, CircleMinus, Copy, CornerDownRight, ExternalLink, Lock, PencilLine, Smile, Trash2, Ungroup, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { MenuDivider, MenuItem, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
@@ -24,7 +24,6 @@ export function PageMenu({
   onShare,
   onRename,
   onIcon,
-  onCopyLink,
   onBacklinks,
   onLock,
   onMoveTo,
@@ -46,7 +45,6 @@ export function PageMenu({
   onShare?(): void;
   onRename?(): void;
   onIcon?(): void;
-  onCopyLink?(): void;
   onBacklinks?(): void;
   onLock?(): void;
   onMoveTo?(): void;
@@ -70,7 +68,6 @@ export function PageMenu({
         {onShare ? <MenuItem icon={<UserPlus size={16} />} label="Share…" onSelect={act(onShare)} /> : null}
         {onRename ? <MenuItem icon={<PencilLine size={16} />} label="Name…" onSelect={act(onRename)} /> : null}
         {onIcon ? <MenuItem icon={<Smile size={16} />} label="Icon…" onSelect={act(onIcon)} /> : null}
-        {onCopyLink ? <MenuItem icon={<Link size={16} />} label="Copy link" onSelect={act(onCopyLink)} /> : null}
         {references && onBacklinks ? (
           <MenuItem icon={<ArrowUpRight size={16} />} label="Backlinks" hint={String(references)} onSelect={act(onBacklinks)} />
         ) : null}

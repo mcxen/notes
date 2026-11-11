@@ -261,7 +261,7 @@ export function SidePeek({
             </button>
           </Tooltip>
           <span className="side-peek__spacer" />
-          <PageActions page={drawn} compact={width < COMPACT_BELOW} link />
+          <PageActions page={drawn} compact={width < COMPACT_BELOW} />
         </header>
         <div ref={scrollRef} className="side-peek__scroll scroller">
           {/* A database is its views, never a page's words. */}
