@@ -1,8 +1,19 @@
-# Notes
+<p align="center">
+  <img src="assets/logo/notes-logo-amber.svg" width="96" alt="Notes">
+</p>
 
-A personal notes app for the desktop: a block editor, nested pages, databases,
-backlinks, graph views, attachments, history and light/dark themes. The
-interface is a web page in the system's own webview (WKWebView on macOS,
+<h1 align="center">Notes</h1>
+
+<p align="center">
+  A personal notes app for the desktop: blocks, nested pages, databases, backlinks, history,
+  light and dark, in English and 简体中文. Your notes are plain files in a folder you choose.
+</p>
+
+<p align="center">
+  <img src="docs/images/demo.gif" alt="Notes in use: folding a toggle, styling several paragraphs at once, the page outline, and light and dark themes" width="860">
+</p>
+
+The interface is a web page in the system's own webview (WKWebView on macOS,
 WebKitGTK on Linux, WebView2 on Windows); the app is written with
 [MyGo](https://github.com/egoist/mygo), in Go, so it is one small binary.
 
@@ -10,6 +21,36 @@ Notes live in a **vault**: a folder you choose. Each page is one JSON file,
 attachments are plain files, and nothing else is needed. A vault can also be
 kept in a WebDAV or SMB folder, which then syncs with the copy on this
 computer.
+
+## What it does
+
+- **A block editor.** Type `/` for headings, to-dos, lists, quotes, callouts, code,
+  tables, toggle lists and databases. Markdown shortcuts work as you type.
+- **Style many paragraphs at once.** Select several, and the bar at the foot of the
+  page turns them into another kind, makes them bold, italic, underlined,
+  struck through or code, and colours them.
+- **Toggle lists** that fold what is under them, kept with the page.
+- **A page outline.** Short lines at the page's right edge, one for each heading:
+  point at them to read the headings, press one to go there.
+- **Pages inside pages**, links with `[[ ]]`, backlinks and a graph.
+- **Databases** as table, board, list, gallery and calendar views.
+- **History.** Every page keeps its recent versions; restore any of them.
+- **Copy as image**, with the pictures among the words.
+- **Light, dark or the system's**, and a translucent sidebar on macOS.
+- **Sync** with a WebDAV or SMB folder, merging pages paragraph by paragraph.
+- **Updates** from this repository's releases, signed.
+
+<p align="center">
+  <img src="docs/images/overview.png" alt="A page in the dark theme with the page outline at its right edge" width="860">
+</p>
+
+<p align="center">
+  <img src="docs/images/selection.png" alt="Several paragraphs selected, with the bar for turning them into another kind, styling and colouring them" width="860">
+</p>
+
+<p align="center">
+  <img src="docs/images/outline.png" alt="The page outline opened by pointing at its lines" width="860">
+</p>
 
 ## Layout
 
@@ -109,10 +150,8 @@ The SMB adapter is not yet tested against a live server.
 
 ## Not in this version
 
-- Signing, notarization and automatic updates are not configured. A tag
-  `v<version>` (matching `mygo.json`) builds and publishes a release through
-  `.github/workflows/release.yml`.
-- Search and Markdown export are not built.
+- The macOS app is not notarized and the Windows installer is not code-signed;
+  updates are checked against a signing key instead (see Download).
 - The sync interval is fixed at five minutes.
 - A browser backup can be imported into a vault from the sidebar menu (Import
   browser backup…). The desktop app does not export backups yet.
