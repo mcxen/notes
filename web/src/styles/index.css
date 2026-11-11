@@ -9223,3 +9223,122 @@ html.translucent[data-theme="dark"] .sidebar {
   0%, 55% { background: rgba(255, 212, 0, 0.28); }
   100% { background: transparent; }
 }
+
+/* ── Page outline: short lines at the page's right edge ────────────────────
+   A zero-height sticky strip in the page's scroller holds it, so it keeps its
+   place while the page scrolls. Pointing at the lines opens the headings by
+   name. A narrow page has no room for it, and the app's settings can turn it off. */
+
+.outline-anchor {
+  position: sticky;
+  z-index: 6;
+  top: calc(var(--topbar-h) + 24px);
+  height: 0;
+  pointer-events: none;
+}
+
+.outline {
+  position: absolute;
+  top: 0;
+  right: 14px;
+  display: flex;
+  max-height: 70vh;
+  flex-direction: column;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.outline__ticks {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: clamp(2px, calc(60vh / var(--outline-n) - 3px), 9px);
+  padding: 8px 4px 8px 12px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.outline__tick {
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink-4);
+  transition: background-color var(--t-fast, 120ms) ease, width var(--t-fast, 120ms) ease;
+}
+
+.outline__tick--1 { width: 18px; }
+.outline__tick--2 { width: 13px; }
+.outline__tick--3 { width: 8px; }
+
+.outline__tick.is-active {
+  background: var(--ink-2);
+}
+
+/* The headings, by name, in a card that opens beside the lines. */
+.outline__panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: none;
+  width: max-content;
+  min-width: 160px;
+  max-width: 260px;
+  max-height: 70vh;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border-radius: 10px;
+  background: var(--elevated);
+  box-shadow: var(--shadow-pop);
+  list-style: none;
+}
+
+.outline:hover .outline__panel,
+.outline:focus-within .outline__panel {
+  display: block;
+}
+
+.outline__item {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.outline__item--2 { padding-left: 20px; }
+.outline__item--3 { padding-left: 32px; }
+
+.outline__item:hover {
+  background: var(--fill-hover);
+  color: var(--ink);
+}
+
+.outline__item.is-active {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Not on a page too narrow to spare the margin (the side peek and the history
+   panel narrow the page too), nor when Settings turn it off. */
+@container page (max-width: 900px) {
+  .outline-anchor { display: none; }
+}
+
+html.no-outline .outline-anchor {
+  display: none;
+}
+
+@media print {
+  .outline-anchor { display: none; }
+}

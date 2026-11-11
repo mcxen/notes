@@ -235,6 +235,7 @@ type searchEntry struct{ page, label, words string }
 var searchEntries = []searchEntry{
 	{"general", labelPickerAtLaunch, "startup launch open picker last vault 启动 选择器 笔记库"},
 	{"appearance", labelTranslucent, "translucent vibrancy material transparent glass 半透明 侧栏 材质"},
+	{"appearance", labelOutline, "outline headings table of contents toc 大纲 目录 标题"},
 	{"vaults", "Recent vaults", "vault folder recent remove show finder explorer"},
 	{"vaults", "Add a vault", "new open folder"},
 	{"sync", "Remote vaults", "sync webdav smb remote cloud disconnect"},
@@ -336,6 +337,7 @@ const (
 	labelPickerAtLaunch = "Show the vault picker when Notes opens"
 	labelTranslucent    = "Translucent sidebar"
 	labelAutoUpdates    = "Check for updates automatically"
+	labelOutline        = "Show the page outline"
 )
 
 func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
@@ -389,20 +391,31 @@ func (s *settingsWindow) appearancePage(c *ui.Context, pal *palette) {
 		s.group(c, pal, tr("Window"), "", func() {
 			s.row(c, pal, tr(labelTranslucent), tr("Available on macOS."), nil)
 		})
-		return
-	}
-	s.group(c, pal, tr("Window"), tr("Light and dark follow the system, or the theme you pick in a vault's sidebar menu."), func() {
-		translucent := !s.st.OpaqueSidebar
-		s.row(c, pal, tr(labelTranslucent), tr("The sidebar shows the desktop through it, as Mac apps do."), func() {
-			toggle(c, "translucent", &translucent, tr(labelTranslucent), pal)
-		})
-		if translucent == s.st.OpaqueSidebar {
-			s.st.OpaqueSidebar = !translucent
-			s.save()
-			s.a.applyTranslucency()
-			if s.win != nil {
-				s.win.SetVibrancy(vibrancyFor(s.st))
+	} else {
+		s.group(c, pal, tr("Window"), tr("Light and dark follow the system, or the theme you pick in a vault's sidebar menu."), func() {
+			translucent := !s.st.OpaqueSidebar
+			s.row(c, pal, tr(labelTranslucent), tr("The sidebar shows the desktop through it, as Mac apps do."), func() {
+				toggle(c, "translucent", &translucent, tr(labelTranslucent), pal)
+			})
+			if translucent == s.st.OpaqueSidebar {
+				s.st.OpaqueSidebar = !translucent
+				s.save()
+				s.a.applyLook()
+				if s.win != nil {
+					s.win.SetVibrancy(vibrancyFor(s.st))
+				}
 			}
+		})
+	}
+	s.group(c, pal, tr("Page"), "", func() {
+		outline := !s.st.HideOutline
+		s.row(c, pal, tr(labelOutline), tr("Short lines at the page's right edge, one for each heading: point at them to see the headings, press one to go there. Pages with fewer than two headings, and narrow windows, have none."), func() {
+			toggle(c, "outline", &outline, tr(labelOutline), pal)
+		})
+		if outline == s.st.HideOutline {
+			s.st.HideOutline = !outline
+			s.save()
+			s.a.applyLook()
 		}
 	})
 }

@@ -40,7 +40,10 @@ if (new URLSearchParams(window.location.search).get("connect") === "1") {
      page must know before its first paint: the class is set first. */
   const look: Promise<void> = isMyGo()
     ? Notebooks.look().then(
-        value => { document.documentElement.classList.toggle("translucent", value.translucent); },
+        value => {
+          document.documentElement.classList.toggle("translucent", value.translucent);
+          document.documentElement.classList.toggle("no-outline", !value.outline);
+        },
         () => undefined,
       )
     : Promise.resolve();

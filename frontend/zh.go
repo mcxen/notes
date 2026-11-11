@@ -109,4 +109,7 @@ var zh = map[string]string{
 	"Last sync %s":             "上次同步 %s",
 	"Not synced yet.":          "尚未同步。",
 	"%s · %s · %d up, %d down, %d merged, %d conflicts": "%s · %s · 上传 %d，下载 %d，合并 %d，冲突 %d",
+	"Page":                  "页面",
+	"Show the page outline": "显示页面大纲",
+	"Short lines at the page's right edge, one for each heading: point at them to see the headings, press one to go there. Pages with fewer than two headings, and narrow windows, have none.": "页面右边缘的短横线，每个标题一条：指向它们查看标题，点击某条跳转到该处。标题少于两个的页面和较窄的窗口不显示。",
 }

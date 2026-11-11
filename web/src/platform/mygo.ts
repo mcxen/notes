@@ -61,6 +61,8 @@ export interface Info {
  */
 export interface Look {
   translucent: boolean;
+  /** Outline is whether pages show their outline. */
+  outline: boolean;
 }
 
 export interface Report {

@@ -2,6 +2,7 @@ import { CircleAlert, Clock3, Eye, FileText, NotebookPen, Plus, RotateCcw, Trash
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { DatabasePage } from "../features/database/DatabasePage";
 import { SidePeek, usePeekLayout } from "../features/database/SidePeek";
+import { PageOutline } from "../features/outline/PageOutline";
 import { DocumentEditor } from "../features/editor/DocumentEditor";
 import { linkedPageId } from "../features/editor/mentions";
 import { QuickFind } from "../features/quickfind/QuickFind";
@@ -30,7 +31,13 @@ const GraphView = lazy(() => import("../features/sidebar/GraphView").then((modul
 function OpenPage({ pageId, preview, readOnly }: { pageId: string; preview: NotePage | null; readOnly: boolean }) {
   const page = usePage(pageId);
   if (!page) return null;
-  return <DocumentEditor page={preview ?? page} readOnly={readOnly} historical={Boolean(preview)} />;
+  return (
+    <>
+      {/* An older version being read has its own words: no outline for it. */}
+      {preview ? null : <PageOutline tree={page.block_tree} />}
+      <DocumentEditor page={preview ?? page} readOnly={readOnly} historical={Boolean(preview)} />
+    </>
+  );
 }
 
 export function App() {

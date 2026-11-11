@@ -14,6 +14,8 @@ import (
 // is translucent. The page reads it when it loads.
 type Look struct {
 	Translucent bool `json:"translucent"`
+	// Outline is whether pages show their outline.
+	Outline bool `json:"outline"`
 }
 
 // Look returns the appearance the settings ask for.
@@ -22,7 +24,7 @@ func (n *Notebooks) Look(ctx context.Context) (Look, error) {
 	if err != nil {
 		return Look{}, err
 	}
-	return Look{Translucent: translucent(st)}, nil
+	return Look{Translucent: translucent(st), Outline: !st.HideOutline}, nil
 }
 
 // translucent reports whether the sidebar is translucent: on macOS, unless the
@@ -39,9 +41,10 @@ func vibrancyFor(st settings.Settings) mygo.Vibrancy {
 	return mygo.VibrancyNone
 }
 
-// applyTranslucency gives every open vault window the material the settings
-// now ask for, and reloads its page so the page draws the sidebar to match.
-func (a *appActions) applyTranslucency() {
+// applyLook gives every open vault window the material the settings now ask
+// for, and reloads its page so the page draws the sidebar and the outline to
+// match.
+func (a *appActions) applyLook() {
 	st, err := settings.Load(a.settings)
 	if err != nil {
 		return

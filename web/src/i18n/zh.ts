@@ -506,4 +506,5 @@ export const zh: Record<string, string> = {
   "{n} matches": "{n} 处匹配",
   "Row {n} options": "第 {n} 行选项",
   "Column {n} options": "第 {n} 列选项",
+  "Page outline": "页面大纲",
 };
