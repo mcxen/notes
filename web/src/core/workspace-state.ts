@@ -8,7 +8,7 @@ import type { PageVersion, SettingsRecord, WorkspaceMutation, WorkspacePreferenc
    drag handler clamps against the live window on top of this. */
 export const SIDEBAR_MIN_WIDTH = 168;
 export const SIDEBAR_MAX_WIDTH = 360;
-export const SIDEBAR_DEFAULT_WIDTH = 216;
+export const SIDEBAR_DEFAULT_WIDTH = 264;
 /** The folded list's rail — `--sidebar-rail` in the stylesheet. */
 export const SIDEBAR_RAIL_WIDTH = 46;
 

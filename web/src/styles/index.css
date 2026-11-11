@@ -179,7 +179,11 @@
      `src/hooks/useFold.ts` — below it the rail draws DIFFERENT controls, not
      smaller ones, so React needs the number too. */
   --fold: 560px;
-  --sidebar-w: 216px;
+  --sidebar-w: 264px;
+  /* The least the open sidebar may be: its head row (the views, search and
+     collapse) after the room macOS keeps for the traffic lights. Narrower, the
+     last buttons were pushed past its edge. */
+  --sidebar-head-w: 176px;
   --sidebar-rail: 46px;
   --sidebar-drawer: 232px;
   --column: 700px;
@@ -905,10 +909,11 @@ kbd {
   /* Where the page pane begins. A fixed-position panel is placed against the
      viewport but still INHERITS from here, which is how the side panels know
      not to cover the navigator. */
-  --pane-left: var(--sidebar-w);
+  --pane-left: var(--sidebar-w-now);
   position: relative;
   display: grid;
-  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  --sidebar-w-now: max(var(--sidebar-w), calc(var(--mygo-titlebar-inset-left, 0px) + var(--sidebar-head-w)));
+  grid-template-columns: var(--sidebar-w-now) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   width: 100%;
   height: 100%;
@@ -3178,6 +3183,35 @@ h3.block__editable {
 
 .block__marker--bullet {
   font-size: calc(var(--read) * 1.15);
+}
+
+/* A toggle's triangle: points right, and turns down while it is open. */
+.block__marker--toggle {
+  margin-left: -2px;
+}
+
+.toggle-arrow {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  place-items: center;
+  border-radius: var(--r-xs);
+  color: var(--ink-3);
+  transition: background var(--t-fast) var(--e-out), color var(--t-fast) var(--e-out);
+}
+
+.toggle-arrow:hover {
+  background: var(--fill-hover);
+  color: var(--ink);
+}
+
+.toggle-arrow svg {
+  transition: transform var(--t-fast) var(--e-out);
+}
+
+.toggle-arrow.is-open svg {
+  transform: rotate(90deg);
 }
 
 .checkbox {
@@ -9186,6 +9220,18 @@ html.translucent[data-theme="dark"] .sidebar {
   font-size: 13px;
   white-space: nowrap;
   cursor: pointer;
+}
+
+.selection-bar__rule {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: var(--hairline-strong);
+}
+
+.selection-bar__btn.is-on {
+  background: var(--fill-active);
+  color: var(--ink);
 }
 
 .selection-bar__btn--icon {

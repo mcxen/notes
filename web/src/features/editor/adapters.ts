@@ -174,7 +174,8 @@ function markdownLine(block: Block, number: number, describe: DescribeMention): 
     case "heading2": return `## ${text}`;
     case "heading3": return `### ${text}`;
     case "todo": return `- [${block.checked ? "x" : " "}] ${text}`;
-    case "bullet": return `- ${text}`;
+    case "bullet":
+    case "toggle": return `- ${text}`;
     case "numbered": return `${number}. ${text}`;
     // Every line of a quote is quoted.
     case "quote": return text.split("\n").map((line) => `> ${line}`).join("\n");
@@ -206,7 +207,8 @@ export function readableTree(tree: BlockTree, titleOf: (pageId: string) => strin
  *  and a list numbered as it shows. */
 export function blockTreeToMarkdown(source: BlockTree, titleOf: (pageId: string) => string): string {
   const describe = readableDescriber(titleOf);
-  return layout(readableTree(source, titleOf)).rows
+  // Outside Notes nothing is folded: a toggle's lines are all written.
+  return layout(readableTree(source, titleOf), () => true).rows
     .map(({ block, depth, index }) => `${"  ".repeat(depth)}${markdownLine(block, index, describe)}`)
     .join("\n");
 }

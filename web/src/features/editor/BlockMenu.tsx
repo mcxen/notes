@@ -10,7 +10,7 @@ import { ColorMenu } from "./ColorMenu";
 import { t, tp } from "../../i18n";
 
 const TURN_INTO: BlockKind[] = [
-  "text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered",
+  "text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered", "toggle",
   "quote", "callout", "code", "divider",
 ];
 

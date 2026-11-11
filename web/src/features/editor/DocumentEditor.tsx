@@ -72,13 +72,17 @@ import { ImageViewer } from "./MediaBlocks";
 import { rememberCodeLanguage } from "./code-highlight";
 import { BlockMenu } from "./BlockMenu";
 import { SelectionBar } from "./SelectionBar";
+import { MARKS } from "./marks";
 import { clearReveal, onReveal, peekReveal } from "../quickfind/reveal";
 import { copyBlocksAsImage } from "./copy-image";
 import { BlockRow, type BlockActions, type LinkLine } from "./BlockRow";
 import {
   appendFragment,
   applyEditorTransaction,
+  blocksHaveMark,
   colorBlocks,
+  markBlocks,
+  selectionStyle,
   convertBlock,
   convertBlocks,
   deleteAcrossBlocks,
@@ -207,7 +211,7 @@ type PageMenuProps = ComponentProps<typeof PageMenu>;
 /** What a row does, by name: each forwarded to the editor's handlers as
  *  they were drawn last (all but those with an answer of their own). */
 const ROW_ACTIONS: Record<Exclude<keyof BlockActions, "describeMention" | "showFile" | "writeTable">, true> = {
-  add: true, dragOver: true, drop: true, toggleCheck: true, openBacklinks: true,
+  add: true, dragOver: true, drop: true, toggleCheck: true, toggleOpen: true, openBacklinks: true,
   toggleLink: true, openLinkMenu: true, rowDragStart: true, rowDragEnd: true, openBlockMenu: true,
   openLinkedPage: true, setLanguage: true, copyCode: true, change: true, keyDown: true, paste: true, pickIcon: true,
   pickFile: true, downloadFile: true, resizeCard: true,
@@ -220,7 +224,7 @@ const ROW_ACTIONS: Record<Exclude<keyof BlockActions, "describeMention" | "showF
  *  would vanish from sight. */
 function dropEdge(target: Block, bounds: DOMRect, x: number, y: number): "above" | "below" | "inside" {
   const past = y > bounds.top + bounds.height / 2;
-  const nested = past && blockDefinition(target.kind).canHaveChildren && target.kind !== "page" && x > bounds.left + 48;
+  const nested = past && blockDefinition(target.kind).canHaveChildren && target.kind !== "page" && !(target.kind === "toggle" && target.collapsed) && x > bounds.left + 48;
   return nested ? "inside" : past ? "below" : "above";
 }
 
@@ -340,7 +344,11 @@ export function DocumentEditor({
   const articleRef = useRef<HTMLElement | null>(null);
   const caretX = useRef(0);
 
-  const { rows, items } = useMemo(() => layout(tree), [tree]);
+  /* A page that is only read cannot write a toggle's fold, so a reader's is
+     this window's alone; otherwise it is the line's own, for everyone. */
+  const [readerOpen, setReaderOpen] = useState<Record<string, boolean>>({});
+  const openOf = useCallback((block: Block) => (readOnly ? readerOpen[block.id] ?? !block.collapsed : !block.collapsed), [readOnly, readerOpen]);
+  const { rows, items } = useMemo(() => layout(tree, openOf), [tree, openOf]);
   const selectedIds = useMemo(() => {
     if (!blockSelection) return [] as string[];
     const from = rows.findIndex((row) => row.block.id === blockSelection.anchor);
@@ -1644,6 +1652,10 @@ export function DocumentEditor({
       dragOver: onDragOver,
       drop: onDrop,
       toggleCheck: (block) => execute(updateBlockFields(tree, block.id, { checked: !block.checked })),
+      toggleOpen: (block) => {
+        if (readOnly) setReaderOpen((current) => ({ ...current, [block.id]: !(current[block.id] ?? !block.collapsed) }));
+        else execute({ ...updateBlockFields(tree, block.id, { collapsed: !block.collapsed })!, focus: undefined });
+      },
       openBacklinks: (pageId, anchor) => setBacklinksFor({ id: pageId, anchor }),
       toggleLink: (block) => setShown({ line: block.id, at: soleLinkOffset(block.content) }, !soleLink(block.content)?.expanded),
       openLinkMenu: (block, anchor) => setPageMenu({ from: "link", blockId: block.id, anchor }),
@@ -1965,6 +1977,7 @@ export function DocumentEditor({
       frames={frames}
       readOnly={readOnly}
       selected={selectedSet.has(row.block.id)}
+      open={openOf(row.block)}
       lonely={lonely}
       references={lineLink(row.block) ? linksOf(lineLink(row.block)!.page_id).length : undefined}
       linkLine={linkLineOf(row.block)}
@@ -2263,6 +2276,11 @@ export function DocumentEditor({
         <SelectionBar
           count={selectedIds.length}
           readOnly={readOnly}
+          marked={new Set(MARKS.filter(({ mark }) => blocksHaveMark(tree, selectedIds, mark)).map(({ mark }) => mark))}
+          styled={selectionStyle(tree, selectedIds)}
+          onMark={(mark) => executeOnBlocks(markBlocks(tree, selectedIds, mark))}
+          onTurnInto={(kind) => executeOnBlocks(convertBlocks(tree, selectedIds, kind))}
+          onColor={(color) => executeOnBlocks(colorBlocks(tree, selectedIds, color))}
           onCopy={() => document.execCommand("copy")}
           onCopyImage={() => copyAsImage(selectedIds)}
           onDelete={() => deleteSelected(selectedIds)}

@@ -21,6 +21,9 @@ export type Item =
     items: Item[];
   };
 
+/** A toggle is open unless it says it is folded. */
+export const defaultOpen = (block: Block): boolean => !block.collapsed;
+
 /** Depth-first order of the lines (`rows`), with list numbering restarted
  *  whenever a run of numbered siblings is interrupted — and the same rows
  *  nested in the blocks that hold them (`items`), for drawing. A block is not
@@ -30,7 +33,7 @@ export type Item =
  *  Nothing folds here. A block folded is folded for everyone: it is no longer
  *  drawn in place but stands on its row, as a sub-page does (composite.ts
  *  draws only the blocks whose rows are shown). */
-export function layout(tree: BlockTree): { rows: Rendered[]; items: Item[] } {
+export function layout(tree: BlockTree, open: (block: Block) => boolean = defaultOpen): { rows: Rendered[]; items: Item[] } {
   const rows: Rendered[] = [];
   const row = (block: Block, depth: number, index: number): Item => {
     const drawn = { block, depth, index };
@@ -46,6 +49,9 @@ export function layout(tree: BlockTree): { rows: Rendered[]; items: Item[] } {
       }
       run.value = block.kind === "numbered" ? run.value + 1 : 0;
       items.push(row(block, depth, run.value));
+      // A toggle folded hides what it holds: those lines are not drawn, nor
+      // walked by the caret.
+      if (block.kind === "toggle" && !open(block)) continue;
       items.push(...visit(block.id, depth + 1, { value: 0 }));
     }
     return items;

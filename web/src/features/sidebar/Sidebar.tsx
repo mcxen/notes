@@ -390,12 +390,15 @@ export function Sidebar() {
     if (!aside || !shell) return;
     const startX = event.clientX;
     const startWidth = aside.getBoundingClientRect().width;
-    const ceiling = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, window.innerWidth - 280));
+    // Never narrower than its head row needs after the traffic lights (macOS).
+    const inset = parseFloat(getComputedStyle(shell).getPropertyValue("--mygo-titlebar-inset-left")) || 0;
+    const floor = Math.max(SIDEBAR_MIN_WIDTH, Math.round(inset) + 176);
+    const ceiling = Math.min(SIDEBAR_MAX_WIDTH, Math.max(floor, window.innerWidth - 280));
     let width = startWidth;
     setResizing(true);
     shell.classList.add("is-resizing");
     const onMove = (move: PointerEvent) => {
-      width = Math.min(ceiling, Math.max(SIDEBAR_MIN_WIDTH, startWidth + move.clientX - startX));
+      width = Math.min(ceiling, Math.max(floor, startWidth + move.clientX - startX));
       shell.style.setProperty("--sidebar-w", `${width}px`);
     };
     const onUp = () => {

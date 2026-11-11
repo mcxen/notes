@@ -58,6 +58,7 @@ function blocksHtml(tree: BlockTree, parentId: string | null): string {
       case "heading3": html += `<h3>${inner}</h3>${children}`; break;
       case "todo": html += `<li>${block.checked ? "☑" : "☐"} ${inner}${children}</li>`; break;
       case "bullet":
+      case "toggle":
       case "numbered": html += `<li>${inner}${children}</li>`; break;
       case "quote": html += `<blockquote>${inner}</blockquote>${children}`; break;
       case "code": html += `<pre><code>${escapeHtml(inlinePlainText(block.content))}</code></pre>`; break;

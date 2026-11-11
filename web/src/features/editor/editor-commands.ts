@@ -7,7 +7,9 @@ import {
   orderedBlocks,
   pageLine,
 } from "../../core/block-tree";
-import { concatInlineContent, inlinePlainText, sliceInlineContent, splitInlineContent } from "../../core/inline-content";
+import {
+  applyMarkToRange, concatInlineContent, inlinePlainText, rangeHasMark, sliceInlineContent, splitInlineContent, type ToggleableMark,
+} from "../../core/inline-content";
 import type { Block, BlockKind, BlockMutation, BlockTree, Embed, InlineContent } from "../../core/types";
 
 export interface EditorTransaction {
@@ -163,6 +165,23 @@ export function splitBlock(
     mutations: [
       { action: "put", block: { ...block, content: left } },
       { action: "put", block: { ...nextBlock, content: right } },
+    ],
+    focus: { id: newId, offset: 0 },
+  };
+}
+
+/** Enter in an open toggle: its words are cut at the caret, and what was after
+ *  it starts a new line inside the toggle, first among its lines. */
+export function splitIntoToggle(tree: BlockTree, blockId: string, offset: number, newId: string): EditorTransaction | null {
+  const block = tree.by_id[blockId];
+  const inserted = block ? insertFirstChild(tree, blockId, newId, "text") : null;
+  if (!block || !inserted) return null;
+  const [left, right] = splitInlineContent(block.content, offset);
+  const child = (inserted.mutations[0] as Extract<BlockMutation, { action: "put" }>).block;
+  return {
+    mutations: [
+      { action: "put", block: { ...block, content: left } },
+      { action: "put", block: { ...child, content: right } },
     ],
     focus: { id: newId, offset: 0 },
   };
@@ -547,6 +566,50 @@ export function convertBlocks(tree: BlockTree, blockIds: readonly string[], kind
     .filter((block): block is Block => Boolean(block) && block.kind !== "page" && block.kind !== "table" && block.kind !== "embed")
     .flatMap((block) => convertBlock(tree, block.id, kind)?.mutations ?? []);
   return mutations.length ? { mutations } : null;
+}
+
+/** Whether a line's words are all in `mark`: every run of a line that has any. */
+function wholeLineHas(block: Block, mark: ToggleableMark): boolean {
+  const text = inlinePlainText(block.content);
+  return text.length > 0 && rangeHasMark(block.content, 0, text.length, mark);
+}
+
+/** The lines among `blockIds` whose words a mark applies to: the ones with words
+ *  that are not code (it has no marks), a file's caption included. */
+function markable(tree: BlockTree, blockIds: readonly string[]): Block[] {
+  return blockIds
+    .map((blockId) => tree.by_id[blockId])
+    .filter((block): block is Block => Boolean(block) && block.kind !== "code" && inlinePlainText(block.content).length > 0);
+}
+
+/** Whether `mark` is on in all the words of the selected lines — as the format
+ *  bar shows a mark pressed, so the next press clears it. False for no words. */
+export function blocksHaveMark(tree: BlockTree, blockIds: readonly string[], mark: ToggleableMark): boolean {
+  const lines = markable(tree, blockIds);
+  return lines.length > 0 && lines.every((block) => wholeLineHas(block, mark));
+}
+
+/** A mark set, or cleared when every line already has it, across all the words
+ *  of the selected lines: what pressing Bold does to a selection of blocks. */
+export function markBlocks(tree: BlockTree, blockIds: readonly string[], mark: ToggleableMark): EditorTransaction | null {
+  const on = !blocksHaveMark(tree, blockIds, mark);
+  const mutations = markable(tree, blockIds).flatMap((block) => {
+    const content = applyMarkToRange(block.content, 0, inlinePlainText(block.content).length, mark, on);
+    return updateBlockContent(tree, block.id, content)?.mutations ?? [];
+  });
+  return mutations.length ? { mutations } : null;
+}
+
+/** What the selected lines share: their kind when it is one kind for all, and
+ *  their colour when they have one in common. What the selection bar shows. */
+export function selectionStyle(tree: BlockTree, blockIds: readonly string[]): { kind?: Block["kind"]; color?: Block["color"] } {
+  const blocks = blockIds.map((blockId) => tree.by_id[blockId]).filter((block): block is Block => Boolean(block));
+  const kinds = new Set(blocks.map((block) => block.kind));
+  const colors = new Set(blocks.map((block) => block.color));
+  return {
+    ...(kinds.size === 1 ? { kind: blocks[0].kind } : {}),
+    ...(colors.size === 1 && blocks[0]?.color ? { color: blocks[0].color } : {}),
+  };
 }
 
 /** Colour, for every selected block but a divider or a folded block: a text

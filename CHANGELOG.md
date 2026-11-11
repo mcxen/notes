@@ -2,6 +2,9 @@
 
 ## 0.1.3
 
+- Toggle list, as in Notion: "/toggle" (or Turn into › Toggle list) makes a line with a triangle that folds what is under it. Whether it is open is kept with the line, so it is the same for everyone who reads the page; on a page you can only read, the triangle opens it for you alone. Enter in an open toggle starts a line inside it. Folded, its lines are left out of arrow-key movement, and still written out when the page is exported or copied.
+- Several selected paragraphs can be styled at once from the bar at the foot of the page: Turn into (headings, lists, toggle…), bold, italic, underline, strikethrough, code and colour, across all their words. The marks show pressed when every selected line has them, and a second press clears them.
+- The sidebar is wider by default (264 px) and never narrower than its top row needs after the window buttons; its search and collapse buttons were pushed past its edge on macOS.
 - First launch: with no vault yet, the window offers to create one at once. It asks for the folder (starting at Documents), then shows the location and a name ("My Notes"), both editable; New Vault makes the folder and opens it on a Welcome page. File › New Vault… opens the same form.
 
 ## 0.1.2

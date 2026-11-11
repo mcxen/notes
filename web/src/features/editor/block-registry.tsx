@@ -6,6 +6,7 @@ import {
   Heading2,
   Heading3,
   List,
+  ListCollapse,
   ListOrdered,
   Minus,
   Quote,
@@ -80,6 +81,15 @@ export const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
     kind: "numbered", label: "Numbered list",
     icon: ListOrdered, tag: "div", editable: true, continueAs: "numbered", shortcuts: ["1.", "1)"],
     canHaveChildren: true, placeholder: "List",
+  },
+  {
+    // Notion's toggle list: a line with a triangle that folds what is under it
+    // away. What it holds is its children (as a list item's are), and whether
+    // they are hidden is kept with the line (`collapsed`).
+    kind: "toggle", label: "Toggle list",
+    icon: ListCollapse, tag: "div", editable: true, continueAs: "text", shortcuts: [],
+    canHaveChildren: true, placeholder: "Toggle",
+    slash: { aliases: ["toggle", "collapse", "fold", "expand", "accordion", "disclosure", "dropdown"] },
   },
   {
     kind: "quote", label: "Quote",

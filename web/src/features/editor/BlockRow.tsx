@@ -55,6 +55,8 @@ export interface BlockRowProps {
   readOnly: boolean;
   selected: boolean;
   lonely: boolean;
+  /** A toggle: what it holds is shown. */
+  open?: boolean;
   dragging: boolean;
   dropEdge: "above" | "below" | "inside" | null;
   /** An upload this session is making for the block, if any. */
@@ -97,6 +99,8 @@ export interface BlockActions extends MediaActions, TableActions, EmbedActions {
   dragOver(block: Block, event: DragEvent<HTMLDivElement>): void;
   drop(event: DragEvent<HTMLDivElement>): void;
   toggleCheck(block: Block): void;
+  /** A toggle's triangle: fold what it holds, or show it. */
+  toggleOpen(block: Block): void;
   /** A line that is nothing but a link: show what it links here, by its
    *  mark… */
   toggleLink(block: Block): void;
@@ -184,7 +188,7 @@ function RowMark({
 }
 
 export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
-  const { block, depth, index, lineMarks = 0, frames = 0, readOnly, linkLine, actions } = props;
+  const { block, depth, index, lineMarks = 0, frames = 0, readOnly, linkLine, actions, open = true } = props;
   const definition = blockDefinition(block.kind);
   const done = block.kind === "todo" && block.checked === true;
   // Emptiness is a fact about the model, never about the DOM: a
@@ -262,6 +266,22 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
           </span>
         ) : null}
 
+        {block.kind === "toggle" ? (
+          <span className="block__marker block__marker--toggle">
+            <button
+              type="button"
+              className={`toggle-arrow ${open ? "is-open" : ""}`}
+              aria-label={open ? t("Collapse") : t("Expand")}
+              aria-expanded={open}
+              tabIndex={-1}
+              // The caret stays in the line it was in.
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => actions.toggleOpen(block)}
+            >
+              <ChevronRight size={16} />
+            </button>
+          </span>
+        ) : null}
         {block.kind === "bullet" ? <span className="block__marker block__marker--bullet" aria-hidden="true">{bulletFor(depth)}</span> : null}
         {block.kind === "numbered" ? <span className="block__marker block__marker--numbered" aria-hidden="true">{numberFor(index, depth)}</span> : null}
         {block.kind === "callout" ? (

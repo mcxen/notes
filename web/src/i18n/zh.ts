@@ -507,4 +507,8 @@ export const zh: Record<string, string> = {
   "Row {n} options": "第 {n} 行选项",
   "Column {n} options": "第 {n} 列选项",
   "Page outline": "页面大纲",
+  "Toggle list": "折叠列表",
+  "Toggle": "折叠",
+  "Collapse": "收起",
+  "Expand": "展开",
 };

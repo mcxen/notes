@@ -27,6 +27,7 @@ import {
   outdentBlocks,
   shiftBlocks,
   splitBlock,
+  splitIntoToggle,
   updateBlockContent,
 } from "./editor-commands";
 import { linkAddressBefore } from "../../core/autolink";
@@ -348,7 +349,11 @@ export function blockKeys(editor: Editor & BlockTyping) {
       }
       const caret = caretOffset(element);
       const newId = createId("block");
-      const split = splitBlock(tree, block.id, caret, newId, definition.continueAs);
+      // An open toggle's next line is inside it, first among what it holds —
+      // what follows the caret goes there; a folded one's is a line after it.
+      const split = block.kind === "toggle" && !block.collapsed
+        ? splitIntoToggle(tree, block.id, caret, newId)
+        : splitBlock(tree, block.id, caret, newId, definition.continueAs);
       // A web address the line ends in is linked as Enter finishes it, as a
       // space after it would — a step of its own, so ⌘Z gives back the words
       // and keeps the new line.
