@@ -41,6 +41,9 @@ type Settings struct {
 	// OpaqueSidebar turns off the translucent sidebar. It is translucent unless
 	// this is set, as the design asks.
 	OpaqueSidebar bool `json:"opaqueSidebar,omitempty"`
+	// UpdateSource is where updates are downloaded from: "" picks by language,
+	// "github" or "tvv" (the tvv.tw mirror) force one.
+	UpdateSource string `json:"updateSource,omitempty"`
 }
 
 // SetRemote records the remote folder of a working copy.

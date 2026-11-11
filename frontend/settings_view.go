@@ -517,6 +517,15 @@ func (s *settingsWindow) aboutPage(c *ui.Context, pal *palette) {
 		if !mygo.Updater.Enabled() {
 			return
 		}
+		s.row(c, pal, "Update source", "Automatic uses the tvv.tw mirror when the system language is Chinese, and GitHub otherwise. A failed or altered mirror download falls back to GitHub.", func() {
+			for _, choice := range updateSourceChoices {
+				if button(c, "update-source:"+choice, updateSourceName(choice), s.st.UpdateSource == choice, pal) && s.st.UpdateSource != choice {
+					s.st.UpdateSource = choice
+					s.save()
+					applyUpdateSource(choice)
+				}
+			}
+		})
 		auto := updater.AutomaticChecks()
 		s.row(c, pal, labelAutoUpdates, "Looks once a day and asks before installing.", func() {
 			toggle(c, "auto-updates", &auto, labelAutoUpdates, pal)

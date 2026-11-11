@@ -39,6 +39,9 @@ func Run() error {
 	actions := &appActions{notebooks: notebooks, settings: settingsPath()}
 	connections.app = actions
 	app.WhenReady(func() {
+		if st, err := settings.Load(actions.settings); err == nil {
+			applyUpdateSource(st.UpdateSource)
+		}
 		app.SetMenu(appMenu(actions))
 		actions.startup()
 	})

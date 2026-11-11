@@ -8837,6 +8837,13 @@ button.db__th:hover,
   padding-left: max(10px, calc(var(--mygo-titlebar-inset-left, 0px) - var(--sidebar-rail) + 8px));
 }
 
+/* Folded, the sidebar is the 46px rail, and the traffic lights (macOS) sit
+   over its top-left corner: its first button would be under them. The rail
+   starts below the title row there, as the open list's head does. */
+:root[data-platform="darwin"] .rail {
+  padding-top: calc(var(--topbar-h) + 4px);
+}
+
 .own-window-controls {
   --window-controls-w: 94px;
 }

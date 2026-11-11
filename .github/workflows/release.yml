@@ -130,3 +130,34 @@ jobs:
             grep -qxF "$want" assets.txt || { echo "::error::the release lacks $want" >&2; exit 1; }
           done
           gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+
+  # The release page also lists tvv.tw links for the installers, for readers
+  # who cannot reach GitHub's downloads directly. The app's own updates reach
+  # the mirror through frontend/update_mirror.go and fall back to GitHub.
+  mirror-links:
+    name: Add mirror links
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Append the tvv.tw links to the release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          tag="$GITHUB_REF_NAME"
+          notes="$RUNNER_TEMP/notes.md"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json body --jq '.body // ""' | sed '/^## Mirror downloads/,$d' > "$notes"
+          {
+            echo '## Mirror downloads'
+            echo
+            echo 'For networks that cannot reach GitHub downloads (tvv.tw mirror):'
+            echo
+            gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].url' | while IFS= read -r url; do
+              name="${url##*/}"
+              case "$name" in
+                update-*|*.json|*.delta|install.sh|install.ps1|SHA256SUMS) continue ;;
+              esac
+              echo "- [$name](https://tvv.tw/$url)"
+            done
+          } >> "$notes"
+          gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --notes-file "$notes"
