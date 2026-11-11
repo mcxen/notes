@@ -1,6 +1,7 @@
 import { useState, type CSSProperties } from "react";
 import type { Person } from "../core/types";
 import { Avatar } from "./Avatar";
+import { t } from "../i18n";
 
 /** A member's own profile picture, from the local notebook — `src` is the person's
  *  `avatarUrl`, which changes when their picture does — or, when they have
@@ -25,7 +26,7 @@ export function ProfileAvatar({
     return (
       <span className="avatar avatar--framed" style={{ "--avatar-size": `${size}px` } as CSSProperties} title={name}>
         <ProfileAvatar src={src} name={name} size={size} />
-        <span className="avatar__presence" aria-label="Online" />
+        <span className="avatar__presence" aria-label={t("Online")} />
       </span>
     );
   }

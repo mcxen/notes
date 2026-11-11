@@ -2,6 +2,7 @@ import { CircleAlert, Check, Info, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMountTransition } from "../hooks/useMountTransition";
+import { t } from "../i18n";
 
 export type ToastTone = "info" | "success" | "error";
 
@@ -35,7 +36,7 @@ function ToastRow({ toast, onClose }: { toast: ToastMessage; onClose(): void }) 
         {toast.tone === "success" ? <Check size={16} /> : toast.tone === "error" ? <CircleAlert size={16} /> : <Info size={16} />}
       </span>
       <span className="toast__message">{toast.message}</span>
-      <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Dismiss message">
+      <button className="icon-btn" onClick={() => setOpen(false)} aria-label={t("Dismiss message")}>
         <X size={13} />
       </button>
     </div>

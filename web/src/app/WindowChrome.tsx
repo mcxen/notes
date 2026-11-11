@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { currentWindow, isMyGo, runtime } from "mygo-runtime";
 import { events } from "../platform/mygo";
+import { t } from "../i18n";
 
 /* The window's own controls, drawn in the page on Windows and Linux, where the
    window has no system buttons (MyGo's HideWindowButtons). macOS keeps its
@@ -60,11 +61,11 @@ export function WindowControls({ maximizable = true }: { maximizable?: boolean }
   }, []);
 
   if (!ownWindowControls()) return null;
-  const maximizeLabel = maximized ? "Restore" : "Maximize";
+  const maximizeLabel = maximized ? t("Restore") : t("Maximize");
 
   return (
-    <div className="window-controls" role="group" aria-label="Window">
-      <button type="button" className="window-control" aria-label="Minimize" title="Minimize" onClick={() => void currentWindow.minimize()}>
+    <div className="window-controls" role="group" aria-label={t("Window")}>
+      <button type="button" className="window-control" aria-label={t("Minimize")} title={t("Minimize")} onClick={() => void currentWindow.minimize()}>
         <MinimizeIcon />
       </button>
       {maximizable && (
@@ -72,7 +73,7 @@ export function WindowControls({ maximizable = true }: { maximizable?: boolean }
           {maximized ? <RestoreIcon /> : <MaximizeIcon />}
         </button>
       )}
-      <button type="button" className="window-control window-control--close" aria-label="Close" title="Close" onClick={() => void currentWindow.close()}>
+      <button type="button" className="window-control window-control--close" aria-label={t("Close")} title={t("Close")} onClick={() => void currentWindow.close()}>
         <CloseIcon />
       </button>
     </div>

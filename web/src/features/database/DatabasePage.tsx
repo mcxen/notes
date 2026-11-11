@@ -7,6 +7,7 @@ import { linkedPageId } from "../editor/mentions";
 import { TitleField } from "../editor/TitleField";
 import { DatabaseViews } from "./DatabaseViews";
 import { usePage } from "../../app/workspace-store";
+import { t } from "../../i18n";
 
 /** A database opened as a page of its own: its name, large, above the same
  *  database a document shows inline. */
@@ -44,7 +45,7 @@ export function DatabaseSheet({ database, readOnly: heldReadOnly = false }: {
           <button
             type="button"
             className="doc__icon"
-            aria-label="Remove database icon"
+            aria-label={t("Remove database icon")}
             disabled={readOnly}
             onClick={() => updatePage(database.id, { icon: "" })}
           >
@@ -56,8 +57,8 @@ export function DatabaseSheet({ database, readOnly: heldReadOnly = false }: {
           className="doc__title"
           historyField="title"
           content={titleContent}
-          placeholder="New database"
-          label="Database title"
+          placeholder={t("New database")}
+          label={t("Database title")}
           readOnly={readOnly}
           onChange={(next) => updatePage(database.id, titleFields(next))}
           onOpenPage={(href, full) => {

@@ -6,6 +6,7 @@ import { rectOf, type AnchorRect } from "../../hooks/useAnchoredPosition";
 import { COLOR_NAMES } from "../../../schema";
 import { DEFAULT_GRAPH_SETTINGS, GRAPH_RANGES, MAX_GROUPS, MAX_QUERY, type GraphNumber } from "../../core/graph-settings";
 import type { ColorName, GraphSettings } from "../../core/types";
+import { t } from "../../i18n";
 
 type Section = keyof GraphSettings["open"];
 
@@ -116,7 +117,7 @@ function GroupColor({ color, label, onChange }: { color: ColorName; label: strin
         aria-expanded={Boolean(anchor)}
         onClick={(event) => setAnchor(anchor ? null : rectOf(event.currentTarget))}
       />
-      <Popover open={Boolean(anchor)} anchor={anchor} placement="bottom-start" role="dialog" label="Group colour" onDismiss={() => setAnchor(null)}>
+      <Popover open={Boolean(anchor)} anchor={anchor} placement="bottom-start" role="dialog" label={t("Group colour")} onDismiss={() => setAnchor(null)}>
         <div className="graph-group__colors">
           {COLOR_NAMES.map((choice) => (
             <button
@@ -165,26 +166,26 @@ export function GraphSettingsPanel({
   const nextColor = COLOR_NAMES.find((color) => !settings.groups.some((group) => group.color === color)) ?? "gray";
 
   return (
-    <section className="graph-settings" aria-label="Graph settings">
+    <section className="graph-settings" aria-label={t("Graph settings")}>
       <Part
         section="filters"
-        title="Filters"
+        title={t("Filters")}
         open={settings.open.filters}
         onToggle={toggle}
         actions={(
           <span className="graph-settings__actions">
-            <Tooltip label="Restore default settings">
+            <Tooltip label={t("Restore default settings")}>
               <button
                 type="button"
                 className="icon-btn icon-btn--sm"
-                aria-label="Restore default settings"
+                aria-label={t("Restore default settings")}
                 onClick={() => onChange({ ...DEFAULT_GRAPH_SETTINGS, open: settings.open })}
               >
                 <RotateCcw size={13} />
               </button>
             </Tooltip>
-            <Tooltip label="Close">
-              <button type="button" className="icon-btn icon-btn--sm" aria-label="Close graph settings" onClick={onClose}>
+            <Tooltip label={t("Close")}>
+              <button type="button" className="icon-btn icon-btn--sm" aria-label={t("Close graph settings")} onClick={onClose}>
                 <X size={14} />
               </button>
             </Tooltip>
@@ -196,39 +197,39 @@ export function GraphSettingsPanel({
           <input
             value={settings.search}
             maxLength={MAX_QUERY}
-            placeholder="Search pages…"
-            aria-label="Search pages"
+            placeholder={t("Search pages…")}
+            aria-label={t("Search pages")}
             spellCheck={false}
             onChange={(event) => set("search", event.target.value)}
           />
           {settings.search ? (
-            <button type="button" className="graph-settings__clear" aria-label="Clear search" onClick={() => set("search", "")}>
+            <button type="button" className="graph-settings__clear" aria-label={t("Clear search")} onClick={() => set("search", "")}>
               <X size={10} />
             </button>
           ) : null}
         </label>
-        {local ? <Slider label="Depth" name="depth" value={settings.depth} onChange={(value) => set("depth", value)} /> : null}
-        <Switch label="Database rows" checked={settings.rows} onChange={(value) => set("rows", value)} />
-        <Switch label="Orphans" checked={settings.orphans} onChange={(value) => set("orphans", value)} />
+        {local ? <Slider label={t("Depth")} name="depth" value={settings.depth} onChange={(value) => set("depth", value)} /> : null}
+        <Switch label={t("Database rows")} checked={settings.rows} onChange={(value) => set("rows", value)} />
+        <Switch label={t("Orphans")} checked={settings.orphans} onChange={(value) => set("orphans", value)} />
       </Part>
 
-      <Part section="groups" title="Groups" open={settings.open.groups} onToggle={toggle}>
+      <Part section="groups" title={t("Groups")} open={settings.open.groups} onToggle={toggle}>
         {settings.groups.map((group, index) => (
           <div key={index} className="graph-group">
-            <GroupColor color={group.color} label={`Group ${index + 1} colour`} onChange={(color) => setGroup(index, { color })} />
+            <GroupColor color={group.color} label={t("Group {n} colour", { n: index + 1 })} onChange={(color) => setGroup(index, { color })} />
             <input
               className="graph-group__query"
               value={group.query}
               maxLength={MAX_QUERY}
-              placeholder="Enter query…"
-              aria-label={`Group ${index + 1} query`}
+              placeholder={t("Enter query…")}
+              aria-label={t("Group {n} query", { n: index + 1 })}
               spellCheck={false}
               onChange={(event) => setGroup(index, { query: event.target.value })}
             />
             <button
               type="button"
               className="icon-btn icon-btn--sm"
-              aria-label={`Delete group ${index + 1}`}
+              aria-label={t("Delete group {n}", { n: index + 1 })}
               onClick={() => set("groups", settings.groups.filter((_, at) => at !== index))}
             >
               <X size={12} />
@@ -241,24 +242,24 @@ export function GraphSettingsPanel({
             className="btn graph-settings__button"
             onClick={() => set("groups", [...settings.groups, { query: "", color: nextColor }])}
           >
-            <Plus size={12} />New group
+            <Plus size={12} />{t("New group")}
           </button>
         ) : null}
       </Part>
 
-      <Part section="display" title="Display" open={settings.open.display} onToggle={toggle}>
-        <Switch label="Arrows" checked={settings.arrows} onChange={(value) => set("arrows", value)} />
-        <Slider label="Text fade threshold" short="Text fade" name="text_fade" value={settings.text_fade} onChange={(value) => set("text_fade", value)} />
-        <Slider label="Node size" name="node_size" value={settings.node_size} onChange={(value) => set("node_size", value)} />
-        <Slider label="Link thickness" name="link_thickness" value={settings.link_thickness} onChange={(value) => set("link_thickness", value)} />
-        <button type="button" className="btn graph-settings__button graph-settings__animate" onClick={onAnimate}>Animate</button>
+      <Part section="display" title={t("Display")} open={settings.open.display} onToggle={toggle}>
+        <Switch label={t("Arrows")} checked={settings.arrows} onChange={(value) => set("arrows", value)} />
+        <Slider label={t("Text fade threshold")} short="Text fade" name="text_fade" value={settings.text_fade} onChange={(value) => set("text_fade", value)} />
+        <Slider label={t("Node size")} name="node_size" value={settings.node_size} onChange={(value) => set("node_size", value)} />
+        <Slider label={t("Link thickness")} name="link_thickness" value={settings.link_thickness} onChange={(value) => set("link_thickness", value)} />
+        <button type="button" className="btn graph-settings__button graph-settings__animate" onClick={onAnimate}>{t("Animate")}</button>
       </Part>
 
-      <Part section="forces" title="Forces" open={settings.open.forces} onToggle={toggle}>
-        <Slider label="Center force" name="center_force" value={settings.center_force} onChange={(value) => set("center_force", value)} />
-        <Slider label="Repel force" name="repel_force" value={settings.repel_force} onChange={(value) => set("repel_force", value)} />
-        <Slider label="Link force" name="link_force" value={settings.link_force} onChange={(value) => set("link_force", value)} />
-        <Slider label="Link distance" name="link_distance" value={settings.link_distance} onChange={(value) => set("link_distance", value)} />
+      <Part section="forces" title={t("Forces")} open={settings.open.forces} onToggle={toggle}>
+        <Slider label={t("Center force")} name="center_force" value={settings.center_force} onChange={(value) => set("center_force", value)} />
+        <Slider label={t("Repel force")} name="repel_force" value={settings.repel_force} onChange={(value) => set("repel_force", value)} />
+        <Slider label={t("Link force")} name="link_force" value={settings.link_force} onChange={(value) => set("link_force", value)} />
+        <Slider label={t("Link distance")} name="link_distance" value={settings.link_distance} onChange={(value) => set("link_distance", value)} />
       </Part>
     </section>
   );

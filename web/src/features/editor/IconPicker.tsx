@@ -3,6 +3,7 @@ import { useMemo, useRef, useState, type DragEvent } from "react";
 import { Popover } from "../../components/Popover";
 import type { AnchorRect } from "../../hooks/useAnchoredPosition";
 import { COVERS, EMOJI_GROUPS, randomEmoji } from "./page-decoration";
+import { t } from "../../i18n";
 
 type Tab = "emoji" | "cover";
 
@@ -60,15 +61,15 @@ function EmojiPicker({ current, onPick, onRemove }: { current?: string; onPick(v
         <input
           autoFocus
           value={query}
-          placeholder="Filter…"
-          aria-label="Filter icons"
+          placeholder={t("Filter…")}
+          aria-label={t("Filter icons")}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <button type="button" className="icon-btn" aria-label="Random icon" onClick={() => onPick(randomEmoji())}>
+        <button type="button" className="icon-btn" aria-label={t("Random icon")} onClick={() => onPick(randomEmoji())}>
           <Shuffle size={15} />
         </button>
         {current ? (
-          <button type="button" className="icon-btn" aria-label="Remove" onClick={onRemove}>
+          <button type="button" className="icon-btn" aria-label={t("Remove")} onClick={onRemove}>
             <Trash2 size={15} />
           </button>
         ) : null}
@@ -77,7 +78,7 @@ function EmojiPicker({ current, onPick, onRemove }: { current?: string; onPick(v
       <div className="picker__body">
         {groups.map((group) => (
           <div key={group.name}>
-            <div className="picker__group-title">{group.name}</div>
+            <div className="picker__group-title">{t(group.name)}</div>
             <div className="picker__grid">
               {group.emoji.map((emoji) => (
                 <button
@@ -129,7 +130,7 @@ function CoverPicker({
   return (
     <>
       <div className="picker__tabs">
-        <span className="picker__tab-group" role="tablist" aria-label="Cover from">
+        <span className="picker__tab-group" role="tablist" aria-label={t("Cover from")}>
           {sources.map((item) => (
             <button
               type="button"
@@ -143,7 +144,7 @@ function CoverPicker({
             </button>
           ))}
         </span>
-        {current ? <button type="button" className="picker__remove" onClick={onRemove}>Remove</button> : null}
+        {current ? <button type="button" className="picker__remove" onClick={onRemove}>{t("Remove")}</button> : null}
       </div>
       {source === "gallery" ? (
         <div className="picker__covers">
@@ -153,7 +154,7 @@ function CoverPicker({
               key={cover.id}
               className={`picker__cover ${current === cover.id ? "is-selected" : ""}`}
               style={{ background: cover.background }}
-              aria-label={cover.name}
+              aria-label={t(cover.name)}
               onClick={() => onPick(cover.id)}
             />
           ))}
@@ -170,15 +171,15 @@ function CoverPicker({
           onDrop={drop}
         >
           <button type="button" className="btn btn--outline picker__upload-button" autoFocus onClick={() => fileInput.current?.click()}>
-            <Upload size={14} />Upload file
+            <Upload size={14} />{t("Upload file")}
           </button>
-          <p className="picker__hint">Or drop a picture here. Wider than 1500 pixels works best; up to 7.5 MB.</p>
+          <p className="picker__hint">{t("Or drop a picture here. Wider than 1500 pixels works best; up to 7.5 MB.")}</p>
           <input
             ref={fileInput}
             type="file"
             accept="image/*"
             hidden
-            aria-label="Cover picture"
+            aria-label={t("Cover picture")}
             onChange={(event) => {
               const file = event.currentTarget.files?.[0];
               event.currentTarget.value = "";

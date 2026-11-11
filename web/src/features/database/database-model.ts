@@ -14,6 +14,7 @@ import type {
   ViewSort,
 } from "../../core/types";
 import { capitalized } from "../../core/title";
+import { t } from "../../i18n";
 
 export const PROPERTY_LABELS: Record<PropertyType, string> = {
   text: "Text",
@@ -47,6 +48,14 @@ export function titleName(config: Pick<DatabaseConfig, "title_name">): string {
 /** What a layout is called: Table, Board, List, Gallery, Calendar. */
 export function viewKindLabel(kind: DatabaseViewKind): string {
   return capitalized(kind);
+}
+
+/** A view's name as shown: the ones the app gave ("Table", "Board 2") in the
+ *  page's language, the ones a person typed as they are. */
+export function viewDisplayName(name: string, kind: DatabaseViewKind): string {
+  if (!name) return t(viewKindLabel(kind));
+  const given = /^(Table|Board|List|Gallery|Calendar)(?: (\d+))?$/.exec(name);
+  return given ? `${t(given[1])}${given[2] ? ` ${given[2]}` : ""}` : name;
 }
 
 function availableName(taken: string[], base: string): string {

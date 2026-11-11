@@ -9,6 +9,7 @@ import { PROPERTY_LABELS, PROPERTY_TYPES, sortable, TITLE_COLUMN } from "./datab
 import { PropertyIcon, TitleIcon, TypeIcon } from "./properties";
 import { PropertyIconPicker } from "./PropertyIconPicker";
 import { StatusOptionsMenu, type StatusEditing } from "./StatusOptions";
+import { t } from "../../i18n";
 
 const GROUP = "property-menu";
 
@@ -95,17 +96,17 @@ export function PropertyMenu({
 
   return (
     <>
-      <Popover open anchor={anchor} placement="bottom-start" label="Edit property" group={GROUP} onDismiss={onClose}>
+      <Popover open anchor={anchor} placement="bottom-start" label={t("Edit property")} group={GROUP} onDismiss={onClose}>
         <div className="prop-menu">
           <div className="prop-menu__head">
             <button
               type="button"
               ref={glyphRef}
               className={`prop-menu__glyph ${side === "icon" ? "is-open" : ""}`}
-              aria-label="Change icon"
+              aria-label={t("Change icon")}
               aria-haspopup="dialog"
               aria-expanded={side === "icon"}
-              title="Change icon"
+              title={t("Change icon")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => setSide((open) => (open === "icon" ? null : "icon"))}
             >
@@ -116,7 +117,7 @@ export function PropertyMenu({
               className="prop-menu__name"
               value={name}
               placeholder={placeholder}
-              aria-label="Property name"
+              aria-label={t("Property name")}
               data-history-field={`property-name:${column}`}
               data-page-id={databaseId}
               spellCheck={false}
@@ -135,7 +136,7 @@ export function PropertyMenu({
               }}
             />
           </div>
-          <MenuList label="Property">
+          <MenuList label={t("Property")}>
             {property?.type === "status" && statusEditing ? (
               <button
                 type="button"
@@ -149,7 +150,7 @@ export function PropertyMenu({
                 onClick={() => setSide((open) => (open === "status" ? null : "status"))}
               >
                 <span className="menu__icon"><SlidersHorizontal size={16} /></span>
-                <span className="menu__copy"><span className="menu__label">Edit property</span></span>
+                <span className="menu__copy"><span className="menu__label">{t("Edit property")}</span></span>
                 <span className="menu__hint"><ChevronRight size={14} /></span>
               </button>
             ) : null}
@@ -167,9 +168,9 @@ export function PropertyMenu({
                   onClick={() => setSide((open) => (open === "type" ? null : "type"))}
                 >
                   <span className="menu__icon"><Repeat size={16} /></span>
-                  <span className="menu__copy"><span className="menu__label">Change type</span></span>
+                  <span className="menu__copy"><span className="menu__label">{t("Change type")}</span></span>
                   <span className="menu__hint prop-menu__type">
-                    {PROPERTY_LABELS[property.type]}
+                    {t(PROPERTY_LABELS[property.type])}
                     <ChevronRight size={14} />
                   </span>
                 </button>
@@ -179,24 +180,24 @@ export function PropertyMenu({
             {/* Pictures have no order to sort by. */}
             {!property || sortable(property) ? (
               <>
-                <MenuItem icon={<ArrowUp size={16} />} label="Sort ascending" selected={sort === "asc"} onSelect={() => sortBy("asc")} />
-                <MenuItem icon={<ArrowDown size={16} />} label="Sort descending" selected={sort === "desc"} onSelect={() => sortBy("desc")} />
+                <MenuItem icon={<ArrowUp size={16} />} label={t("Sort ascending")} selected={sort === "asc"} onSelect={() => sortBy("asc")} />
+                <MenuItem icon={<ArrowDown size={16} />} label={t("Sort descending")} selected={sort === "desc"} onSelect={() => sortBy("desc")} />
                 {/* Notion's "Wrap text": on until it is turned off. The menu
                     stays open, so the column can be seen change. */}
                 {wrap === undefined ? null : (
-                  <MenuItem icon={<TextWrap size={16} />} label="Wrap text" selected={wrap} onSelect={() => onWrap(!wrap)} />
+                  <MenuItem icon={<TextWrap size={16} />} label={t("Wrap text")} selected={wrap} onSelect={() => onWrap(!wrap)} />
                 )}
                 <MenuDivider />
               </>
             ) : null}
             {property ? (
-              <MenuItem icon={<ArrowLeftToLine size={16} />} label="Insert left" onSelect={() => onInsert("left")} />
+              <MenuItem icon={<ArrowLeftToLine size={16} />} label={t("Insert left")} onSelect={() => onInsert("left")} />
             ) : null}
-            <MenuItem icon={<ArrowRightToLine size={16} />} label="Insert right" onSelect={() => onInsert("right")} />
+            <MenuItem icon={<ArrowRightToLine size={16} />} label={t("Insert right")} onSelect={() => onInsert("right")} />
             {property ? (
               <>
-                <MenuItem icon={<Copy size={16} />} label="Duplicate property" onSelect={() => { onClose(); onDuplicate(); }} />
-                <MenuItem icon={<Trash2 size={16} />} label="Delete property" tone="danger" onSelect={() => { onClose(); onDelete(); }} />
+                <MenuItem icon={<Copy size={16} />} label={t("Duplicate property")} onSelect={() => { onClose(); onDuplicate(); }} />
+                <MenuItem icon={<Trash2 size={16} />} label={t("Delete property")} tone="danger" onSelect={() => { onClose(); onDelete(); }} />
               </>
             ) : null}
           </MenuList>
@@ -237,17 +238,17 @@ export function PropertyMenu({
           open={typeOpen}
           anchor={typeOpen && typeRef.current ? rectOf(typeRef.current) : null}
           placement="right-start"
-          label="Change type"
+          label={t("Change type")}
           group={GROUP}
           onDismiss={() => setSide(null)}
         >
-          <MenuList label="Change type" autoFocus>
-            <div className="menu__section-title">Type</div>
+          <MenuList label={t("Change type")} autoFocus>
+            <div className="menu__section-title">{t("Type")}</div>
             {PROPERTY_TYPES.map((type) => (
               <MenuItem
                 key={type}
                 icon={<TypeIcon type={type} />}
-                label={PROPERTY_LABELS[type]}
+                label={t(PROPERTY_LABELS[type])}
                 selected={property.type === type}
                 onSelect={() => {
                   setSide(null);

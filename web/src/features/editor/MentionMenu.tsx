@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { dateLabel } from "../../core/inline-content";
 import { pageGlyph } from "./block-registry";
 import type { MentionItem } from "./mentions";
+import { t } from "../../i18n";
 
 /** The menu `@` and `[[` open: pages to mention (and, for `[[`, blocks), dates,
  *  and a new page by the name typed. The keyboard stays in the text — the editor moves the active
@@ -25,7 +26,7 @@ export function MentionMenu({
   }, [activeIndex]);
 
   if (!items.length) {
-    return <div className="menu slash mention-menu"><div className="slash__empty">No pages found</div></div>;
+    return <div className="menu slash mention-menu"><div className="slash__empty">{t("No pages found")}</div></div>;
   }
   const sections = [
     { title: "Pages", items: items.filter((item) => item.kind === "page") },
@@ -72,7 +73,7 @@ export function MentionMenu({
                     <span className="menu__icon"><Plus size={17} /></span>
                     <span className="menu__copy">
                       <span className="menu__label">New page “{item.title}”</span>
-                      <span className="menu__description">Inside this page</span>
+                      <span className="menu__description">{t("Inside this page")}</span>
                     </span>
                   </>
                 )}

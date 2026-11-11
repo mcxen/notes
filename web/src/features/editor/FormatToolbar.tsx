@@ -11,6 +11,7 @@ import { blockDefinition } from "./block-registry";
 import { ColorMenu } from "./ColorMenu";
 import { MARKS } from "./marks";
 import { isWebLink } from "../../core/inline-content";
+import { t } from "../../i18n";
 
 export interface FormatState {
   anchor: AnchorRect;
@@ -66,18 +67,18 @@ export function LinkForm({
       <input
         autoFocus
         value={value}
-        placeholder="Paste a link…"
+        placeholder={t("Paste a link…")}
         onChange={(event) => onValue(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !imeComposing(event)) { event.preventDefault(); onSubmit(); }
         }}
       />
       <button type="button" className="btn btn--primary" onMouseDown={(event) => event.preventDefault()} onClick={onSubmit}>
-        {linked ? "Update" : "Link"}
+        {linked ? t("Update") : t("Link")}
       </button>
       {linked ? (
         <button type="button" className="btn btn--danger" onMouseDown={(event) => event.preventDefault()} onClick={onRemove}>
-          Remove
+          {t("Remove")}
         </button>
       ) : null}
     </div>
@@ -155,7 +156,7 @@ export function FormatToolbar({
         placement="top-start"
         gap={8}
         role="toolbar"
-        label="Text formatting"
+        label={t("Text formatting")}
         group="format"
         onDismiss={onClose}
       >
@@ -169,7 +170,7 @@ export function FormatToolbar({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setTurnOpen((open) => !open)}
               >
-                {blockDefinition(state.kind).label}
+                {t(blockDefinition(state.kind).label)}
                 <ChevronDown size={13} />
               </button>
             ) : (
@@ -191,7 +192,7 @@ export function FormatToolbar({
                 type="button"
                 key={mark}
                 className={`icon-btn ${state.marks[mark] ? "is-on" : ""}`}
-                aria-label={label}
+                aria-label={t(label)}
                 aria-pressed={state.marks[mark]}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => onToggleMark(mark)}
@@ -203,7 +204,7 @@ export function FormatToolbar({
               type="button"
               ref={linkRef}
               className={`icon-btn ${state.link ? "is-on" : ""}`}
-              aria-label="Link"
+              aria-label={t("Link")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => { setHref(state.link ?? selectedAddress(state.text) ?? ""); setLinkOpen((open) => !open); }}
             >
@@ -213,7 +214,7 @@ export function FormatToolbar({
               type="button"
               ref={colorRef}
               className={`icon-btn format-bar__color ${state.color ? "is-on" : ""}`}
-              aria-label="Text color"
+              aria-label={t("Text color")}
               data-color={state.color}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => setColorOpen((open) => !open)}
@@ -225,8 +226,8 @@ export function FormatToolbar({
             <button
               type="button"
               className="icon-btn"
-              aria-label="Group"
-              title="Group"
+              aria-label={t("Group")}
+              title={t("Group")}
               onMouseDown={(event) => event.preventDefault()}
               onClick={onMakeBlock}
             >
@@ -240,7 +241,7 @@ export function FormatToolbar({
         open={colorOpen}
         anchor={colorRef.current ? rectOf(colorRef.current) : null}
         placement="bottom-start"
-        label="Text color"
+        label={t("Text color")}
         group="format"
         onDismiss={() => setColorOpen(false)}
         closeOnScroll={false}
@@ -254,12 +255,12 @@ export function FormatToolbar({
         open={turnOpen}
         anchor={turnRef.current ? rectOf(turnRef.current) : null}
         placement="bottom-start"
-        label="Turn into"
+        label={t("Turn into")}
         group="format"
         onDismiss={() => setTurnOpen(false)}
         closeOnScroll={false}
       >
-        <MenuList label="Turn into">
+        <MenuList label={t("Turn into")}>
           {TURN_INTO.map((kind) => {
             const definition = blockDefinition(kind);
             const Icon = definition.icon;
@@ -267,7 +268,7 @@ export function FormatToolbar({
               <MenuItem
                 key={kind}
                 icon={<Icon size={16} />}
-                label={definition.label}
+                label={t(definition.label)}
                 selected={state.ranges.length === 1 && kind === state.kind}
                 onSelect={() => {
                   setTurnOpen(false);
@@ -280,7 +281,7 @@ export function FormatToolbar({
           {onTurnIntoDatabase ? (
             <MenuItem
               icon={<Database size={16} />}
-              label="Database"
+              label={t("Database")}
               onSelect={() => { setTurnOpen(false); onTurnIntoDatabase(); }}
             />
           ) : null}
@@ -292,7 +293,7 @@ export function FormatToolbar({
         anchor={linkRef.current ? rectOf(linkRef.current) : null}
         placement="bottom-start"
         role="dialog"
-        label="Link"
+        label={t("Link")}
         group="format"
         onDismiss={(reason) => {
           setLinkOpen(false);

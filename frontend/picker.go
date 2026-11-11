@@ -51,13 +51,13 @@ func (p *picker) view(c *ui.Context) {
 		})
 		card(c, pal).Padding(22, 24, 20, 24).Gap(14).Children(func() {
 			ui.Column(c).Gap(4).Children(func() {
-				ui.Text(c, "Choose a vault").FontSize(20).FontWeight(650).TextColor(pal.text)
-				ui.Text(c, "A vault is a folder of notes. Open one you used before, or start a new one.").FontSize(13).TextColor(pal.textMuted)
+				ui.Text(c, tr("Choose a vault")).FontSize(20).FontWeight(650).TextColor(pal.text)
+				ui.Text(c, tr("A vault is a folder of notes. Open one you used before, or start a new one.")).FontSize(13).TextColor(pal.textMuted)
 			})
 			ui.Scroll(c.Key("recent")).Grow(1).MinHeight(0).Children(func() {
 				ui.Column(c).AlignItems(ui.Stretch).Gap(2).Children(func() {
 					if len(p.recent) == 0 {
-						ui.Text(c, "No vaults yet.").FontSize(13).TextColor(pal.textFaint).Padding(10, 12)
+						ui.Text(c, tr("No vaults yet.")).FontSize(13).TextColor(pal.textFaint).Padding(10, 12)
 					}
 					for _, folder := range p.recent {
 						row := ui.ButtonBase(c.Key("vault:"+folder)).Padding(8, 10).Gap(12).Radius(9).AlignItems(ui.Center).Label(p.a.recentLabel(folder))
@@ -86,14 +86,14 @@ func (p *picker) view(c *ui.Context) {
 				})
 			})
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				if button(c, "connect", "Connect to a Remote Folder…", false, pal) {
+				if button(c, "connect", tr("Connect to a Remote Folder…"), false, pal) {
 					go p.a.connect()
 				}
 				ui.Spacer(c)
-				if button(c, "open", "Open Folder…", false, pal) {
+				if button(c, "open", tr("Open Folder…"), false, pal) {
 					go p.a.openVault()
 				}
-				if button(c, "new", "New Vault…", true, pal) {
+				if button(c, "new", tr("New Vault…"), true, pal) {
 					go p.a.newVault()
 				}
 			})

@@ -9,10 +9,18 @@ import { UiProvider } from "./app/ui-context";
 import { WindowControls, markWindowChrome } from "./app/WindowChrome";
 import { WorkspaceProvider } from "./app/workspace-context";
 import { isMyGo } from "mygo-runtime";
+import { Fragment, type ReactNode } from "react";
+import { useLang } from "./i18n";
 import { Notebooks } from "./platform/mygo";
 import "./styles/index.css";
 
 markWindowChrome();
+
+/* Everything is mounted again when the language changes: each text reads it as
+   it is drawn, and a page drawn before must not keep the old words. */
+function Localized({ children }: { children: ReactNode }) {
+  return <Fragment key={useLang()}>{children}</Fragment>;
+}
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -20,9 +28,11 @@ const root = createRoot(document.getElementById("root")!);
 if (new URLSearchParams(window.location.search).get("connect") === "1") {
   root.render(
     <StrictMode>
-      <ErrorBoundary>
-        <ConnectRemote />
-      </ErrorBoundary>
+      <Localized>
+        <ErrorBoundary>
+          <ConnectRemote />
+        </ErrorBoundary>
+      </Localized>
     </StrictMode>,
   );
 } else {
@@ -41,17 +51,19 @@ if (new URLSearchParams(window.location.search).get("connect") === "1") {
        an error in the workspace itself: Try again opens it afresh. */
     root.render(
       <StrictMode>
-        {/* Outside the boundaries: the window's own buttons work even when the page fails. */}
-        <WindowControls />
-        <ErrorBoundary>
-          <WorkspaceProvider>
-            <ErrorBoundary>
-              <UiProvider>
-                <App />
-              </UiProvider>
-            </ErrorBoundary>
-          </WorkspaceProvider>
-        </ErrorBoundary>
+        <Localized>
+          {/* Outside the boundaries: the window's own buttons work even when the page fails. */}
+          <WindowControls />
+          <ErrorBoundary>
+            <WorkspaceProvider>
+              <ErrorBoundary>
+                <UiProvider>
+                  <App />
+                </UiProvider>
+              </ErrorBoundary>
+            </WorkspaceProvider>
+          </ErrorBoundary>
+        </Localized>
       </StrictMode>,
     );
   });

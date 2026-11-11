@@ -1,6 +1,7 @@
 import { isContentColor } from "./colors";
 import { isImageType, normalizeStoredFile } from "./files";
 import type { InlineContent, InlineMarks, InlineRun, Mention } from "./types";
+import { language, t } from "../i18n";
 
 /** A link a run may carry: an http(s) address, or a page of this workspace
  *  (`#<page id>`). "javascript:", "data:" and the rest are never kept. */
@@ -131,10 +132,11 @@ export function dateLabel(date: string, now?: Date): string {
   const [year, month, day] = date.split("-").map(Number);
   if (now) {
     const days = Math.round((Date.UTC(year, month - 1, day) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000);
-    if (days === 0) return "Today";
-    if (days === 1) return "Tomorrow";
-    if (days === -1) return "Yesterday";
+    if (days === 0) return t("Today");
+    if (days === 1) return t("Tomorrow");
+    if (days === -1) return t("Yesterday");
   }
+  if (language() === "zh") return `${year}年${month}月${day}日`;
   return `${MONTHS[month - 1] ?? ""} ${day}, ${year}`;
 }
 

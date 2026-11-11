@@ -9,6 +9,7 @@ import { useWorkspace } from "../../app/workspace-context";
 import { useUi } from "../../app/ui-context";
 import { usePages } from "../../app/workspace-store";
 import { pageGlyph } from "../editor/block-registry";
+import { t } from "../../i18n";
 
 function when(value: string | undefined): string {
   if (!value) return "";
@@ -33,7 +34,7 @@ export function TrashMenu({ anchor, onClose }: { anchor: AnchorRect | null; onCl
   const needle = query.trim().toLowerCase();
   const hits = useMemo(() => Object.values(pages)
     .filter((page) => page.archived)
-    .map((page) => ({ page, crumb: pageAncestry(pages, page.id).slice(0, -1).map((item) => pageName(item) || "Untitled").join(" / ") }))
+    .map((page) => ({ page, crumb: pageAncestry(pages, page.id).slice(0, -1).map((item) => pageName(item)).join(" / ") }))
     .filter(({ page, crumb }) => !needle || pageName(page).toLowerCase().includes(needle) || crumb.toLowerCase().includes(needle))
     .toSorted((left, right) => (right.page.archived_at ?? "").localeCompare(left.page.archived_at ?? "")), [needle, pages]);
 
@@ -47,14 +48,14 @@ export function TrashMenu({ anchor, onClose }: { anchor: AnchorRect | null; onCl
   };
 
   return (
-    <Popover open anchor={anchor} placement="top-start" role="dialog" label="Trash" onDismiss={onClose}>
+    <Popover open anchor={anchor} placement="top-start" role="dialog" label={t("Trash")} onDismiss={onClose}>
       <div className="move-to trash">
         <input
           autoFocus
           className="move-to__search"
           value={query}
-          placeholder="Search the trash"
-          aria-label="Search the trash"
+          placeholder={t("Search the trash")}
+          aria-label={t("Search the trash")}
           onChange={(event) => { setQuery(event.target.value); setActive(0); }}
           onKeyDown={(event) => {
             if (imeComposing(event)) return;
@@ -68,7 +69,7 @@ export function TrashMenu({ anchor, onClose }: { anchor: AnchorRect | null; onCl
             }
           }}
         />
-        <div className="move-to__list" ref={listRef} role="listbox" aria-label="Pages in the trash">
+        <div className="move-to__list" ref={listRef} role="listbox" aria-label={t("Pages in the trash")}>
           {hits.length ? hits.map(({ page, crumb }, index) => (
             <div
               key={page.id}
@@ -80,7 +81,7 @@ export function TrashMenu({ anchor, onClose }: { anchor: AnchorRect | null; onCl
             >
               <span className="move-to__icon" aria-hidden="true">{pageGlyph(page, 15)}</span>
               <span className="move-to__copy">
-                <span className="move-to__title">{pageName(page) || "Untitled"}</span>
+                <span className="move-to__title">{pageName(page)}</span>
                 {crumb ? <span className="move-to__crumb">{crumb}</span> : null}
               </span>
               <span className="trash__when">{when(page.archived_at)}</span>
@@ -88,7 +89,7 @@ export function TrashMenu({ anchor, onClose }: { anchor: AnchorRect | null; onCl
                 <button
                   type="button"
                   className="icon-btn icon-btn--sm"
-                  aria-label={`Restore ${pageName(page)}`}
+                  aria-label={t("Restore {name}", { name: pageName(page) })}
                   onClick={(event) => { event.stopPropagation(); restorePage(page.id); onClose(); }}
                 >
                   <RotateCcw size={14} />
@@ -97,8 +98,8 @@ export function TrashMenu({ anchor, onClose }: { anchor: AnchorRect | null; onCl
                   <button
                     type="button"
                     className="icon-btn icon-btn--sm"
-                    aria-label={`Delete ${pageName(page)} permanently`}
-                    onClick={(event) => { event.stopPropagation(); deletePage(page.id); toast("Deleted permanently", "success"); }}
+                    aria-label={t("Delete {name} permanently", { name: pageName(page) })}
+                    onClick={(event) => { event.stopPropagation(); deletePage(page.id); toast(t("Deleted permanently"), "success"); }}
                   >
                     <X size={14} />
                   </button>

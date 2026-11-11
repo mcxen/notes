@@ -55,10 +55,10 @@ func (c *Connections) OpenPicker(ctx context.Context) {
 func (c *Connections) Connect(ctx context.Context, req ConnectRequest) (string, error) {
 	cfg := settings.Remote{Kind: req.Kind, Address: req.Address, Share: req.Share, Folder: req.Folder, User: req.User, Domain: req.Domain}
 	if cfg.Kind != "webdav" && cfg.Kind != "smb" {
-		return "", errors.New("choose WebDAV or SMB")
+		return "", errors.New(tr("choose WebDAV or SMB"))
 	}
 	if cfg.Address == "" {
-		return "", errors.New("enter the address of the folder")
+		return "", errors.New(tr("enter the address of the folder"))
 	}
 	root, err := userDataDir()
 	if err != nil {
@@ -70,11 +70,11 @@ func (c *Connections) Connect(ctx context.Context, req ConnectRequest) (string, 
 	}
 	if err := mygo.Secrets.Set(passwordKey(folder), []byte(req.Password)); err != nil {
 		_ = os.RemoveAll(folder)
-		return "", fmt.Errorf("the password could not be saved: %w", err)
+		return "", fmt.Errorf("%s: %w", tr("the password could not be saved"), err)
 	}
 	if _, err := runSync(ctx, folder, cfg); err != nil {
 		cleanupConnect(folder)
-		return "", fmt.Errorf("the folder could not be reached: %w", err)
+		return "", fmt.Errorf("%s: %w", tr("the folder could not be reached"), err)
 	}
 	st, err := settings.Load(settingsPath())
 	if err != nil {

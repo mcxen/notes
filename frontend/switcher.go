@@ -61,7 +61,7 @@ func (c *Connections) entries(current string) []VaultEntry {
 		if cfg, ok := st.RemoteOf(folder); ok {
 			e.Remote = true
 			e.Name = cfg.Address
-			e.Detail = remoteKind(cfg.Kind) + " · working copy " + filepath.Base(folder)
+			e.Detail = remoteKind(cfg.Kind) + " · " + tr("working copy %s", filepath.Base(folder))
 		}
 		e.Missing = !isDirectory(folder)
 		out = append(out, e)
@@ -75,7 +75,7 @@ func (c *Connections) entries(current string) []VaultEntry {
 // is open already is brought forward, not opened twice.
 func (c *Connections) OpenVault(ctx context.Context, path string, newWindow bool) error {
 	if !isDirectory(path) {
-		return errors.New("this vault folder is no longer there")
+		return errors.New(tr("This vault folder is no longer there."))
 	}
 	caller := mygo.CallerWindow(ctx)
 	var here string

@@ -34,6 +34,7 @@ import {
 } from "./graph";
 import { GraphSettingsPanel } from "./GraphSettingsPanel";
 import { useGraphSettings } from "./useGraphSettings";
+import { t } from "../../i18n";
 
 /* Obsidian's graph: every page — blocks and a database's rows among them —
    as a dot, what holds what and what links to what as lines. In the side
@@ -561,11 +562,11 @@ export function GraphView({
 
   const tools = (
     <>
-        <Tooltip label="Around this page">
+        <Tooltip label={t("Around this page")}>
           <button
             type="button"
             className={`icon-btn ${local ? "is-active" : ""}`}
-            aria-label="Around this page"
+            aria-label={t("Around this page")}
             aria-pressed={local}
             disabled={!anchor}
             onClick={() => choose("local")}
@@ -573,27 +574,27 @@ export function GraphView({
             <LocateFixed size={16} />
           </button>
         </Tooltip>
-        <Tooltip label="Everything">
+        <Tooltip label={t("Everything")}>
           <button
             type="button"
             className={`icon-btn ${!local ? "is-active" : ""}`}
-            aria-label="Everything"
+            aria-label={t("Everything")}
             aria-pressed={!local}
             onClick={() => choose("all")}
           >
             <Orbit size={16} />
           </button>
         </Tooltip>
-        <Tooltip label="Fit to view">
-          <button type="button" className="icon-btn" aria-label="Fit to view" onClick={refit}>
+        <Tooltip label={t("Fit to view")}>
+          <button type="button" className="icon-btn" aria-label={t("Fit to view")} onClick={refit}>
             <Maximize size={16} />
           </button>
         </Tooltip>
-        <Tooltip label="Graph settings">
+        <Tooltip label={t("Graph settings")}>
           <button
             type="button"
             className={`icon-btn ${settingsOpen ? "is-active" : ""}`}
-            aria-label="Graph settings"
+            aria-label={t("Graph settings")}
             aria-pressed={settingsOpen}
             aria-expanded={settingsOpen}
             onClick={() => setSettingsOpen((open) => !open)}
@@ -602,8 +603,8 @@ export function GraphView({
           </button>
         </Tooltip>
         {onOpenAsPage ? (
-          <Tooltip label="Open as full page">
-            <button type="button" className="icon-btn" aria-label="Open as full page" onClick={onOpenAsPage}>
+          <Tooltip label={t("Open as full page")}>
+            <button type="button" className="icon-btn" aria-label={t("Open as full page")} onClick={onOpenAsPage}>
               <ArrowUpRight size={16} />
             </button>
           </Tooltip>
@@ -613,10 +614,10 @@ export function GraphView({
 
   return (
     <>
-      {variant === "sidebar" ? <div className="sidebar__tools" role="toolbar" aria-label="Graph">{tools}</div> : null}
+      {variant === "sidebar" ? <div className="sidebar__tools" role="toolbar" aria-label={t("Graph")}>{tools}</div> : null}
 
       <div ref={boxRef} className={`graph graph--${variant}`}>
-        {variant === "page" ? <div className="graph__tools" role="toolbar" aria-label="Graph">{tools}</div> : null}
+        {variant === "page" ? <div className="graph__tools" role="toolbar" aria-label={t("Graph")}>{tools}</div> : null}
         {drawn ? (
           <svg
             ref={svgRef}
@@ -671,7 +672,7 @@ export function GraphView({
                     data-tone={colors.get(node.id)}
                     role="button"
                     tabIndex={0}
-                    aria-label={`Open ${node.label}`}
+                    aria-label={t("Open {name}", { name: node.label })}
                     aria-current={node.id === anchor ? "page" : undefined}
                     onPointerEnter={() => { if (!gesture.current?.moved) setHovered(node.id); }}
                     onPointerLeave={() => setHovered((current) => (current === node.id ? null : current))}
@@ -707,7 +708,7 @@ export function GraphView({
         ) : (
           <div className="sidebar__empty">
             <Waypoints size={18} />
-            <p>Nothing to draw yet.</p>
+            <p>{t("Nothing to draw yet.")}</p>
           </div>
         )}
         {settingsOpen ? (

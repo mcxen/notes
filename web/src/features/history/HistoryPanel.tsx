@@ -8,6 +8,7 @@ import { useUi } from "../../app/ui-context";
 import { useWorkspaceState } from "../../app/workspace-store";
 import { isCurrent, versionList } from "../../core/versions";
 import { personName, ProfileAvatar } from "../../components/ProfileAvatar";
+import { t } from "../../i18n";
 
 const PANEL_EXIT_MS = 320;
 
@@ -97,16 +98,16 @@ export function HistoryPanel({
 
   return (
     <>
-      <button className={`panel__scrim ${shown ? "is-shown" : ""}`} aria-label="Close page history" onClick={onClose} />
-      <aside className={`panel ${shown ? "is-shown" : ""}`} aria-label="Page history">
+      <button className={`panel__scrim ${shown ? "is-shown" : ""}`} aria-label={t("Close page history")} onClick={onClose} />
+      <aside className={`panel ${shown ? "is-shown" : ""}`} aria-label={t("Page history")}>
         <header className="panel__head">
-          <h2>Page history</h2>
-          <button type="button" className="icon-btn" aria-label="Close page history" onClick={onClose}>
+          <h2>{t("Page history")}</h2>
+          <button type="button" className="icon-btn" aria-label={t("Close page history")} onClick={onClose}>
             <X size={17} />
           </button>
         </header>
 
-        <div className="panel__body scroller" role="listbox" aria-label="Versions">
+        <div className="panel__body scroller" role="listbox" aria-label={t("Versions")}>
           <button
             type="button"
             role="option"
@@ -114,7 +115,7 @@ export function HistoryPanel({
             className={`history-item history-item--current ${selected ? "" : "is-selected"}`}
             onClick={() => setSelectedId("")}
           >
-            <span className="history-item__time">Current version</span>
+            <span className="history-item__time">{t("Current version")}</span>
           </button>
           {groups.map(([group, items]) => (
             <section className="history-group" key={group}>
@@ -156,11 +157,11 @@ export function HistoryPanel({
             onClick={() => {
               if (!selected) return;
               restoreVersion(pageId, selected);
-              toast("Version restored", "success");
+              toast(t("Version restored"), "success");
               onClose();
             }}
           >
-            <RotateCcw size={15} />Restore
+            <RotateCcw size={15} />{t("Restore")}
           </button>
         </footer>
       </aside>

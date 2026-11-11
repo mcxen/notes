@@ -6,6 +6,7 @@ import { Popover } from "../../components/Popover";
 import type { AnchorRect } from "../../hooks/useAnchoredPosition";
 import { pageGlyph } from "./block-registry";
 import type { BlockReference } from "./mentions";
+import { t } from "../../i18n";
 
 /** The longest passage shown for one link. */
 const PASSAGE_LIMIT = 120;
@@ -32,7 +33,7 @@ export function BlockBacklinks({
   onClose(): void;
 }) {
   return (
-    <Popover open anchor={anchor} placement="bottom-start" label="Backlinks" group="page-menu" onDismiss={onClose}>
+    <Popover open anchor={anchor} placement="bottom-start" label={t("Backlinks")} group="page-menu" onDismiss={onClose}>
       <MenuList label={`Backlinks to ${name}`} autoFocus className="block-backlinks">
         <div className="menu__section-title block-backlinks__title">
           {references.length} backlink{references.length === 1 ? "" : "s"} to {name}

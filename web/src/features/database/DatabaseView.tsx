@@ -105,6 +105,7 @@ import {
   TITLE_COLUMN,
   titleName,
   toggleCardProperty,
+  viewDisplayName,
   viewKindLabel,
   viewRows,
   viewSorts,
@@ -131,6 +132,7 @@ import { CoverImage, useHomedCovers } from "../editor/CoverImage";
 import type { CardPreview } from "./database-model";
 import { sameItems, usePage, useWorkspaceState } from "../../app/workspace-store";
 import { VIEW_KINDS } from "../../../schema";
+import { t } from "../../i18n";
 
 // The marks columns can wear come with the database, drawn from its first table.
 provideIcons(columnIcons);
@@ -261,7 +263,7 @@ function RowName({
         <TitleField
           className={titleClass}
           content={pageTitleContent(row)}
-          placeholder="Untitled"
+          placeholder={t("Untitled")}
           label={label}
           historyField="title"
           focusOnMount={caret}
@@ -311,7 +313,7 @@ function RowPageMark({ row, className, size, onOpen }: {
     <button
       type="button"
       className={`${className} db__row-mark`}
-      aria-label={`Open ${row.title || "Untitled"}`}
+      aria-label={t("Open {name}", { name: row.title || t("Untitled") })}
       onClick={(event) => {
         event.stopPropagation();
         onOpen(row.id, fullPage(event));
@@ -340,8 +342,8 @@ const renameOnFreeSpace = (
 function RowActions({ row, onOpen }: { row: NotePage; onOpen(pageId: string, full?: boolean): void }) {
   return (
     <span className="db__row-actions">
-      <Tooltip label="Open">
-        <button type="button" className="db__open" aria-label={`Open ${row.title || "Untitled"}`} onClick={(event) => onOpen(row.id, fullPage(event))}>
+      <Tooltip label={t("Open")}>
+        <button type="button" className="db__open" aria-label={t("Open {name}", { name: row.title || t("Untitled") })} onClick={(event) => onOpen(row.id, fullPage(event))}>
           <Maximize2 size={13} />
         </button>
       </Tooltip>
@@ -621,8 +623,8 @@ function TableLayout({
             ))}
             {minimal ? null : (
               <th className="db__add-property">
-                <Tooltip label="Add property">
-                  <button type="button" aria-label="Add property" onClick={(event) => onAddProperty(rectOf(event.currentTarget))}>
+                <Tooltip label={t("Add property")}>
+                  <button type="button" aria-label={t("Add property")} onClick={(event) => onAddProperty(rectOf(event.currentTarget))}>
                     <Plus size={15} />
                   </button>
                 </Tooltip>
@@ -634,7 +636,7 @@ function TableLayout({
       </table>
       {readOnly ? null : (
         <button type="button" className="db__add-row" onClick={onAddInline}>
-          <Plus size={15} />New
+          <Plus size={15} />{t("New")}
         </button>
       )}
     </div>
@@ -675,7 +677,7 @@ function BoardLayout({
     <div className="board scroller">
       {columns.map((value) => {
         const items = rows.filter((row) => propertyValue(row, property) === value);
-        const label = value || `No ${propertyName(property)}`;
+        const label = value || t("No {name}", { name: propertyName(property) });
         return (
           <section
             key={value || "none"}
@@ -692,7 +694,7 @@ function BoardLayout({
                 <button
                   type="button"
                   className="icon-btn"
-                  aria-label={`New row in ${label}`}
+                  aria-label={t("New row in {name}", { name: label })}
                   onClick={() => onAddInline(value ? { [property.id]: value } : undefined)}
                 >
                   <Plus size={15} />
@@ -739,7 +741,7 @@ function BoardLayout({
                 className="board__add"
                 onClick={() => onAddInline(value ? { [property.id]: value } : undefined)}
               >
-                <Plus size={14} />New
+                <Plus size={14} />{t("New")}
               </button>
             )}
           </section>
@@ -773,8 +775,8 @@ function CardTitle({
       <TitleField
         className={`${className} card-title-input`}
         content={pageTitleContent(row)}
-        placeholder="Untitled"
-        label="Name"
+        placeholder={t("Untitled")}
+        label={t("Name")}
         historyField="title"
         focusOnMount="all"
         onChange={(next) => onRename(row, next)}
@@ -800,7 +802,7 @@ function CardTitle({
       }}
     >
       {row.icon ? <span aria-hidden="true">{row.icon}</span> : null}
-      <span className="card-open__name">{row.title ? <NameWords content={pageTitleContent(row)} /> : "Untitled"}</span>
+      <span className="card-open__name">{row.title ? <NameWords content={pageTitleContent(row)} /> : t("Untitled")}</span>
     </button>
   );
 }
@@ -808,11 +810,11 @@ function CardTitle({
 /** The pencil that appears on a card you point at, as on Notion's. */
 function CardRename({ row, onStartRename }: { row: NotePage; onStartRename(pageId: string): void }) {
   return (
-    <Tooltip label="Rename">
+    <Tooltip label={t("Rename")}>
       <button
         type="button"
         className="card-rename"
-        aria-label={`Rename ${row.title || "Untitled"}`}
+        aria-label={t("Rename {name}", { name: row.title || t("Untitled") })}
         onClick={() => onStartRename(row.id)}
       >
         <Pencil size={13} />
@@ -878,7 +880,7 @@ function ListLayout({
         </div>
       ))}
       <button type="button" className="db__add-row" onClick={onAddInline}>
-        <Plus size={15} />New
+        <Plus size={15} />{t("New")}
       </button>
     </div>
   );
@@ -963,7 +965,7 @@ function GalleryLayout({
       })}
       {readOnly ? null : (
         <button type="button" className="db-card db-card--new" onClick={() => onAddInline()}>
-          <Plus size={16} />New
+          <Plus size={16} />{t("New")}
         </button>
       )}
     </div>
@@ -1009,7 +1011,7 @@ function CalendarLayout({
       <div className="db-cal__bar">
         <strong className="db-cal__month">{month}</strong>
         <span className="db-cal__nav">
-          <button type="button" className="icon-btn icon-btn--sm" aria-label="Previous month" onClick={() => step(-1)}>
+          <button type="button" className="icon-btn icon-btn--sm" aria-label={t("Previous month")} onClick={() => step(-1)}>
             <ChevronLeft size={15} />
           </button>
           <button
@@ -1020,9 +1022,9 @@ function CalendarLayout({
               setCursor({ year: now.getFullYear(), month: now.getMonth() });
             }}
           >
-            Today
+            {t("Today")}
           </button>
-          <button type="button" className="icon-btn icon-btn--sm" aria-label="Next month" onClick={() => step(1)}>
+          <button type="button" className="icon-btn icon-btn--sm" aria-label={t("Next month")} onClick={() => step(1)}>
             <ChevronRight size={15} />
           </button>
         </span>
@@ -1046,7 +1048,7 @@ function CalendarLayout({
                 <button
                   type="button"
                   className="db-cal__add"
-                  aria-label={`New row on ${label}`}
+                  aria-label={t("New row on {name}", { name: label })}
                   onClick={() => onAdd({ [property.id]: key })}
                 >
                   <Plus size={12} />
@@ -1054,7 +1056,7 @@ function CalendarLayout({
               )}
               {items.slice(0, 3).map((row) => (
                 <button type="button" key={row.id} className="db-cal__item" data-page-id={row.id} onClick={(event) => onOpen(row.id, fullPage(event))}>
-                  {row.title || "Untitled"}
+                  {row.title || t("Untitled")}
                 </button>
               ))}
               {items.length > 3 ? <span className="db-cal__more">+{items.length - 3} more</span> : null}
@@ -1093,7 +1095,7 @@ function GallerySettings({
   ];
   return (
     <>
-      <div className="menu__section-title">Card preview</div>
+      <div className="menu__section-title">{t("Card preview")}</div>
       {choices.map((choice) => (
         <MenuItem
           key={choice.value}
@@ -1105,7 +1107,7 @@ function GallerySettings({
       ))}
       {properties.length ? (
         <>
-          <div className="menu__section-title">Properties</div>
+          <div className="menu__section-title">{t("Properties")}</div>
           {properties.map((property) => (
             <MenuItem
               key={property.id}
@@ -1266,8 +1268,8 @@ export function DatabaseView({
   const sorts = viewSorts(view, properties);
   const sortNames = sorts.map((sort) => sortColumns.find((column) => column.id === sort.property_id)?.label ?? "");
   // One key names its column, as Notion's chip does; several say how many.
-  const sortLabel = sorts.length > 1 ? `${sorts.length} sorts` : sortNames[0];
-  const sortTitle = sorts.length ? `Sorted by ${sortNames.join(", then ")}` : "Sort";
+  const sortLabel = sorts.length > 1 ? t("{n} sorts", { n: sorts.length }) : sortNames[0];
+  const sortTitle = sorts.length ? t("Sorted by {names}", { names: sortNames.join(t(", then ")) }) : t("Sort");
   const menuView = menu?.kind === "view" ? config.views.find((item) => item.id === menu.viewId) : undefined;
   const menuProperty = menuColumn && menuColumn !== TITLE_COLUMN ? properties.find((property) => property.id === menuColumn) : undefined;
   const newPropertyId = () => createId("property");
@@ -1440,14 +1442,14 @@ export function DatabaseView({
         type="button"
         className="db__view-switch"
         aria-haspopup="menu"
-        aria-label={`View: ${view.name || viewKindLabel(view.kind)}`}
+        aria-label={t("View: {name}", { name: viewDisplayName(view.name, view.kind) })}
         onClick={(event) => setMenu({ kind: "views", anchor: rectOf(event.currentTarget) })}
       >
         <ViewIcon kind={view.kind} />
-        <span className="view-tab__name">{view.name || viewKindLabel(view.kind)}</span>
+        <span className="view-tab__name">{viewDisplayName(view.name, view.kind)}</span>
         <ChevronDown size={14} />
       </button>
-      <div className="db__views" role="tablist" aria-label="Views" ref={tabsRef}>
+      <div className="db__views" role="tablist" aria-label={t("Views")} ref={tabsRef}>
         {config.views.map((item) => {
           const active = item.id === view.id;
           return (
@@ -1471,15 +1473,15 @@ export function DatabaseView({
               }}
             >
               <ViewIcon kind={item.kind} />
-              <span className="view-tab__name">{item.name || viewKindLabel(item.kind)}</span>
+              <span className="view-tab__name">{viewDisplayName(item.name, item.kind)}</span>
             </button>
           );
         })}
-        <Tooltip label="Add a view">
+        <Tooltip label={t("Add a view")}>
           <button
             type="button"
             className="view-tab view-tab--add"
-            aria-label="Add a view"
+            aria-label={t("Add a view")}
             onClick={(event) => setMenu({ kind: "add-view", anchor: rectOf(event.currentTarget) })}
           >
             <Plus size={15} />
@@ -1556,11 +1558,11 @@ export function DatabaseView({
         {title ? <div className="db__title">{title}</div> : <div className="db__tabs">{tabs}</div>}
         <div className="db__tools">
           {filterable.length && !readOnly ? (
-            <Tooltip label={view.filter ? `${filterProperty ? propertyName(filterProperty) : ""}: ${view.filter.value}` : "Filter"}>
+            <Tooltip label={view.filter ? `${filterProperty ? propertyName(filterProperty) : ""}: ${view.filter.value}` : t("Filter")}>
               <button
                 type="button"
                 className={`db__tool ${view.filter ? "is-on" : ""}`}
-                aria-label={view.filter ? `Filtered by ${filterProperty ? propertyName(filterProperty) : ""}: ${view.filter.value}` : "Filter"}
+                aria-label={view.filter ? t("Filtered by {name}", { name: `${filterProperty ? propertyName(filterProperty) : ""}: ${view.filter.value}` }) : t("Filter")}
                 onClick={(event) => setMenu({ kind: "filter", anchor: rectOf(event.currentTarget) })}
               >
                 <Filter size={15} />
@@ -1589,8 +1591,8 @@ export function DatabaseView({
             ref={searchRef}
             className={`db__search ${searchOpen ? "is-open" : ""}`}
             value={query}
-            aria-label="Search this database"
-            placeholder="Search…"
+            aria-label={t("Search this database")}
+            placeholder={t("Search…")}
             tabIndex={searchOpen ? 0 : -1}
             onChange={(event) => setQuery(event.target.value)}
             onBlur={() => { if (!query) setSearchOpen(false); }}
@@ -1600,11 +1602,11 @@ export function DatabaseView({
               setSearchOpen(false);
             }}
           />
-          <Tooltip label="Search">
+          <Tooltip label={t("Search")}>
             <button
               type="button"
               className="icon-btn"
-              aria-label="Search this database"
+              aria-label={t("Search this database")}
               onClick={() => {
                 setSearchOpen((open) => !open);
                 window.setTimeout(() => searchRef.current?.focus(), 60);
@@ -1615,18 +1617,18 @@ export function DatabaseView({
           </Tooltip>
           {readOnly ? (
             variant === "inline" ? (
-              <Tooltip label="Open as full page">
-                <button type="button" className="db__tool" aria-label="Open as full page" onClick={() => selectPage(databaseId)}>
+              <Tooltip label={t("Open as full page")}>
+                <button type="button" className="db__tool" aria-label={t("Open as full page")} onClick={() => selectPage(databaseId)}>
                   <ArrowUpRight size={16} />
                 </button>
               </Tooltip>
             ) : null
           ) : (
-            <Tooltip label="View and database settings">
+            <Tooltip label={t("View and database settings")}>
               <button
                 type="button"
                 className={`db__tool ${menu?.kind === "view" && menu.viewId === view.id ? "is-open" : ""}`}
-                aria-label="View and database settings"
+                aria-label={t("View and database settings")}
                 aria-haspopup="menu"
                 onClick={(event) => setMenu({ kind: "view", viewId: view.id, anchor: rectOf(event.currentTarget) })}
               >
@@ -1647,7 +1649,7 @@ export function DatabaseView({
           databaseId={databaseId}
           property={menuProperty ?? null}
           name={menuProperty ? menuProperty.name : config.title_name ?? titleLabel}
-          placeholder={menuProperty ? PROPERTY_LABELS[menuProperty.type] : "Name"}
+          placeholder={menuProperty ? t(PROPERTY_LABELS[menuProperty.type]) : t("Name")}
           icon={menuProperty ? menuProperty.icon : config.title_icon}
           sort={sorts.find((sort) => sort.property_id === menuColumn)?.direction}
           wrap={menuColumn === TITLE_COLUMN || menuProperty?.type === "text" ? columnWraps(view, menuColumn) : undefined}
@@ -1668,16 +1670,16 @@ export function DatabaseView({
         open={menu?.kind === "row" && Boolean(menuRow)}
         anchor={menu?.kind === "row" ? menu.anchor : null}
         placement="bottom-start"
-        label="Row"
+        label={t("Row")}
         onDismiss={() => setMenu(null)}
       >
         {menuRow ? (
-          <MenuList label="Row" autoFocus>
-            <MenuItem icon={<Maximize2 size={16} />} label="Open" onSelect={() => { setMenu(null); openRow(menuRow.id); }} />
+          <MenuList label={t("Row")} autoFocus>
+            <MenuItem icon={<Maximize2 size={16} />} label={t("Open")} onSelect={() => { setMenu(null); openRow(menuRow.id); }} />
             <MenuDivider />
             <MenuItem
               icon={<Trash2 size={16} />}
-              label="Delete"
+              label={t("Delete")}
               tone="danger"
               onSelect={() => {
                 setMenu(null);
@@ -1693,7 +1695,7 @@ export function DatabaseView({
         open={menu?.kind === "view" && Boolean(menuView)}
         anchor={menu?.kind === "view" ? menu.anchor : null}
         placement="bottom-start"
-        label="View settings"
+        label={t("View settings")}
         onDismiss={() => setMenu(null)}
       >
         {menuView ? (
@@ -1702,27 +1704,27 @@ export function DatabaseView({
             {config.views.length > 1 ? <input
               className="view-menu__name"
               value={menuView.name}
-              aria-label="View name"
+              aria-label={t("View name")}
               data-history-field={`view:${menuView.id}`}
               data-page-id={databaseId}
-              placeholder={viewKindLabel(menuView.kind)}
+              placeholder={t(viewKindLabel(menuView.kind))}
               onChange={(event) => saveView({ ...menuView, name: event.target.value })}
               onKeyDown={(event) => { if (event.key === "Enter" && !imeComposing(event)) setMenu(null); }}
             /> : null}
-            <MenuList label="View settings" autoFocus={config.views.length <= 1}>
-              <div className="menu__section-title">Layout</div>
+            <MenuList label={t("View settings")} autoFocus={config.views.length <= 1}>
+              <div className="menu__section-title">{t("Layout")}</div>
               {VIEW_KINDS.map((kind) => (
                 <MenuItem
                   key={kind}
                   icon={<ViewIcon kind={kind} size={16} />}
-                  label={viewKindLabel(kind)}
+                  label={t(viewKindLabel(kind))}
                   selected={menuView.kind === kind}
                   onSelect={() => changeLayout(menuView, kind)}
                 />
               ))}
               {menuView.kind === "board" && groupableProperties(properties).length > 1 ? (
                 <>
-                  <div className="menu__section-title">Group by</div>
+                  <div className="menu__section-title">{t("Group by")}</div>
                   {groupableProperties(properties).map((property) => (
                     <MenuItem
                       key={property.id}
@@ -1736,7 +1738,7 @@ export function DatabaseView({
               ) : null}
               {menuView.kind === "calendar" && properties.filter((property) => property.type === "date").length > 1 ? (
                 <>
-                  <div className="menu__section-title">Show by</div>
+                  <div className="menu__section-title">{t("Show by")}</div>
                   {properties.filter((property) => property.type === "date").map((property) => (
                     <MenuItem
                       key={property.id}
@@ -1758,7 +1760,7 @@ export function DatabaseView({
               <MenuDivider />
               <MenuItem
                 icon={<Copy size={16} />}
-                label="Duplicate view"
+                label={t("Duplicate view")}
                 onSelect={() => {
                   const copied = duplicateView(config, menuView.id, createId("view"));
                   if (!copied) return;
@@ -1770,7 +1772,7 @@ export function DatabaseView({
               {config.views.length > 1 ? (
                 <MenuItem
                   icon={<Trash2 size={16} />}
-                  label="Delete view"
+                  label={t("Delete view")}
                   tone="danger"
                   onSelect={() => {
                     const next = removeView(config, menuView.id);
@@ -1782,7 +1784,7 @@ export function DatabaseView({
               ) : (
                 <MenuItem
                   icon={<Plus size={16} />}
-                  label="Add a view"
+                  label={t("Add a view")}
                   onSelect={() => { if (menu?.anchor) setMenu({ kind: "add-view", anchor: menu.anchor }); }}
                 />
               )}
@@ -1794,13 +1796,13 @@ export function DatabaseView({
               {menuView.kind === "table" ? (
                 <MenuItem
                   icon={<Minimize2 size={16} />}
-                  label="Minimal table"
+                  label={t("Minimal table")}
                   selected={Boolean(menuView.minimal)}
                   onSelect={() => saveView({ ...menuView, minimal: !menuView.minimal })}
                 />
               ) : null}
               {variant === "inline" ? (
-                <MenuItem icon={<ArrowUpRight size={16} />} label="Open as full page" onSelect={() => { setMenu(null); selectPage(databaseId); }} />
+                <MenuItem icon={<ArrowUpRight size={16} />} label={t("Open as full page")} onSelect={() => { setMenu(null); selectPage(databaseId); }} />
               ) : null}
               {document ? (() => {
                 const convertible = databaseConvertible(document.state.pages, databaseId);
@@ -1815,15 +1817,15 @@ export function DatabaseView({
                     column: () => createId("col"),
                     row: () => createId("row"),
                   }, { now: new Date().toISOString(), author: platform.bootstrap.user.displayName }, ordersBetween);
-                  if ("refusal" in done) toast(done.refusal, "error");
+                  if ("refusal" in done) toast(t(done.refusal), "error");
                   else commitWrites(done.mutations);
                 };
                 if (convertible.table && convertible.list) return null;
                 return (
                   <>
-                    <div className="menu__section-title">Turn into</div>
-                    {convertible.table ? null : <MenuItem icon={<Table size={16} />} label="Table" onSelect={() => turn("table")} />}
-                    {convertible.list ? null : <MenuItem icon={<List size={16} />} label="List" onSelect={() => turn("list")} />}
+                    <div className="menu__section-title">{t("Turn into")}</div>
+                    {convertible.table ? null : <MenuItem icon={<Table size={16} />} label={t("Table")} onSelect={() => turn("table")} />}
+                    {convertible.list ? null : <MenuItem icon={<List size={16} />} label={t("List")} onSelect={() => turn("list")} />}
                   </>
                 );
               })() : null}
@@ -1836,16 +1838,16 @@ export function DatabaseView({
         open={menu?.kind === "views"}
         anchor={menu?.kind === "views" ? menu.anchor : null}
         placement="bottom-start"
-        label="Views"
+        label={t("Views")}
         onDismiss={() => setMenu(null)}
       >
-        <MenuList label="Views" autoFocus>
-          <div className="menu__section-title">Views</div>
+        <MenuList label={t("Views")} autoFocus>
+          <div className="menu__section-title">{t("Views")}</div>
           {config.views.map((item) => (
             <MenuItem
               key={item.id}
               icon={<ViewIcon kind={item.kind} size={16} />}
-              label={item.name || viewKindLabel(item.kind)}
+              label={viewDisplayName(item.name, item.kind)}
               selected={item.id === view.id}
               onSelect={() => { openView(item.id); setMenu(null); }}
             />
@@ -1853,12 +1855,12 @@ export function DatabaseView({
           <MenuDivider />
           <MenuItem
             icon={<SlidersHorizontal size={16} />}
-            label="Edit this view"
+            label={t("Edit this view")}
             onSelect={() => { if (menu?.anchor) setMenu({ kind: "view", viewId: view.id, anchor: menu.anchor }); }}
           />
           <MenuItem
             icon={<Plus size={16} />}
-            label="Add a view"
+            label={t("Add a view")}
             onSelect={() => { if (menu?.anchor) setMenu({ kind: "add-view", anchor: menu.anchor }); }}
           />
         </MenuList>
@@ -1868,16 +1870,16 @@ export function DatabaseView({
         open={menu?.kind === "add-view"}
         anchor={menu?.kind === "add-view" ? menu.anchor : null}
         placement="bottom-start"
-        label="Add a view"
+        label={t("Add a view")}
         onDismiss={() => setMenu(null)}
       >
-        <MenuList label="Add a view" autoFocus>
-          <div className="menu__section-title">Add a view</div>
+        <MenuList label={t("Add a view")} autoFocus>
+          <div className="menu__section-title">{t("Add a view")}</div>
           {VIEW_KINDS.map((kind) => (
             <MenuItem
               key={kind}
               icon={<ViewIcon kind={kind} size={16} />}
-              label={viewKindLabel(kind)}
+              label={t(viewKindLabel(kind))}
               onSelect={() => addView(kind)}
             />
           ))}
@@ -1888,10 +1890,10 @@ export function DatabaseView({
         open={menu?.kind === "filter"}
         anchor={menu?.kind === "filter" ? menu.anchor : null}
         placement="bottom-end"
-        label="Filter"
+        label={t("Filter")}
         onDismiss={() => setMenu(null)}
       >
-        <MenuList label="Filter" autoFocus>
+        <MenuList label={t("Filter")} autoFocus>
           {filterable.map((property) => (
             <div key={property.id} className="menu__group">
               <div className="menu__section-title">{propertyName(property)}</div>
@@ -1908,7 +1910,7 @@ export function DatabaseView({
           <MenuDivider />
           <MenuItem
             icon={<X size={16} />}
-            label="Clear filter"
+            label={t("Clear filter")}
             disabled={!view.filter}
             onSelect={() => { saveView({ ...view, filter: undefined }); setMenu(null); }}
           />
@@ -1919,7 +1921,7 @@ export function DatabaseView({
         open={menu?.kind === "sort"}
         anchor={menu?.kind === "sort" ? menu.anchor : null}
         placement="bottom-end"
-        label="Sort"
+        label={t("Sort")}
         onDismiss={() => setMenu(null)}
       >
         {/* Unsorted, Sort is the list of what to sort by; sorted, it is the
@@ -1927,8 +1929,8 @@ export function DatabaseView({
         {sorts.length ? (
           <SortPanel sorts={sorts} columns={sortColumns} onChange={saveSorts} />
         ) : (
-          <MenuList label="Sort by" autoFocus>
-            <div className="menu__section-title">Sort by</div>
+          <MenuList label={t("Sort by")} autoFocus>
+            <div className="menu__section-title">{t("Sort by")}</div>
             {sortColumns.map((column) => (
               <MenuItem
                 key={column.id}
@@ -1945,15 +1947,15 @@ export function DatabaseView({
         open={menu?.kind === "property"}
         anchor={menu?.kind === "property" ? menu.anchor : null}
         placement="bottom-start"
-        label="Add property"
+        label={t("Add property")}
         onDismiss={() => setMenu(null)}
       >
-        <MenuList label="Property type" autoFocus>
+        <MenuList label={t("Property type")} autoFocus>
           {PROPERTY_TYPES.map((type) => (
             <MenuItem
               key={type}
               icon={<TypeIcon type={type} />}
-              label={PROPERTY_LABELS[type]}
+              label={t(PROPERTY_LABELS[type])}
               onSelect={() => addColumn(type, properties.length)}
             />
           ))}

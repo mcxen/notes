@@ -34,6 +34,7 @@ import { LinkForm, linkHref, selectedAddress } from "./FormatToolbar";
 import { inlineFromNodes, keptOffset } from "./rich-text";
 import { focusRange, selectionOffsets, selectionRect } from "./selection";
 import { markForKey, MARKS } from "./marks";
+import { t } from "../../i18n";
 
 /* Words typed outside a page's paragraphs — a page's name (TitleField), a
    simple table's cell (SimpleTable) — in one line of `contenteditable` of
@@ -517,7 +518,7 @@ export function RichField({
         gap={8}
         placement="bottom-start"
         role="dialog"
-        label="Link"
+        label={t("Link")}
         group={POP_GROUP}
         closeOnScroll={false}
         onDismiss={closeBox}

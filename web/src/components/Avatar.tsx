@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { t } from "../i18n";
 
 const COLORS = ["#dd7359", "#4c8b7b", "#5578be", "#a567a9", "#b58a46"];
 
@@ -36,7 +37,7 @@ export function Avatar({
   return (
     <span className="avatar" style={style} title={name} aria-label={name}>
       {initials(name)}
-      {online === true ? <span className="avatar__presence" aria-label="Online" /> : null}
+      {online === true ? <span className="avatar__presence" aria-label={t("Online")} /> : null}
     </span>
   );
 }

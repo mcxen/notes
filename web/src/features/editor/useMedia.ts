@@ -10,6 +10,7 @@ import { homeFile, isImageType, refuseFiles, stageFile, type StagedFile } from "
 import type { UploadState } from "./MediaBlocks";
 import { spaceOfPage } from "../../core/page-tree";
 import type { Editor } from "./editor-state";
+import { t } from "../../i18n";
 
 /** Where files land: among a line's words, in place of `start` to `end`; or
  *  lines of their own, before or after a line, or in place of an empty one
@@ -123,7 +124,7 @@ export function useMedia(editor: Editor) {
     try {
       staged = await Promise.all(files.map((file) => stageFile(platform.files, file, place)));
     } catch {
-      toast("Could not read that file", "error");
+      toast(t("Could not read that file"), "error");
       return;
     }
     const current = latestTree();

@@ -2,6 +2,7 @@ import { ChevronDown, GripVertical, Plus, Trash2, X } from "lucide-react";
 import { useState, type DragEvent, type ReactNode } from "react";
 import { MenuItem, MenuList } from "../../components/Menu";
 import type { ViewSort } from "../../core/types";
+import { t } from "../../i18n";
 
 /** A column a view can be sorted by: its id (`TITLE_COLUMN` for the row
  *  names), its name and its mark. */
@@ -118,14 +119,14 @@ export function SortPanel({
           );
         })}
       </div>
-      <MenuList label="Sorts">
+      <MenuList label={t("Sorts")}>
         <MenuItem
           icon={<Plus size={16} />}
-          label="Add sort"
+          label={t("Add sort")}
           disabled={!unused.length}
           onSelect={() => { if (unused.length) onChange([...sorts, { property_id: unused[0].id, direction: "asc" }]); }}
         />
-        <MenuItem icon={<Trash2 size={16} />} label="Delete sort" onSelect={() => onChange([])} />
+        <MenuItem icon={<Trash2 size={16} />} label={t("Delete sort")} onSelect={() => onChange([])} />
       </MenuList>
     </div>
   );

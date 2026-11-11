@@ -18,6 +18,7 @@ import { useUi } from "./ui-context";
 import { pageAncestry } from "../core/page-tree";
 import { useWorkspace } from "./workspace-context";
 import { usePage, useWorkspaceState, useWorkspaceStore } from "./workspace-store";
+import { t } from "../i18n";
 
 /* Sharing, page history and the graph are loaded the first time they are opened. */
 const ShareDialog = lazy(() => import("../features/share/ShareDialog").then((module) => ({ default: module.ShareDialog })));
@@ -201,9 +202,9 @@ export function App() {
 
   if (loading) {
     return (
-      <div className="state-screen state-screen--loading" role="status" aria-label="Opening Notes">
+      <div className="state-screen state-screen--loading" role="status" aria-label={t("Opening Notes")}>
         <span className="state-screen__mark"><NotebookPen size={20} /></span>
-        <p>Opening Notes…</p>
+        <p>{t("Opening Notes…")}</p>
       </div>
     );
   }
@@ -212,9 +213,9 @@ export function App() {
     return (
       <main className="state-screen">
         <span className="state-screen__mark state-screen__mark--danger"><CircleAlert size={20} /></span>
-        <h1>Notes couldn’t open</h1>
+        <h1>{t("Notes couldn’t open")}</h1>
         <p>{error}</p>
-        <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>Try again</button>
+        <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>{t("Try again")}</button>
       </main>
     );
   }
@@ -257,25 +258,25 @@ export function App() {
             {historyPreview ? (
               <div className="history-banner" role="status">
                 <Clock3 size={14} />
-                <span>You are looking at an older version.</span>
+                <span>{t("You are looking at an older version.")}</span>
               </div>
             ) : trashedAt ? (
               <div className="history-banner trash-banner" role="status">
                 <Trash2 size={14} />
-                <span>In the trash</span>
+                <span>{t("In the trash")}</span>
                 <button type="button" className="btn btn--outline" onClick={() => restorePage(trashedAt, { select: false })}>
-                  <RotateCcw size={13} />Restore
+                  <RotateCcw size={13} />{t("Restore")}
                 </button>
                 {canEdit(trashedAt) ? (
-                  <button type="button" className="btn btn--danger" onClick={() => { deletePage(trashedAt); toast("Deleted permanently", "success"); }}>
-                    Delete permanently
+                  <button type="button" className="btn btn--danger" onClick={() => { deletePage(trashedAt); toast(t("Deleted permanently"), "success"); }}>
+                    {t("Delete permanently")}
                   </button>
                 ) : null}
               </div>
             ) : selectedKind && !canEdit(selectedPageId) ? (
               <div className="history-banner" role="status">
                 <Eye size={14} />
-                <span>You can only view this page.</span>
+                <span>{t("You can only view this page.")}</span>
               </div>
             ) : null}
 
@@ -286,9 +287,9 @@ export function App() {
             ) : (
               <div className="empty-page">
                 <FileText size={28} strokeWidth={1.4} />
-                <h1>No page open</h1>
+                <h1>{t("No page open")}</h1>
                 <button type="button" className="btn btn--primary" onClick={() => createPage(null, "document")}>
-                  <Plus size={15} />New page
+                  <Plus size={15} />{t("New page")}
                 </button>
               </div>
             )}

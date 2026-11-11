@@ -6,6 +6,7 @@ import { embedFromUrl, embedVerb } from "../../core/embeds";
 import type { Embed } from "../../core/types";
 import type { AnchorRect } from "../../hooks/useAnchoredPosition";
 import { isWebLink } from "../../core/inline-content";
+import { t } from "../../i18n";
 
 /* Notion's link card: a web link in a page rested on shows where it goes —
    and lets it be copied, edited, or, for a YouTube video or a post on X,
@@ -115,20 +116,20 @@ export function LinkHoverCard({
 }) {
   const embed = embedFromUrl(link.href);
   return (
-    <Popover open anchor={link.anchor} placement="bottom-start" gap={4} role="dialog" label="Link" onDismiss={onClose}>
+    <Popover open anchor={link.anchor} placement="bottom-start" gap={4} role="dialog" label={t("Link")} onDismiss={onClose}>
       <div className="link-card" onPointerEnter={onKeep} onPointerLeave={onRelease}>
         <a className="link-card__address" href={link.href} target="_blank" rel="noopener noreferrer" title={link.href} onClick={onClose}>
           <Globe size={14} aria-hidden="true" />
           <span className="link-card__url">{link.href}</span>
         </a>
-        <Tooltip label="Copy link">
-          <button type="button" className="link-card__icon" aria-label="Copy link" onClick={() => onCopy(link)}>
+        <Tooltip label={t("Copy link")}>
+          <button type="button" className="link-card__icon" aria-label={t("Copy link")} onClick={() => onCopy(link)}>
             <Copy size={14} />
           </button>
         </Tooltip>
-        {readOnly ? null : <button type="button" className="link-card__action" onClick={() => onEdit(link)}>Edit</button>}
+        {readOnly ? null : <button type="button" className="link-card__action" onClick={() => onEdit(link)}>{t("Edit")}</button>}
         {readOnly || !embed ? null : (
-          <button type="button" className="link-card__action" title={embedVerb(embed)} onClick={() => onEmbed(link, embed)}>Embed</button>
+          <button type="button" className="link-card__action" title={embedVerb(embed)} onClick={() => onEmbed(link, embed)}>{t("Embed")}</button>
         )}
       </div>
     </Popover>
@@ -161,12 +162,12 @@ export function CardOffer({
 }) {
   const items = [
     { label: embedVerb(offer.embed), run: onTake },
-    { label: "Keep as link", run: onKeepLink },
+    { label: t("Keep as link"), run: onKeepLink },
   ];
   return (
-    <Popover open anchor={offer.anchor} placement="bottom-start" label="Paste as" onDismiss={onKeepLink}>
-      <div className="menu card-offer" role="menu" aria-label="Paste as">
-        <div className="menu__section-title">Paste as</div>
+    <Popover open anchor={offer.anchor} placement="bottom-start" label={t("Paste as")} onDismiss={onKeepLink}>
+      <div className="menu card-offer" role="menu" aria-label={t("Paste as")}>
+        <div className="menu__section-title">{t("Paste as")}</div>
         {items.map((item, index) => (
           <button
             key={item.label}

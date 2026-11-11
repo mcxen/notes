@@ -8,6 +8,7 @@ import type { NotePage } from "../../core/types";
 import { useWorkspace } from "../../app/workspace-context";
 import { pageAncestry } from "../../core/page-tree";
 import { usePages } from "../../app/workspace-store";
+import { t } from "../../i18n";
 
 /** Notion's "Move to": the page picker that sends blocks — or a whole page —
  *  to another page. Recently edited pages come first; typing filters by title
@@ -55,7 +56,7 @@ export function MoveToMenu({
       .slice(0, 50);
   }, [allPages, needle, pages, spaceOf]);
   // Null is the top of Files, first when it is offered at all.
-  const top = Boolean(onMoveToTop) && (!needle || "top level".includes(needle) || "files".includes(needle));
+  const top = Boolean(onMoveToTop) && (!needle || "top level".includes(needle) || "files".includes(needle) || t("Files").toLowerCase().includes(needle));
   const options: Array<(typeof hits)[number] | null> = top ? [null, ...hits] : hits;
   const choose = (option: (typeof hits)[number] | null) => {
     if (option) onMove(option.page.id);
@@ -67,14 +68,14 @@ export function MoveToMenu({
   }, [active]);
 
   return (
-    <Popover open anchor={anchor} placement="bottom-start" role="dialog" label="Move to" onDismiss={onClose}>
+    <Popover open anchor={anchor} placement="bottom-start" role="dialog" label={t("Move to")} onDismiss={onClose}>
       <div className="move-to">
         <input
           autoFocus
           className="move-to__search"
           value={query}
-          placeholder={placeholder ?? (count > 1 ? `Move ${count} paragraphs to…` : "Move to…")}
-          aria-label="Page to move to"
+          placeholder={placeholder ?? (count > 1 ? t("Move {n} paragraphs to…", { n: count }) : t("Move to…"))}
+          aria-label={t("Page to move to")}
           onChange={(event) => { setQuery(event.target.value); setActive(0); }}
           onKeyDown={(event) => {
             if (imeComposing(event)) return;
@@ -88,7 +89,7 @@ export function MoveToMenu({
             }
           }}
         />
-        <div className="move-to__list" ref={listRef} role="listbox" aria-label="Pages">
+        <div className="move-to__list" ref={listRef} role="listbox" aria-label={t("Pages")}>
           {options.length ? options.map((hit, index) => (
             <button
               key={hit?.page.id ?? "top"}
@@ -104,15 +105,15 @@ export function MoveToMenu({
               </span>
               <span className="move-to__copy">
                 <span className="move-to__title">{hit ? pageName(hit.page) : "Top level"}</span>
-                {hit ? (hit.crumb ? <span className="move-to__crumb">{hit.crumb}</span> : null) : <span className="move-to__crumb">Files</span>}
+                {hit ? (hit.crumb ? <span className="move-to__crumb">{hit.crumb}</span> : null) : <span className="move-to__crumb">{t("Files")}</span>}
               </span>
               {hit?.shared ? (
-                <span className="move-to__shared" role="img" aria-label="Shared" title="Shared — what moves here is shared with everyone in it">
+                <span className="move-to__shared" role="img" aria-label={t("Shared")} title={t("Shared — what moves here is shared with everyone in it")}>
                   <Users size={13} />
                 </span>
               ) : null}
             </button>
-          )) : <p className="move-to__empty">No pages match</p>}
+          )) : <p className="move-to__empty">{t("No pages match")}</p>}
         </div>
       </div>
     </Popover>

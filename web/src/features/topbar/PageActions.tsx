@@ -24,6 +24,7 @@ import { LAND_EVENT, requestLanding } from "../editor/landing";
 import { MoveToMenu } from "../editor/MoveToMenu";
 import { PAGE_FONTS, pageFont } from "../editor/page-decoration";
 import { sameItems, usePage, useWorkspaceState } from "../../app/workspace-store";
+import { t } from "../../i18n";
 
 /* What a page's bar offers for the page it names: Share, the star, and the
    ··· menu — the same wherever the page is shown, full-page or in the side
@@ -107,7 +108,7 @@ export function PageActions({
       if (!moreRef.current) return;
       event.preventDefault();
       if (!canMove) {
-        toast(current.share_space_id ? "A shared page stays where it is shared" : "You can view this page, but not move it", "info");
+        toast(current.share_space_id ? t("A shared page stays where it is shared") : t("You can view this page, but not move it"), "info");
         return;
       }
       setMoreAnchor(null);
@@ -130,11 +131,11 @@ export function PageActions({
 
   return (
     <>
-      <Tooltip label={favorite ? "Remove from favorites" : "Add to favorites"}>
+      <Tooltip label={favorite ? t("Remove from favorites") : t("Add to favorites")}>
         <button
           type="button"
           className={`icon-btn topbar__star ${favorite ? "is-on" : ""}`}
-          aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+          aria-label={favorite ? t("Remove from favorites") : t("Add to favorites")}
           aria-pressed={favorite}
           onClick={() => toggleFavorite(page.id)}
         >
@@ -145,7 +146,7 @@ export function PageActions({
         ref={moreRef}
         type="button"
         className={`icon-btn ${moreAnchor ? "is-active" : ""}`}
-        aria-label="More page actions"
+        aria-label={t("More page actions")}
         aria-haspopup="menu"
         aria-expanded={Boolean(moreAnchor)}
         onClick={(event) => setMoreAnchor(moreAnchor ? null : rectOf(event.currentTarget))}
@@ -157,14 +158,14 @@ export function PageActions({
         open={Boolean(moreAnchor)}
         anchor={moreAnchor}
         placement="bottom-end"
-        label="Page actions"
+        label={t("Page actions")}
         onDismiss={() => setMoreAnchor(null)}
       >
-        <MenuList label="Page actions" className="menu--page" autoFocus>
+        <MenuList label={t("Page actions")} className="menu--page" autoFocus>
           {/* Notion opens this menu on the page's font. A pick leaves the
               menu open, so the page can be seen changing behind it. */}
           {editable && page.kind === "document" ? (
-            <div className="font-row" role="group" aria-label="Page font">
+            <div className="font-row" role="group" aria-label={t("Page font")}>
               {PAGE_FONTS.map((option) => (
                 <button
                   key={option.id}
@@ -176,8 +177,8 @@ export function PageActions({
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => { if (font !== option.id) updatePage(page.id, { font: option.id }); }}
                 >
-                  <span className="font-row__sample" aria-hidden="true">Ag</span>
-                  <span className="font-row__label">{option.label}</span>
+                  <span className="font-row__sample" aria-hidden="true">{t("Ag")}</span>
+                  <span className="font-row__label">{t(option.label)}</span>
                 </button>
               ))}
             </div>
@@ -185,17 +186,17 @@ export function PageActions({
           {shownIn ? (
             <MenuItem
               icon={<CornerUpLeft size={16} />}
-              label={`Open in ${pageName(shownIn)}`}
+              label={t("Open in {name}", { name: pageName(shownIn) })}
               onSelect={() => { setMoreAnchor(null); openInPage(); }}
             />
           ) : null}
           {editable ? (
-            <MenuItem icon={<Copy size={16} />} label="Duplicate" onSelect={() => { setMoreAnchor(null); duplicatePage(page.id); }} />
+            <MenuItem icon={<Copy size={16} />} label={t("Duplicate")} onSelect={() => { setMoreAnchor(null); duplicatePage(page.id); }} />
           ) : null}
           {movable ? (
             <MenuItem
               icon={<CornerDownRight size={16} />}
-              label="Move to"
+              label={t("Move to")}
               hint={moveShortcut ? "⌘⇧P" : undefined}
               onSelect={() => { setMoveAnchor(moreAnchor); setMoreAnchor(null); }}
             />
@@ -204,27 +205,27 @@ export function PageActions({
           {widthOption && editable ? (
             <MenuItem
               icon={<MoveHorizontal size={16} />}
-              label="Full width"
+              label={t("Full width")}
               selected={Boolean(page.full_width)}
               onSelect={() => { updatePage(page.id, { full_width: !page.full_width }); setMoreAnchor(null); }}
             />
           ) : null}
           {onHistory ? (
-            <MenuItem icon={<Clock3 size={16} />} label="Page history" onSelect={() => { setMoreAnchor(null); onHistory(); }} />
+            <MenuItem icon={<Clock3 size={16} />} label={t("Page history")} onSelect={() => { setMoreAnchor(null); onHistory(); }} />
           ) : null}
           <MenuDivider />
           {/* Where Notion keeps Undo too: in the page's own menu, with the
               shortcut that does the same thing from anywhere. */}
-          <MenuItem icon={<Undo2 size={16} />} label="Undo" hint="⌘Z" disabled={!canUndo()} onSelect={() => { setMoreAnchor(null); undo(); }} />
-          <MenuItem icon={<Redo2 size={16} />} label="Redo" hint="⌘⇧Z" disabled={!canRedo()} onSelect={() => { setMoreAnchor(null); redo(); }} />
+          <MenuItem icon={<Undo2 size={16} />} label={t("Undo")} hint="⌘Z" disabled={!canUndo()} onSelect={() => { setMoreAnchor(null); undo(); }} />
+          <MenuItem icon={<Redo2 size={16} />} label={t("Redo")} hint="⌘⇧Z" disabled={!canRedo()} onSelect={() => { setMoreAnchor(null); redo(); }} />
           {trashable ? (
             <>
               <MenuDivider />
               <MenuItem
                 icon={<Trash2 size={16} />}
-                label="Move to trash"
+                label={t("Move to trash")}
                 tone="danger"
-                onSelect={() => { setMoreAnchor(null); archivePage(page.id); toast("Moved to trash", "success"); }}
+                onSelect={() => { setMoreAnchor(null); archivePage(page.id); toast(t("Moved to trash"), "success"); }}
               />
             </>
           ) : null}
@@ -238,7 +239,7 @@ export function PageActions({
           anchor={moveAnchor}
           pages={moveTargets ?? []}
           count={1}
-          placeholder="Move page to…"
+          placeholder={t("Move page to…")}
           onMove={(targetId) => { setMoveAnchor(null); movePage(page.id, targetId); }}
           onMoveToTop={canMovePage(page.id, null)
             ? () => { setMoveAnchor(null); movePage(page.id, null); }

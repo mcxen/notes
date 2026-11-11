@@ -9,6 +9,7 @@ import { requestReveal } from "./reveal";
 import { useUi } from "../../app/ui-context";
 import { useWorkspaceState } from "../../app/workspace-store";
 import { pageGlyph } from "../editor/block-registry";
+import { t } from "../../i18n";
 
 export { quickFind };
 export type { Hit };
@@ -60,14 +61,14 @@ export function QuickFind() {
   };
 
   return (
-    <Modal open={quickFindOpen} label="Search pages" className="quickfind" onClose={() => setQuickFindOpen(false)}>
+    <Modal open={quickFindOpen} label={t("Search pages")} className="quickfind" onClose={() => setQuickFindOpen(false)}>
       <div className="quickfind__input">
         <Search size={18} />
         <input
           autoFocus
           value={query}
-          placeholder="Search pages…"
-          aria-label="Search pages"
+          placeholder={t("Search pages…")}
+          aria-label={t("Search pages")}
           onChange={(event) => { setQuery(event.target.value); setActive(0); }}
           onKeyDown={(event) => {
             if (imeComposing(event)) return;
@@ -85,7 +86,7 @@ export function QuickFind() {
         />
       </div>
 
-      <div className="menu scroller" role="listbox" aria-label="Results">
+      <div className="menu scroller" role="listbox" aria-label={t("Results")}>
         {hits.length ? hits.map((hit, index) => (
           <button
             type="button"

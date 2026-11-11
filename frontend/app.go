@@ -19,6 +19,9 @@ const appName = "Notes"
 func Run() error {
 	app := mygo.App
 	app.SetName(appName)
+	// The languages Notes speaks, before any window exists: MyGo's own words
+	// (menus, dialogs) follow the same choice.
+	app.SetLanguages(languages...)
 	// One process per user: two would each hold a vault in memory and save
 	// over one another. A second launch hands over to the first and exits.
 	if !app.RequestSingleInstanceLock() {
@@ -41,9 +44,16 @@ func Run() error {
 	app.WhenReady(func() {
 		if st, err := settings.Load(actions.settings); err == nil {
 			applyUpdateSource(st.UpdateSource)
+			applyLanguage(st.Language)
 		}
+		rememberLanguage()
 		app.SetMenu(appMenu(actions))
 		actions.startup()
+	})
+	app.OnLocaleChanged(func(string) {
+		rememberLanguage()
+		actions.refreshMenu()
+		actions.retitle()
 	})
 	app.OnSecondInstance(func([]string, string) { actions.bringForward() })
 	// On macOS the app stays open after its last window closes, as Mac apps
@@ -95,9 +105,20 @@ func (a *appActions) recentFolders() []string {
 // working copy by its address, a local vault by its folder name.
 func (a *appActions) recentLabel(folder string) string {
 	if cfg, ok := remoteOf(folder); ok {
-		return cfg.Address + " (remote)"
+		return cfg.Address + tr(" (remote)")
 	}
 	return filepath.Base(folder)
+}
+
+// retitle says the titles of the windows that are not a vault's again, after
+// the language changed. A vault's window is titled by its folder.
+func (a *appActions) retitle() {
+	if w := a.settingsWin; w != nil && !w.IsDestroyed() {
+		w.SetTitle(tr("Settings"))
+	}
+	if w := a.connectWin; w != nil && !w.IsDestroyed() {
+		w.SetTitle(tr("Connect to a Remote Folder"))
+	}
 }
 
 // refreshMenu rebuilds the menu, so Open Recent lists the latest vaults.
@@ -108,22 +129,22 @@ func (a *appActions) refreshMenu() {
 // openFolder shows a vault folder that was opened before.
 func (a *appActions) openFolder(folder string) {
 	if !isDirectory(folder) {
-		mygo.Dialog.Error(appName, "This vault folder is no longer there.")
+		mygo.Dialog.Error(appName, tr("This vault folder is no longer there."))
 		return
 	}
 	if err := a.open(folder); err != nil {
-		mygo.Dialog.Error(appName, "The folder could not be opened as a vault: "+err.Error())
+		mygo.Dialog.Error(appName, tr("The folder could not be opened as a vault: %v", err))
 	}
 }
 
 // openFromPicker opens a vault chosen in the picker, and closes the picker.
 func (a *appActions) openFromPicker(p *picker, folder string) {
 	if !isDirectory(folder) {
-		mygo.Dialog.Error(appName, "This vault folder is no longer there.")
+		mygo.Dialog.Error(appName, tr("This vault folder is no longer there."))
 		return
 	}
 	if err := a.open(folder); err != nil {
-		mygo.Dialog.Error(appName, "The folder could not be opened as a vault: "+err.Error())
+		mygo.Dialog.Error(appName, tr("The folder could not be opened as a vault: %v", err))
 		return
 	}
 	if p.win != nil {
@@ -185,12 +206,12 @@ func (a *appActions) bringForward() {
 
 // newVault asks for an empty or new folder and makes it a vault.
 func (a *appActions) newVault() {
-	a.chooseFolder("Choose a folder for the new vault")
+	a.chooseFolder(tr("Choose a folder for the new vault"))
 }
 
 // openVault asks for an existing vault folder.
 func (a *appActions) openVault() {
-	a.chooseFolder("Open a vault")
+	a.chooseFolder(tr("Open a vault"))
 }
 
 func (a *appActions) chooseFolder(title string) {
@@ -198,13 +219,13 @@ func (a *appActions) chooseFolder(title string) {
 		Title:             title,
 		Directory:         true,
 		CreateDirectories: true,
-		ButtonLabel:       "Choose",
+		ButtonLabel:       tr("Choose"),
 	})
 	if err != nil || len(folders) == 0 {
 		return
 	}
 	if err := a.open(folders[0]); err != nil {
-		mygo.Dialog.Error(appName, "The folder could not be opened as a vault: "+err.Error())
+		mygo.Dialog.Error(appName, tr("The folder could not be opened as a vault: %v", err))
 	}
 }
 
@@ -225,7 +246,7 @@ func (a *appActions) open(folder string) error {
 // connectWindowOptions is the window of the connect form.
 func connectWindowOptions() mygo.WindowOptions {
 	opts := mygo.WindowOptions{
-		Title:           "Connect to a Remote Folder",
+		Title:           tr("Connect to a Remote Folder"),
 		URL:             "/?connect=1",
 		Width:           440,
 		Height:          520,

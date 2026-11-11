@@ -5,6 +5,7 @@ import { Tooltip } from "../../components/Tooltip";
 import { imeComposing } from "../../core/keyboard";
 import type { AnchorRect } from "../../hooks/useAnchoredPosition";
 import { findPropertyIcons, PROPERTY_ICON_KEYS, propertyIcon } from "./property-icons";
+import { t } from "../../i18n";
 
 /** "arrow-up-right" → "Arrow up right", for the cell's name. */
 function iconLabel(key: string): string {
@@ -37,7 +38,7 @@ export function PropertyIconPicker({
   const keys = useMemo(() => findPropertyIcons(query), [query]);
 
   return (
-    <Popover open anchor={anchor} placement="bottom-start" role="dialog" label="Property icon" group={group} onDismiss={onClose}>
+    <Popover open anchor={anchor} placement="bottom-start" role="dialog" label={t("Property icon")} group={group} onDismiss={onClose}>
       <div className="picker picker--icons">
         <div className="picker__head">
           <label className="picker__filter">
@@ -45,8 +46,8 @@ export function PropertyIconPicker({
             <input
               autoFocus
               value={query}
-              placeholder="Filter…"
-              aria-label="Filter icons"
+              placeholder={t("Filter…")}
+              aria-label={t("Filter icons")}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
                 // Enter takes the first mark the filter found.
@@ -56,18 +57,18 @@ export function PropertyIconPicker({
               }}
             />
           </label>
-          <Tooltip label="Random">
+          <Tooltip label={t("Random")}>
             <button
               type="button"
               className="icon-btn picker__shuffle"
-              aria-label="Random icon"
+              aria-label={t("Random icon")}
               onClick={() => onPick(PROPERTY_ICON_KEYS[Math.floor(Math.random() * PROPERTY_ICON_KEYS.length)])}
             >
               <Shuffle size={15} />
             </button>
           </Tooltip>
           {current && propertyIcon(current) ? (
-            <button type="button" className="picker__remove" onClick={onRemove}>Remove</button>
+            <button type="button" className="picker__remove" onClick={onRemove}>{t("Remove")}</button>
           ) : null}
         </div>
         <div className="picker__body">

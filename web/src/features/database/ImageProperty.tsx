@@ -19,6 +19,7 @@ import {
 } from "../editor/file-store";
 import { ImageViewer, useFileUrl } from "../editor/MediaBlocks";
 import { MAX_ROW_IMAGES, propertyName, rowImages } from "./database-model";
+import { t } from "../../i18n";
 
 /* An Image property's pictures — Notion's Files & media, for pictures. Their
    bytes are stored the way an image block's are (`stageFile`: with the row,
@@ -159,7 +160,7 @@ function Thumb({ file, className, picture }: { file: StoredFile; className: stri
     <span
       className={`${className} ${failed ? "is-failed" : ""}`}
       data-picture={picture}
-      title={failed ? `${file.name} could not be loaded` : undefined}
+      title={failed ? t("{name} could not be loaded", { name: file.name }) : undefined}
       style={file.width && file.height ? { aspectRatio: `${file.width} / ${file.height}` } : undefined}
     >
       {/* A picture whose bytes never came says so, rather than waiting as an
@@ -285,16 +286,16 @@ export function ImageProperty({
   const add = async (picked: File[]) => {
     if (!platform || readOnly || !picked.length) return;
     const images = picked.filter((file) => isImageType(file.type));
-    if (images.length < picked.length) toast(`${name} holds images only.`, "error");
+    if (images.length < picked.length) toast(t("{name} holds images only.", { name }), "error");
     if (!images.length) return;
     const oversized = images.find((file) => file.size > MAX_FILE_BYTES);
     if (oversized) {
-      toast(`${oversized.name || "That image"} is larger than 7.5 MB.`, "error");
+      toast(t("{name} is larger than 7.5 MB.", { name: oversized.name || t("That image") }), "error");
       return;
     }
     const room = MAX_ROW_IMAGES - current().length;
     if (room <= 0) {
-      toast(`A cell holds up to ${MAX_ROW_IMAGES} images.`, "error");
+      toast(t("A cell holds up to {n} images.", { n: MAX_ROW_IMAGES }), "error");
       return;
     }
     const pictures = images.slice(0, room);
@@ -303,17 +304,17 @@ export function ImageProperty({
     try {
       staged = await Promise.all(pictures.map((file) => stageFile(platform.files, file, place)));
     } catch {
-      toast("Could not read that image", "error");
+      toast(t("Could not read that image"), "error");
       return;
     }
     const next = [...current(), ...staged.map((item) => item.file)];
     if (!fitsRow(workspace.document?.state.pages[row.id], property.id, next)) {
-      toast("This row cannot hold that many more pictures.", "error");
+      toast(t("This row cannot hold that many more pictures."), "error");
       return;
     }
     write(next);
     if (pictures.length < images.length) {
-      toast(`Added ${pictures.length} of ${images.length} — a cell holds up to ${MAX_ROW_IMAGES} images.`, "info");
+      toast(t("Added {done} of {all} — a cell holds up to {n} images.", { done: pictures.length, all: images.length, n: MAX_ROW_IMAGES }), "info");
     }
     for (const item of staged) {
       queueUpload(() => item.transfer())
@@ -321,7 +322,7 @@ export function ImageProperty({
           if (stored.preview) settleFile(workspace, row.id, property.id, item.file.path, stored);
         })
         .catch(() => {
-          toast(`${item.file.name} could not be uploaded`, "error");
+          toast(t("{name} could not be uploaded", { name: item.file.name }), "error");
           write(current().filter((file) => file.path !== item.file.path), false);
         });
     }
@@ -341,7 +342,7 @@ export function ImageProperty({
       event.stopPropagation();
       const pasted = pastedFiles(event.clipboardData);
       if (pasted.length) void addRef.current(pasted);
-      else toast("Nothing to add — copy an image first.", "info");
+      else toast(t("Nothing to add — copy an image first."), "info");
     };
     document.addEventListener("paste", onPaste, true);
     return () => document.removeEventListener("paste", onPaste, true);
@@ -434,7 +435,7 @@ export function ImageProperty({
           accept="image/*"
           multiple
           hidden
-          aria-label={`Add images to ${name}`}
+          aria-label={t("Add images to {name}", { name })}
           onChange={(event) => {
             const picked = [...(event.currentTarget.files ?? [])];
             event.currentTarget.value = "";
@@ -489,7 +490,7 @@ export function ImageProperty({
                     <button
                       type="button"
                       className="img-prop__open"
-                      title="View full size"
+                      title={t("View full size")}
                       aria-keyshortcuts={readOnly ? undefined : "Alt+ArrowUp Alt+ArrowDown"}
                       onKeyDown={(event) => moveByKey(event, file.path)}
                       onClick={() => {
@@ -507,7 +508,7 @@ export function ImageProperty({
                       <button
                         type="button"
                         className="icon-btn icon-btn--sm"
-                        aria-label={`Remove ${file.name}`}
+                        aria-label={t("Remove {name}", { name: file.name })}
                         onClick={() => write(current().filter((item) => item.path !== file.path))}
                       >
                         <X size={14} />
@@ -518,17 +519,17 @@ export function ImageProperty({
               })}
             </ul>
           ) : readOnly ? (
-            <p className="img-prop__empty">No images</p>
+            <p className="img-prop__empty">{t("No images")}</p>
           ) : null}
           {readOnly ? null : (
             <div className={`img-prop__upload ${files.length ? "" : "is-first"}`}>
               {files.length ? (
                 <button type="button" className="img-prop__add" onClick={() => input.current?.click()}>
-                  <Plus size={15} />Add images
+                  <Plus size={15} />{t("Add images")}
                 </button>
               ) : (
                 <button type="button" className="btn btn--primary img-prop__upload-button" onClick={() => input.current?.click()}>
-                  Upload images
+                  {t("Upload images")}
                 </button>
               )}
             </div>
@@ -545,7 +546,7 @@ export function ImageProperty({
             onStep: (delta) => setViewing((at) => (at === null ? at : Math.max(0, Math.min(files.length - 1, at + delta)))),
           }}
           onDownload={() => {
-            if (platform) void downloadFile(platform.files, shown).catch(() => toast("Could not download that file", "error"));
+            if (platform) void downloadFile(platform.files, shown).catch(() => toast(t("Could not download that file"), "error"));
           }}
           onClose={() => setViewing(null)}
         />

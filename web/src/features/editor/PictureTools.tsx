@@ -1,5 +1,6 @@
 import { AlignCenter, AlignLeft, AlignRight, Download, Maximize2 } from "lucide-react";
 import type { Block } from "../../core/types";
+import { t } from "../../i18n";
 
 const ALIGNMENTS = [
   { value: undefined, label: "Align left", Icon: AlignLeft },
@@ -39,13 +40,13 @@ export function PictureTools({
       onMouseDown={(event) => event.preventDefault()}
     >
       {readOnly ? null : (
-        <span className="picture-tools__group" role="group" aria-label="Align">
+        <span className="picture-tools__group" role="group" aria-label={t("Align")}>
           {ALIGNMENTS.map(({ value, label, Icon }) => (
             <button
               key={label}
               type="button"
               className={`block__image-tool ${align === value ? "is-active" : ""}`}
-              aria-label={label}
+              aria-label={t(label)}
               aria-pressed={align === value}
               onClick={() => onAlign(value)}
             >
@@ -54,10 +55,10 @@ export function PictureTools({
           ))}
         </span>
       )}
-      <button type="button" className="block__image-tool" aria-label="Download" onClick={onDownload}>
+      <button type="button" className="block__image-tool" aria-label={t("Download")} onClick={onDownload}>
         <Download size={14} />
       </button>
-      <button type="button" className="block__image-tool" aria-label="View full size" onClick={onView}>
+      <button type="button" className="block__image-tool" aria-label={t("View full size")} onClick={onView}>
         <Maximize2 size={14} />
       </button>
     </div>

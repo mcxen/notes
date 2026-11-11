@@ -8,6 +8,7 @@ import { pageAncestry } from "../../core/page-tree";
 import { usePage, useWorkspaceState } from "../../app/workspace-store";
 import type { NotePage } from "../../core/types";
 import { PageActions } from "./PageActions";
+import { t } from "../../i18n";
 
 const MAX_CRUMBS = 4;
 
@@ -72,7 +73,7 @@ export function TopBar({ onHistory }: { onHistory(): void }) {
   // Until the roster has been read, all presence gives is an id: no name.
   const nameOf = (userId: string) => {
     const member = memberOf(userId);
-    return member ? personName(member) : "Someone";
+    return member ? personName(member) : t("Someone");
   };
 
   /* Saving is a state, not news. At rest nothing is shown; while a write is
@@ -82,19 +83,19 @@ export function TopBar({ onHistory }: { onHistory(): void }) {
      bar on a narrow window for something that is true almost all of the
      time. */
   const saveLabel = saveStatus === "offline"
-    ? "Not saved yet — you’re offline. Keep this window open: it saves once you’re back online."
+    ? t("Not saved yet — you’re offline. Keep this window open: it saves once you’re back online.")
     : saveStatus === "refused"
-      ? "Some changes could not be saved and were undone. Everything else is saved."
-      : "Saving…";
+      ? t("Some changes could not be saved and were undone. Everything else is saved.")
+      : t("Saving…");
 
   return (
     <header className="topbar">
-      <nav className="topbar__crumbs" aria-label="Breadcrumb">
+      <nav className="topbar__crumbs" aria-label={t("Breadcrumb")}>
         {graphOpen ? (
           <span className="crumb__slot">
             <span className="crumb is-current" aria-current="page">
               <span className="crumb__icon" aria-hidden="true"><Waypoints size={14} /></span>
-              <span className="crumb__label">Graph</span>
+              <span className="crumb__label">{t("Graph")}</span>
             </span>
           </span>
         ) : crumbs.map((crumb, index) => (
@@ -121,7 +122,7 @@ export function TopBar({ onHistory }: { onHistory(): void }) {
             className={`save-state save-state--${saveStatus}`}
             role="status"
             aria-live="polite"
-            aria-label={saveStatus === "saved" ? "All changes saved" : saveLabel}
+            aria-label={saveStatus === "saved" ? t("All changes saved") : saveLabel}
             tabIndex={saveStatus === "saved" ? -1 : 0}
           />
         </Tooltip>
@@ -142,8 +143,8 @@ export function TopBar({ onHistory }: { onHistory(): void }) {
 
         {opened ? <OpenPageActions pageId={selectedPageId} compact={folded} onHistory={onHistory} /> : null}
         {graphOpen ? (
-          <Tooltip label="Close graph">
-            <button type="button" className="icon-btn" aria-label="Close graph" onClick={closeGraph}>
+          <Tooltip label={t("Close graph")}>
+            <button type="button" className="icon-btn" aria-label={t("Close graph")} onClick={closeGraph}>
               <X size={16} />
             </button>
           </Tooltip>

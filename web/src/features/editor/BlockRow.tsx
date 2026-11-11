@@ -12,6 +12,7 @@ import { InlineEditor } from "./InlineEditor";
 import { EmbedBlock, type EmbedActions } from "./EmbedBlock";
 import { FileBlock, type MediaActions, type UploadState } from "./MediaBlocks";
 import { SimpleTable, type TableActions } from "./SimpleTable";
+import { t } from "../../i18n";
 
 const BULLETS = ["•", "◦", "▪"];
 
@@ -149,11 +150,11 @@ function RowMark({
 }) {
   return (
     <span className="block__page-mark">
-      <Tooltip label="Show here" hint={readOnly ? "Right-click for more" : "Drag to move · right-click for more"}>
+      <Tooltip label={t("Show here")} hint={readOnly ? "Right-click for more" : "Drag to move · right-click for more"}>
         <button
           type="button"
           className={`block__page-toggle ${still ? "is-static" : ""}`}
-          aria-label={`Show ${label} here`}
+          aria-label={t("Show {name} here", { name: label })}
           aria-expanded={false}
           aria-haspopup="menu"
           disabled={disabled}
@@ -229,7 +230,7 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
           its frame. */}
       {props.replace ?? <div className="block__content">
         {readOnly ? null : (
-          <Tooltip label="Click to add below" hint="Alt-click to add above">
+          <Tooltip label={t("Click to add below")} hint="Alt-click to add above">
             <button
               type="button"
               className="block__add"
@@ -237,7 +238,7 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
               // The keyboard's way in is "/"; a stop on every line would
               // make tabbing through a page a crawl.
               tabIndex={-1}
-              aria-label="Add below"
+              aria-label={t("Add below")}
               // The caret stays where it was until the new line takes it.
               onMouseDown={(event) => event.preventDefault()}
               onClick={(event) => actions.add(block, rectOf(event.currentTarget), event.altKey)}
@@ -251,7 +252,7 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
             <button
               type="button"
               className={`checkbox ${block.checked ? "is-checked" : ""}`}
-              aria-label={block.checked ? "Mark as not done" : "Mark as done"}
+              aria-label={block.checked ? t("Mark as not done") : t("Mark as done")}
               aria-pressed={Boolean(block.checked)}
               disabled={readOnly}
               onClick={() => actions.toggleCheck(block)}
@@ -267,7 +268,7 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
           <button
             type="button"
             className="block__callout-icon"
-            aria-label="Change callout icon"
+            aria-label={t("Change callout icon")}
             disabled={readOnly}
             onClick={(event) => actions.pickIcon(block, rectOf(event.currentTarget))}
           >
@@ -294,13 +295,13 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
         ) : null}
 
         {!readOnly && lineMarks === 0 ? (
-          <Tooltip label="Drag to move" hint="Click or ⌘/ to open menu">
+          <Tooltip label={t("Drag to move")} hint="Click or ⌘/ to open menu">
             <button
               type="button"
               className="block__handle"
               contentEditable={false}
               tabIndex={-1}
-              aria-label={block.kind === "table" ? "Table options" : "Line options"}
+              aria-label={block.kind === "table" ? t("Table options") : t("Line options")}
               aria-haspopup="menu"
               // No preventDefault on its press: that would stop the drag
               // before it began.
@@ -334,14 +335,14 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
             <div className="block__code-bar" contentEditable={false}>
               <select
                 className="block__code-lang"
-                aria-label="Code language"
+                aria-label={t("Code language")}
                 value={codeLanguage(block.language).id}
                 disabled={readOnly}
                 onChange={(event) => actions.setLanguage(block, event.target.value)}
               >
                 {CODE_LANGUAGES.map((language) => <option key={language.id} value={language.id}>{language.label}</option>)}
               </select>
-              <button type="button" className="icon-btn" aria-label="Copy code" onClick={() => actions.copyCode(block)}>
+              <button type="button" className="icon-btn" aria-label={t("Copy code")} onClick={() => actions.copyCode(block)}>
                 <Copy size={14} />
               </button>
             </div>

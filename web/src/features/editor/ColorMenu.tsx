@@ -2,6 +2,7 @@ import { MenuItem, MenuList } from "../../components/Menu";
 import { COLOR_NAMES } from "../../../schema";
 import { capitalized } from "../../core/title";
 import type { ContentColor } from "../../core/types";
+import { t } from "../../i18n";
 
 /** Notion's "A" swatch: the letter in a text colour, or on a background. */
 function Swatch({ color }: { color?: ContentColor | "background" }) {
@@ -21,14 +22,14 @@ export function ColorMenu({
   onPick(color: ContentColor | undefined): void;
 }) {
   return (
-    <MenuList label="Color" autoFocus={autoFocus}>
-      <div className="menu__section-title">Text color</div>
-      <MenuItem icon={<Swatch />} label="Default" selected={!current} onSelect={() => onPick(undefined)} />
+    <MenuList label={t("Color")} autoFocus={autoFocus}>
+      <div className="menu__section-title">{t("Text color")}</div>
+      <MenuItem icon={<Swatch />} label={t("Default")} selected={!current} onSelect={() => onPick(undefined)} />
       {COLOR_NAMES.map((name) => (
         <MenuItem key={name} icon={<Swatch color={name} />} label={capitalized(name)} selected={current === name} onSelect={() => onPick(name)} />
       ))}
-      <div className="menu__section-title">Background color</div>
-      <MenuItem icon={<Swatch color="background" />} label="Default background" onSelect={() => onPick(undefined)} />
+      <div className="menu__section-title">{t("Background color")}</div>
+      <MenuItem icon={<Swatch color="background" />} label={t("Default background")} onSelect={() => onPick(undefined)} />
       {COLOR_NAMES.map((name) => (
         <MenuItem
           key={`${name}_background`}

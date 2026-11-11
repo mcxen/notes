@@ -4,6 +4,7 @@ import { useWorkspace } from "../../app/workspace-context";
 import { DatabaseViews } from "./DatabaseViews";
 import { consumeFresh } from "./fresh";
 import { usePage } from "../../app/workspace-store";
+import { t } from "../../i18n";
 
 /** A database drawn inside a document, where the `/table`, `/board`, `/list`,
  *  `/gallery` or `/calendar` command was typed. It is a real database page —
@@ -62,7 +63,7 @@ export function InlineDatabase({
     return (
       <div className="dbv-missing" contentEditable={false}>
         <Table2 size={15} />
-        {database?.archived ? "This database is in the trash" : "This database no longer exists"}
+        {database?.archived ? t("This database is in the trash") : t("This database no longer exists")}
       </div>
     );
   }
@@ -87,8 +88,8 @@ export function InlineDatabase({
               className="dbv-inline__title t-control-size-keep"
               data-history-field="title"
               value={database.title}
-              placeholder="Untitled database"
-              aria-label="Database title"
+              placeholder={t("Untitled database")}
+              aria-label={t("Database title")}
               readOnly={readOnly}
               onChange={(event) => { if (!readOnly) updatePage(databaseId, { title: event.target.value }); }}
             />

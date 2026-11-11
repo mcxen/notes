@@ -6,6 +6,7 @@ import type { Block, Embed, PostEmbed, PostMedia, VideoEmbed } from "../../core/
 import { rectOf, type AnchorRect } from "../../hooks/useAnchoredPosition";
 import { publicPicture } from "./embed-details";
 import { dragEdge } from "./MediaBlocks";
+import { t } from "../../i18n";
 
 /** What a card asks of its editor. */
 export interface EmbedActions {
@@ -58,7 +59,7 @@ function EmbedTools({ embed, block, readOnly, actions }: { embed: Embed; block: 
         <button
           type="button"
           className="block__image-tool"
-          aria-label="Card actions"
+          aria-label={t("Card actions")}
           onClick={(event) => actions.openBlockMenu(block, rectOf(event.currentTarget))}
         >
           <MoreHorizontal size={14} />
@@ -167,7 +168,7 @@ function PostMediaCell({ item }: { item: PostMedia }) {
     <span className="embed__media-cell" data-kind={item.kind}>
       {src ? <img src={src} alt="" draggable={false} /> : null}
       {item.kind === "video" ? <span className="embed__media-play" aria-hidden="true"><Play size={12} fill="currentColor" /></span> : null}
-      {item.kind === "gif" ? <span className="embed__media-badge" aria-hidden="true">GIF</span> : null}
+      {item.kind === "gif" ? <span className="embed__media-badge" aria-hidden="true">{t("GIF")}</span> : null}
     </span>
   );
 }
@@ -178,9 +179,9 @@ function PostMediaCell({ item }: { item: PostMedia }) {
 function PostMediaGrid({ embed }: { embed: PostEmbed }) {
   if (embed.sensitive) {
     return (
-      <span className="embed__media is-sensitive" role="img" aria-label="Sensitive media">
+      <span className="embed__media is-sensitive" role="img" aria-label={t("Sensitive media")}>
         <EyeOff size={16} aria-hidden="true" />
-        <span>Sensitive</span>
+        <span>{t("Sensitive")}</span>
       </span>
     );
   }
@@ -244,7 +245,7 @@ export function EmbedBlock({ block, readOnly, actions }: { block: Block; readOnl
     // Asked again only when the card, or whether it has been read, changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [embed?.url, unread, readOnly]);
-  if (!embed) return <p className="embed embed--broken" contentEditable={false}>This card’s link can’t be shown.</p>;
+  if (!embed) return <p className="embed embed--broken" contentEditable={false}>{t("This card’s link can’t be shown.")}</p>;
   const width = normalizeImageWidth(block.width);
   return embed.provider === "youtube"
     ? <VideoCard embed={embed} block={block} width={width} readOnly={readOnly} actions={actions} />

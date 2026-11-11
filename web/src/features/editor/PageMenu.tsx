@@ -4,6 +4,7 @@ import { MenuDivider, MenuItem, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
 import { imeComposing } from "../../core/keyboard";
 import type { AnchorRect } from "../../hooks/useAnchoredPosition";
+import { t } from "../../i18n";
 
 /** The one menu for a page wherever it stands in another: a block drawn in
  *  place, a page or database shown here, a page's row, a line that is only
@@ -61,25 +62,25 @@ export function PageMenu({
   const act = (action: () => void) => () => { onClose(); action(); };
   const shown = [onShow, onFold, onUngroup, onRemoveHere, onDelete].some(Boolean);
   return (
-    <Popover open anchor={anchor} placement="bottom-start" label="Page" group="page-menu" onDismiss={onClose}>
-      <MenuList label="Page" autoFocus>
+    <Popover open anchor={anchor} placement="bottom-start" label={t("Page")} group="page-menu" onDismiss={onClose}>
+      <MenuList label={t("Page")} autoFocus>
         <div className="menu__section-title page-menu__name">{name}</div>
-        {onOpen ? <MenuItem icon={<ExternalLink size={16} />} label="Open" onSelect={act(onOpen)} /> : null}
-        {onShare ? <MenuItem icon={<UserPlus size={16} />} label="Share…" onSelect={act(onShare)} /> : null}
-        {onRename ? <MenuItem icon={<PencilLine size={16} />} label="Name…" onSelect={act(onRename)} /> : null}
-        {onIcon ? <MenuItem icon={<Smile size={16} />} label="Icon…" onSelect={act(onIcon)} /> : null}
+        {onOpen ? <MenuItem icon={<ExternalLink size={16} />} label={t("Open")} onSelect={act(onOpen)} /> : null}
+        {onShare ? <MenuItem icon={<UserPlus size={16} />} label={t("Share…")} onSelect={act(onShare)} /> : null}
+        {onRename ? <MenuItem icon={<PencilLine size={16} />} label={t("Name…")} onSelect={act(onRename)} /> : null}
+        {onIcon ? <MenuItem icon={<Smile size={16} />} label={t("Icon…")} onSelect={act(onIcon)} /> : null}
         {references && onBacklinks ? (
-          <MenuItem icon={<ArrowUpRight size={16} />} label="Backlinks" hint={String(references)} onSelect={act(onBacklinks)} />
+          <MenuItem icon={<ArrowUpRight size={16} />} label={t("Backlinks")} hint={String(references)} onSelect={act(onBacklinks)} />
         ) : null}
-        {onLock ? <MenuItem icon={<Lock size={16} />} label="Read only here" selected={locked} onSelect={act(onLock)} /> : null}
-        {onMoveTo ? <MenuItem icon={<CornerDownRight size={16} />} label="Move to…" onSelect={act(onMoveTo)} /> : null}
-        {onDuplicate ? <MenuItem icon={<Copy size={16} />} label="Duplicate" onSelect={act(onDuplicate)} /> : null}
+        {onLock ? <MenuItem icon={<Lock size={16} />} label={t("Read only here")} selected={locked} onSelect={act(onLock)} /> : null}
+        {onMoveTo ? <MenuItem icon={<CornerDownRight size={16} />} label={t("Move to…")} onSelect={act(onMoveTo)} /> : null}
+        {onDuplicate ? <MenuItem icon={<Copy size={16} />} label={t("Duplicate")} onSelect={act(onDuplicate)} /> : null}
         {shown ? <MenuDivider /> : null}
-        {onShow ? <MenuItem icon={<ChevronsUpDown size={16} />} label="Show here" onSelect={act(onShow)} /> : null}
-        {onFold ? <MenuItem icon={<ChevronsDownUp size={16} />} label="Fold" onSelect={act(onFold)} /> : null}
-        {onUngroup ? <MenuItem icon={<Ungroup size={16} />} label="Ungroup" onSelect={act(onUngroup)} /> : null}
-        {onRemoveHere ? <MenuItem icon={<CircleMinus size={16} />} label="Remove from this page" onSelect={act(onRemoveHere)} /> : null}
-        {onDelete ? <MenuItem icon={<Trash2 size={16} />} label="Move to trash" tone="danger" onSelect={act(onDelete)} /> : null}
+        {onShow ? <MenuItem icon={<ChevronsUpDown size={16} />} label={t("Show here")} onSelect={act(onShow)} /> : null}
+        {onFold ? <MenuItem icon={<ChevronsDownUp size={16} />} label={t("Fold")} onSelect={act(onFold)} /> : null}
+        {onUngroup ? <MenuItem icon={<Ungroup size={16} />} label={t("Ungroup")} onSelect={act(onUngroup)} /> : null}
+        {onRemoveHere ? <MenuItem icon={<CircleMinus size={16} />} label={t("Remove from this page")} onSelect={act(onRemoveHere)} /> : null}
+        {onDelete ? <MenuItem icon={<Trash2 size={16} />} label={t("Move to trash")} tone="danger" onSelect={act(onDelete)} /> : null}
       </MenuList>
     </Popover>
   );
@@ -107,7 +108,7 @@ export function PageNameEditor({
     onClose();
   };
   return (
-    <Popover open anchor={anchor} placement="bottom-start" role="dialog" label="Name this block" group="page-menu" onDismiss={onClose}>
+    <Popover open anchor={anchor} placement="bottom-start" role="dialog" label={t("Name this block")} group="page-menu" onDismiss={onClose}>
       <form
         className="link-editor"
         onSubmit={(event) => {
@@ -119,7 +120,7 @@ export function PageNameEditor({
           autoFocus
           value={value}
           placeholder={firstLine}
-          aria-label="Block name"
+          aria-label={t("Block name")}
           maxLength={120}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => {
@@ -127,7 +128,7 @@ export function PageNameEditor({
             if (event.key === "Enter" && imeComposing(event)) event.preventDefault();
           }}
         />
-        <button type="submit" className="btn btn--primary">Save</button>
+        <button type="submit" className="btn btn--primary">{t("Save")}</button>
       </form>
     </Popover>
   );

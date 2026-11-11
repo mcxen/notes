@@ -4,7 +4,6 @@
 package frontend
 
 import (
-	"fmt"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -69,7 +68,7 @@ func (a *appActions) openSettings(page string) {
 	s.refresh()
 	st, _ := settings.Load(a.settings)
 	s.win = mygo.NewWindow(framed(mygo.WindowOptions{
-		Title:     "Settings",
+		Title:     tr("Settings"),
 		Width:     820,
 		Height:    580,
 		MinWidth:  680,
@@ -111,7 +110,7 @@ func (s *settingsWindow) refresh() {
 
 func (s *settingsWindow) save() {
 	if err := s.st.Save(s.a.settings); err != nil {
-		s.notes = "The settings could not be saved: " + err.Error()
+		s.notes = tr("The settings could not be saved: %v", err)
 		return
 	}
 	s.notes = ""
@@ -136,14 +135,14 @@ func (s *settingsWindow) view(c *ui.Context) {
 				}
 			}
 			if found != nil && len(found) == 0 {
-				ui.Text(c, "No settings match").FontSize(13).TextColor(pal.textFaint).Padding(8, 10)
+				ui.Text(c, tr("No settings match")).FontSize(13).TextColor(pal.textFaint).Padding(8, 10)
 			}
 		})
 		ui.Column(c).Grow(1).MinWidth(0).Padding(cardGap, cardGap, cardGap, 0).Children(func() {
 			card(c, pal).Children(func() {
 				page := s.current()
 				ui.Row(c.Key("header")).Height(headerH).Shrink(0).AlignItems(ui.Center).Padding(0, 10, 0, 24).DragWindow().Children(func() {
-					ui.Text(c, page.title).FontSize(15).FontWeight(650).TextColor(pal.text)
+					ui.Text(c, tr(page.title)).FontSize(15).FontWeight(650).TextColor(pal.text)
 					ui.Spacer(c)
 					windowButtons(c, s.win, pal)
 				})
@@ -183,7 +182,7 @@ func (s *settingsWindow) current() settingsPage {
 
 func (s *settingsWindow) navItem(c *ui.Context, pal *palette, p settingsPage) {
 	sel := s.page == p.id
-	item := ui.Row(c.Key(p.id)).Height(32).Padding(0, 10).Gap(10).AlignItems(ui.Center).Radius(8).Label(p.title)
+	item := ui.Row(c.Key(p.id)).Height(32).Padding(0, 10).Gap(10).AlignItems(ui.Center).Radius(8).Label(tr(p.title))
 	if pal.dark {
 		item.Border(1, ui.Transparent)
 	}
@@ -204,7 +203,7 @@ func (s *settingsWindow) navItem(c *ui.Context, pal *palette, p settingsPage) {
 		if sel {
 			glyph.TextColor(pal.accent)
 		}
-		ui.Text(c, p.title).FontSize(13.5).TextColor(pal.text).SingleLine()
+		ui.Text(c, tr(p.title)).FontSize(13.5).TextColor(pal.text).SingleLine()
 	})
 }
 
@@ -214,10 +213,10 @@ func (s *settingsWindow) searchField(c *ui.Context, pal *palette) {
 	frame.Children(func() {
 		ui.Icon(c, searchGlyph).Size(13, 13).TextColor(pal.textFaint).Shrink(0)
 		in = ui.TextInputBase(c.Key("in"), &s.query).Bind(&s.searchRef).Grow(1).MinWidth(0).FontSize(13).
-			Placeholder("Search settings").Label("Search settings")
+			Placeholder(tr("Search settings")).Label(tr("Search settings"))
 		in.OnShortcut(0, ui.KeyEscape, func() { s.query = "" })
 		if s.query != "" {
-			x := ui.ButtonBase(c.Key("clear")).Size(16, 16).Radius(8).Center().Shrink(0).Label("Clear search").
+			x := ui.ButtonBase(c.Key("clear")).Size(16, 16).Radius(8).Center().Shrink(0).Label(tr("Clear search")).
 				Background(pal.textFaint.Alpha(0.55)).TextColor(pal.card)
 			x.Children(func() { ui.Icon(c, clearGlyph).Size(9, 9) })
 			if x.Clicked() {
@@ -234,8 +233,8 @@ func (s *settingsWindow) searchField(c *ui.Context, pal *palette) {
 type searchEntry struct{ page, label, words string }
 
 var searchEntries = []searchEntry{
-	{"general", labelPickerAtLaunch, "startup launch open picker last vault"},
-	{"appearance", labelTranslucent, "translucent vibrancy material transparent glass"},
+	{"general", labelPickerAtLaunch, "startup launch open picker last vault 启动 选择器 笔记库"},
+	{"appearance", labelTranslucent, "translucent vibrancy material transparent glass 半透明 侧栏 材质"},
 	{"vaults", "Recent vaults", "vault folder recent remove show finder explorer"},
 	{"vaults", "Add a vault", "new open folder"},
 	{"sync", "Remote vaults", "sync webdav smb remote cloud disconnect"},
@@ -255,13 +254,14 @@ func (s *settingsWindow) search() map[string][]string {
 	}
 	found := map[string][]string{}
 	for _, p := range settingsPages {
-		if matches(p.title, terms) {
+		if matches(tr(p.title)+" "+p.title, terms) {
 			found[p.id] = []string{}
 		}
 	}
 	for _, e := range searchEntries {
-		if matches(e.label+" "+e.words, terms) {
-			found[e.page] = append(found[e.page], e.label)
+		label := tr(e.label)
+		if matches(label+" "+e.label+" "+e.words, terms) {
+			found[e.page] = append(found[e.page], label)
 		}
 	}
 	if found[s.page] == nil {
@@ -335,30 +335,43 @@ func (s *settingsWindow) row(c *ui.Context, pal *palette, label, detail string, 
 const (
 	labelPickerAtLaunch = "Show the vault picker when Notes opens"
 	labelTranslucent    = "Translucent sidebar"
+	labelAutoUpdates    = "Check for updates automatically"
 )
 
 func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
-	s.group(c, pal, "Startup", "", func() {
+	s.group(c, pal, tr("Language"), "", func() {
+		s.row(c, pal, tr("Language"), tr("Automatic follows the system's language. The pages and the menus change at once."), func() {
+			for _, choice := range languageChoices {
+				if button(c, "language:"+choice, languageName(choice), s.st.Language == choice, pal) && s.st.Language != choice {
+					s.st.Language = choice
+					s.save()
+					applyLanguage(choice)
+					s.a.refreshMenu()
+				}
+			}
+		})
+	})
+	s.group(c, pal, tr("Startup"), "", func() {
 		picker := s.st.PickerAtLaunch
-		s.row(c, pal, labelPickerAtLaunch, "When it is off, Notes reopens the vault you used last.", func() {
-			toggle(c, "picker-at-launch", &picker, labelPickerAtLaunch, pal)
+		s.row(c, pal, tr(labelPickerAtLaunch), tr("When it is off, Notes reopens the vault you used last."), func() {
+			toggle(c, "picker-at-launch", &picker, tr(labelPickerAtLaunch), pal)
 		})
 		if picker != s.st.PickerAtLaunch {
 			s.st.PickerAtLaunch = picker
 			s.save()
 		}
 	})
-	s.group(c, pal, "Shortcuts", "", func() {
+	s.group(c, pal, tr("Shortcuts"), "", func() {
 		mod := "⌘"
 		if runtime.GOOS != "darwin" {
 			mod = "Ctrl+"
 		}
 		for _, k := range [][2]string{
-			{"Open a vault", mod + "O"},
-			{"Vault picker", mod + "⇧O"},
-			{"Sync now", mod + "⇧S"},
-			{"Toggle the sidebar", mod + "\\"},
-			{"Settings", mod + ","},
+			{tr("Open a vault"), mod + "O"},
+			{tr("Vault picker"), mod + "⇧O"},
+			{tr("Sync now"), mod + "⇧S"},
+			{tr("Toggle the sidebar"), mod + "\\"},
+			{tr("Settings"), mod + ","},
 		} {
 			keys := k[1]
 			if runtime.GOOS != "darwin" {
@@ -373,15 +386,15 @@ func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
 
 func (s *settingsWindow) appearancePage(c *ui.Context, pal *palette) {
 	if runtime.GOOS != "darwin" {
-		s.group(c, pal, "Window", "", func() {
-			s.row(c, pal, labelTranslucent, "Available on macOS.", nil)
+		s.group(c, pal, tr("Window"), "", func() {
+			s.row(c, pal, tr(labelTranslucent), tr("Available on macOS."), nil)
 		})
 		return
 	}
-	s.group(c, pal, "Window", "Light and dark follow the system, or the theme you pick in a vault's sidebar menu.", func() {
+	s.group(c, pal, tr("Window"), tr("Light and dark follow the system, or the theme you pick in a vault's sidebar menu."), func() {
 		translucent := !s.st.OpaqueSidebar
-		s.row(c, pal, labelTranslucent, "The sidebar shows the desktop through it, as Mac apps do.", func() {
-			toggle(c, "translucent", &translucent, labelTranslucent, pal)
+		s.row(c, pal, tr(labelTranslucent), tr("The sidebar shows the desktop through it, as Mac apps do."), func() {
+			toggle(c, "translucent", &translucent, tr(labelTranslucent), pal)
 		})
 		if translucent == s.st.OpaqueSidebar {
 			s.st.OpaqueSidebar = !translucent
@@ -395,9 +408,9 @@ func (s *settingsWindow) appearancePage(c *ui.Context, pal *palette) {
 }
 
 func (s *settingsWindow) vaultsPage(c *ui.Context, pal *palette) {
-	s.group(c, pal, "Recent vaults", "Removing a vault from the list leaves its folder as it is.", func() {
+	s.group(c, pal, tr("Recent vaults"), tr("Removing a vault from the list leaves its folder as it is."), func() {
 		if len(s.st.Recent) == 0 {
-			s.row(c, pal, "No vaults yet", "Open a folder or start a new vault.", nil)
+			s.row(c, pal, tr("No vaults yet"), tr("Open a folder or start a new vault."), nil)
 			return
 		}
 		for _, folder := range s.st.Recent {
@@ -406,7 +419,7 @@ func (s *settingsWindow) vaultsPage(c *ui.Context, pal *palette) {
 				if button(c, "show:"+folder, revealLabel(), false, pal) {
 					mygo.Shell.ShowItemInFolder(folder)
 				}
-				if button(c, "forget:"+folder, "Remove", false, pal) {
+				if button(c, "forget:"+folder, tr("Remove"), false, pal) {
 					s.st.Forget(folder)
 					s.save()
 					s.refresh()
@@ -416,11 +429,11 @@ func (s *settingsWindow) vaultsPage(c *ui.Context, pal *palette) {
 		}
 	})
 	s.group(c, pal, "", "", func() {
-		s.row(c, pal, "Add a vault", "A vault is a folder: each page is a JSON file in it.", func() {
-			if button(c, "open-vault", "Open Folder…", false, pal) {
+		s.row(c, pal, tr("Add a vault"), tr("A vault is a folder: each page is a JSON file in it."), func() {
+			if button(c, "open-vault", tr("Open Folder…"), false, pal) {
 				go s.a.openVault()
 			}
-			if button(c, "new-vault", "New Vault…", true, pal) {
+			if button(c, "new-vault", tr("New Vault…"), true, pal) {
 				go s.a.newVault()
 			}
 		})
@@ -438,35 +451,35 @@ func (s *settingsWindow) syncPage(c *ui.Context, pal *palette) {
 		folder := folder
 		s.group(c, pal, s.a.recentLabel(folder), "", func() {
 			s.row(c, pal, remoteKind(cfg.Kind)+" · "+remoteWhere(cfg), lastSyncLine(s.log, folder), func() {
-				if button(c, "sync:"+folder, "Sync Now", false, pal) {
+				if button(c, "sync:"+folder, tr("Sync Now"), false, pal) {
 					go func() {
 						s.a.notebooks.syncFolder(folder)
 						if s.win != nil {
 							s.win.Update(func() {
 								s.refresh()
-								s.toast = "Synced " + s.a.recentLabel(folder)
+								s.toast = tr("Synced %s", s.a.recentLabel(folder))
 							})
 						}
 					}()
 				}
-				if button(c, "disconnect:"+folder, "Disconnect", false, pal) {
+				if button(c, "disconnect:"+folder, tr("Disconnect"), false, pal) {
 					if err := s.a.notebooks.Disconnect(folder); err != nil {
-						s.notes = "Disconnect failed: " + err.Error()
+						s.notes = tr("Disconnect failed: %v", err)
 					}
 					s.refresh()
 				}
 			})
-			s.row(c, pal, "Working copy", shortPath(folder), func() {
+			s.row(c, pal, tr("Working copy"), shortPath(folder), func() {
 				if button(c, "copy:"+folder, revealLabel(), false, pal) {
 					mygo.Shell.ShowItemInFolder(folder)
 				}
 			})
 			for _, item := range s.trash[folder] {
 				item := item
-				s.row(c, pal, item.Path, "Moved out by sync on "+item.Day, func() {
-					if button(c, "restore:"+item.Trashed, "Restore", false, pal) {
+				s.row(c, pal, item.Path, tr("Moved out by sync on %s", item.Day), func() {
+					if button(c, "restore:"+item.Trashed, tr("Restore"), false, pal) {
 						if _, err := vsync.RestoreTrash(folder, item.Trashed); err != nil {
-							s.notes = "Restore failed: " + err.Error()
+							s.notes = tr("Restore failed: %v", err)
 						}
 						s.refresh()
 					}
@@ -474,19 +487,19 @@ func (s *settingsWindow) syncPage(c *ui.Context, pal *palette) {
 			}
 		})
 	}
-	s.group(c, pal, "Remote vaults", "Notes keeps a working copy on this computer and syncs it a few seconds after each change, every five minutes, and when a window comes forward. Passwords stay in the system's credential store.", func() {
-		detail := "Keep a vault in a WebDAV folder or an SMB share."
+	s.group(c, pal, tr("Remote vaults"), tr("Notes keeps a working copy on this computer and syncs it a few seconds after each change, every five minutes, and when a window comes forward. Passwords stay in the system's credential store."), func() {
+		detail := tr("Keep a vault in a WebDAV folder or an SMB share.")
 		if remotes > 0 {
-			detail = fmt.Sprintf("%d vault(s) kept in a remote folder.", remotes)
+			detail = tr("%d vault(s) kept in a remote folder.", remotes)
 		}
-		s.row(c, pal, "Connect to a remote folder", detail, func() {
-			if button(c, "connect", "Connect…", true, pal) {
+		s.row(c, pal, tr("Connect to a remote folder"), detail, func() {
+			if button(c, "connect", tr("Connect…"), true, pal) {
 				go s.a.connect()
 			}
 		})
 	})
 	if len(s.log) > 0 {
-		s.group(c, pal, "Recent syncs", "", func() {
+		s.group(c, pal, tr("Recent syncs"), "", func() {
 			for i, e := range s.log {
 				if i >= 20 {
 					break
@@ -498,26 +511,26 @@ func (s *settingsWindow) syncPage(c *ui.Context, pal *palette) {
 }
 
 func (s *settingsWindow) aboutPage(c *ui.Context, pal *palette) {
-	s.group(c, pal, "Notes", "", func() {
-		s.row(c, pal, "Version", appVersion(), nil)
+	s.group(c, pal, tr("Notes"), "", func() {
+		s.row(c, pal, tr("Version"), appVersion(), nil)
 		path := s.a.settings
-		s.row(c, pal, "Settings file", shortPath(path), func() {
+		s.row(c, pal, tr("Settings file"), shortPath(path), func() {
 			if button(c, "show-settings", revealLabel(), false, pal) {
 				mygo.Shell.ShowItemInFolder(path)
 			}
 		})
-		s.row(c, pal, "Sync log", shortPath(filepath.Join(filepath.Dir(path), "sync-log.json")), nil)
+		s.row(c, pal, tr("Sync log"), shortPath(filepath.Join(filepath.Dir(path), "sync-log.json")), nil)
 	})
-	s.group(c, pal, "Updates", "", func() {
-		s.row(c, pal, "Check for updates", updateLine(), func() {
-			if button(c, "check-updates", "Check Now", false, pal) {
+	s.group(c, pal, tr("Updates"), "", func() {
+		s.row(c, pal, tr("Check for updates"), updateLine(), func() {
+			if button(c, "check-updates", tr("Check Now"), false, pal) {
 				updater.CheckForUpdates()
 			}
 		})
 		if !mygo.Updater.Enabled() {
 			return
 		}
-		s.row(c, pal, "Update source", "Automatic uses the tvv.tw mirror when the system language is Chinese, and GitHub otherwise. A failed or altered mirror download falls back to GitHub.", func() {
+		s.row(c, pal, tr("Update source"), tr("Automatic uses the tvv.tw mirror when the system language is Chinese, and GitHub otherwise. A failed or altered mirror download falls back to GitHub."), func() {
 			for _, choice := range updateSourceChoices {
 				if button(c, "update-source:"+choice, updateSourceName(choice), s.st.UpdateSource == choice, pal) && s.st.UpdateSource != choice {
 					s.st.UpdateSource = choice
@@ -527,8 +540,8 @@ func (s *settingsWindow) aboutPage(c *ui.Context, pal *palette) {
 			}
 		})
 		auto := updater.AutomaticChecks()
-		s.row(c, pal, labelAutoUpdates, "Looks once a day and asks before installing.", func() {
-			toggle(c, "auto-updates", &auto, labelAutoUpdates, pal)
+		s.row(c, pal, tr(labelAutoUpdates), tr("Looks once a day and asks before installing."), func() {
+			toggle(c, "auto-updates", &auto, tr(labelAutoUpdates), pal)
 		})
 		if auto != updater.AutomaticChecks() {
 			updater.SetAutomaticChecks(auto)
@@ -536,21 +549,19 @@ func (s *settingsWindow) aboutPage(c *ui.Context, pal *palette) {
 	})
 }
 
-const labelAutoUpdates = "Check for updates automatically"
-
 // updateLine says whether this build can update itself, and what the last
 // check found.
 func updateLine() string {
 	if !mygo.Updater.Enabled() {
-		return "This copy cannot update itself: it was installed by a package manager or runs from a development build."
+		return tr("This copy cannot update itself: it was installed by a package manager or runs from a development build.")
 	}
 	if v := updater.AvailableVersion(); v != "" {
-		return "Version " + v + " is available."
+		return tr("Version %s is available.", v)
 	}
 	if t := updater.LastCheck(); !t.IsZero() {
-		return "Last checked " + t.Local().Format("2 Jan 2006, 15:04") + "."
+		return tr("Last checked %s.", t.Local().Format(dateTimeLayout()))
 	}
-	return "Not checked yet."
+	return tr("Not checked yet.")
 }
 
 func appVersion() string {
@@ -563,11 +574,11 @@ func appVersion() string {
 func revealLabel() string {
 	switch runtime.GOOS {
 	case "darwin":
-		return "Show in Finder"
+		return tr("Show in Finder")
 	case "windows":
-		return "Show in Explorer"
+		return tr("Show in Explorer")
 	}
-	return "Show in Folder"
+	return tr("Show in Folder")
 }
 
 func remoteKind(kind string) string {
@@ -588,15 +599,15 @@ func remoteWhere(cfg settings.Remote) string {
 func lastSyncLine(log []synclog.Entry, folder string) string {
 	for _, e := range log {
 		if e.Folder == folder {
-			return "Last sync " + logLine(e)
+			return tr("Last sync %s", logLine(e))
 		}
 	}
-	return "Not synced yet."
+	return tr("Not synced yet.")
 }
 
 func logLine(e synclog.Entry) string {
-	line := fmt.Sprintf("%s · %s · %d up, %d down, %d merged, %d conflicts",
-		e.Time.Local().Format("Jan 2 15:04"), e.Status, len(e.Uploaded), len(e.Downloaded), len(e.Merged), len(e.Conflicts))
+	line := tr("%s · %s · %d up, %d down, %d merged, %d conflicts",
+		e.Time.Local().Format(shortTimeLayout()), e.Status, len(e.Uploaded), len(e.Downloaded), len(e.Merged), len(e.Conflicts))
 	if e.Message != "" {
 		line += " · " + e.Message
 	}

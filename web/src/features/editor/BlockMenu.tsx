@@ -7,6 +7,7 @@ import { normalizeSimpleTable } from "../../core/simple-table";
 import type { Block, BlockKind, ContentColor } from "../../core/types";
 import { blockDefinition } from "./block-registry";
 import { ColorMenu } from "./ColorMenu";
+import { t } from "../../i18n";
 
 const TURN_INTO: BlockKind[] = [
   "text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered",
@@ -78,25 +79,25 @@ export function BlockMenu({
 
   return (
     <>
-      <Popover open anchor={anchor} placement="bottom-start" label="Paragraph actions" group="block-menu" onDismiss={onClose}>
-        <MenuList label="Paragraph actions" autoFocus>
+      <Popover open anchor={anchor} placement="bottom-start" label={t("Paragraph actions")} group="block-menu" onDismiss={onClose}>
+        <MenuList label={t("Paragraph actions")} autoFocus>
           {several ? <div className="menu__section-title">{blocks.length} paragraphs</div> : null}
           {/* A table's own switches first, as at the top of Notion's. */}
           {table && headers && onTableHeader ? (
             <>
-              <MenuItem icon={<Rows3 size={16} />} label="Header row" selected={headers.header_row} onSelect={() => { onClose(); onTableHeader(table, "header_row"); }} />
-              <MenuItem icon={<Columns3 size={16} />} label="Header column" selected={headers.header_column} onSelect={() => { onClose(); onTableHeader(table, "header_column"); }} />
+              <MenuItem icon={<Rows3 size={16} />} label={t("Header row")} selected={headers.header_row} onSelect={() => { onClose(); onTableHeader(table, "header_row"); }} />
+              <MenuItem icon={<Columns3 size={16} />} label={t("Header column")} selected={headers.header_column} onSelect={() => { onClose(); onTableHeader(table, "header_column"); }} />
               <MenuDivider />
             </>
           ) : null}
-          <MenuItem icon={<Trash2 size={16} />} label="Delete" hint="Del" tone="danger" onSelect={() => { onClose(); onDelete(); }} />
-          <MenuItem icon={<Copy size={16} />} label="Duplicate" hint="⌘D" onSelect={() => { onClose(); onDuplicate(); }} />
-          <MenuItem icon={<CornerDownRight size={16} />} label="Move to" hint="⌘⇧P" onSelect={() => { onClose(); onMoveTo(); }} />
-          <MenuItem icon={<Group size={16} />} label="Group" onSelect={() => { onClose(); onMakeBlock(); }} />
-          <MenuItem icon={<ImageDown size={16} />} label="Copy as image" hint="⌘⇧C" onSelect={() => { onClose(); onCopyImage(); }} />
-          {media ? <MenuItem icon={<Replace size={16} />} label="Replace" onSelect={() => { onClose(); onReplace(); }} /> : null}
-          {media?.file ? <MenuItem icon={<Download size={16} />} label="Download" onSelect={() => { onClose(); onDownload(); }} /> : null}
-          {card && onTurnIntoLink ? <MenuItem icon={<Link2 size={16} />} label="Turn into link" onSelect={() => { onClose(); onTurnIntoLink(); }} /> : null}
+          <MenuItem icon={<Trash2 size={16} />} label={t("Delete")} hint="Del" tone="danger" onSelect={() => { onClose(); onDelete(); }} />
+          <MenuItem icon={<Copy size={16} />} label={t("Duplicate")} hint="⌘D" onSelect={() => { onClose(); onDuplicate(); }} />
+          <MenuItem icon={<CornerDownRight size={16} />} label={t("Move to")} hint="⌘⇧P" onSelect={() => { onClose(); onMoveTo(); }} />
+          <MenuItem icon={<Group size={16} />} label={t("Group")} onSelect={() => { onClose(); onMakeBlock(); }} />
+          <MenuItem icon={<ImageDown size={16} />} label={t("Copy as image")} hint="⌘⇧C" onSelect={() => { onClose(); onCopyImage(); }} />
+          {media ? <MenuItem icon={<Replace size={16} />} label={t("Replace")} onSelect={() => { onClose(); onReplace(); }} /> : null}
+          {media?.file ? <MenuItem icon={<Download size={16} />} label={t("Download")} onSelect={() => { onClose(); onDownload(); }} /> : null}
+          {card && onTurnIntoLink ? <MenuItem icon={<Link2 size={16} />} label={t("Turn into link")} onSelect={() => { onClose(); onTurnIntoLink(); }} /> : null}
           {convertible || colorable || onTurnIntoDatabase ? <MenuDivider /> : null}
           {convertible ? <button
             type="button"
@@ -108,13 +109,13 @@ export function BlockMenu({
             onClick={() => { setColorOpen(false); setTurnOpen((open) => !open); }}
           >
             <span className="menu__icon"><CornerUpLeft size={16} /></span>
-            <span className="menu__copy"><span className="menu__label">Turn into</span></span>
+            <span className="menu__copy"><span className="menu__label">{t("Turn into")}</span></span>
             <span className="menu__hint"><ChevronRight size={14} /></span>
           </button> : null}
           {/* Lines of a list, or a table: into a database, beside the kinds
               they can turn into (features/database/convert.ts). */}
           {onTurnIntoDatabase ? (
-            <MenuItem icon={<Database size={16} />} label="Turn into database" onSelect={() => { onClose(); onTurnIntoDatabase(); }} />
+            <MenuItem icon={<Database size={16} />} label={t("Turn into database")} onSelect={() => { onClose(); onTurnIntoDatabase(); }} />
           ) : null}
           {colorable ? <button
             type="button"
@@ -126,7 +127,7 @@ export function BlockMenu({
             onClick={() => { setTurnOpen(false); setColorOpen((open) => !open); }}
           >
             <span className="menu__icon"><Palette size={16} /></span>
-            <span className="menu__copy"><span className="menu__label">Color</span></span>
+            <span className="menu__copy"><span className="menu__label">{t("Color")}</span></span>
             <span className="menu__hint"><ChevronRight size={14} /></span>
           </button> : null}
         </MenuList>
@@ -136,7 +137,7 @@ export function BlockMenu({
         open={colorOpen}
         anchor={colorRef.current ? rectOf(colorRef.current) : null}
         placement="right-start"
-        label="Color"
+        label={t("Color")}
         group="block-menu"
         onDismiss={() => setColorOpen(false)}
       >
@@ -147,11 +148,11 @@ export function BlockMenu({
         open={turnOpen}
         anchor={turnRef.current ? rectOf(turnRef.current) : null}
         placement="right-start"
-        label="Turn into"
+        label={t("Turn into")}
         group="block-menu"
         onDismiss={() => setTurnOpen(false)}
       >
-        <MenuList label="Turn into" autoFocus>
+        <MenuList label={t("Turn into")} autoFocus>
           {TURN_INTO.map((option) => {
             const definition = blockDefinition(option);
             const Icon = definition.icon;
@@ -159,7 +160,7 @@ export function BlockMenu({
               <MenuItem
                 key={option}
                 icon={<Icon size={16} />}
-                label={definition.label}
+                label={t(definition.label)}
                 selected={option === kind}
                 onSelect={() => { setTurnOpen(false); onClose(); onTurnInto(option); }}
               />

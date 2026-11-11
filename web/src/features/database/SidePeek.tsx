@@ -21,6 +21,7 @@ import { propertyName, rowValues } from "./database-model";
 import { usePage, useWorkspaceState } from "../../app/workspace-store";
 import { spaceOfPage } from "../../core/page-tree";
 import { useHomedImages } from "./ImageProperty";
+import { t } from "../../i18n";
 
 const PEEK_EXIT_MS = 180;
 /** The narrowest a docked peek gets, and the narrowest the page beside it. */
@@ -96,7 +97,7 @@ function PageProperties({ page }: { page: NotePage }) {
   if (!properties.length) return null;
   const values = page.properties ?? {};
   return (
-    <div className="page-props" aria-label="Properties">
+    <div className="page-props" aria-label={t("Properties")}>
       {properties.map((property) => (
         <label className="page-props__row" key={property.id} data-type={property.type}>
           <span className="page-props__name"><PropertyIcon property={property} />{propertyName(property)}</span>
@@ -236,22 +237,22 @@ export function SidePeek({
           <div
             className="side-peek__seam"
             role="separator"
-            aria-label="Resize the side peek"
+            aria-label={t("Resize the side peek")}
             aria-orientation="vertical"
             onPointerDown={startResize}
           />
         ) : null}
         <header className="side-peek__bar">
-          <Tooltip label="Close" hint="Esc">
-            <button type="button" className="icon-btn" aria-label="Close side peek" onClick={closePeek}>
+          <Tooltip label={t("Close")} hint="Esc">
+            <button type="button" className="icon-btn" aria-label={t("Close side peek")} onClick={closePeek}>
               <ChevronsRight size={17} />
             </button>
           </Tooltip>
-          <Tooltip label="Open as full page">
+          <Tooltip label={t("Open as full page")}>
             <button
               type="button"
               className="icon-btn"
-              aria-label="Open as full page"
+              aria-label={t("Open as full page")}
               onClick={() => {
                 selectPage(drawn.id);
                 closePeek();

@@ -4,6 +4,7 @@ import { createId } from "../../core/ids";
 import type { StoredFile } from "../../core/types";
 import type { PlatformClient } from "../../platform/client";
 import { thumbnail } from "../../shared/thumbnail";
+import { t } from "../../i18n";
 
 /* Image and file blocks' bytes.
 
@@ -26,9 +27,9 @@ export const MAX_FILES_AT_ONCE = 10;
 
 /** Why these files cannot be uploaded, or null when they can. */
 export function refuseFiles(files: File[]): string | null {
-  if (files.length > MAX_FILES_AT_ONCE) return `Add up to ${MAX_FILES_AT_ONCE} files at a time.`;
+  if (files.length > MAX_FILES_AT_ONCE) return t("Add up to {n} files at a time.", { n: MAX_FILES_AT_ONCE });
   const oversized = files.find((file) => file.size > MAX_FILE_BYTES);
-  return oversized ? `${oversized.name || "That file"} is larger than 7.5 MB.` : null;
+  return oversized ? t("{name} is larger than 7.5 MB.", { name: oversized.name || t("That file") }) : null;
 }
 
 export { isImageType };

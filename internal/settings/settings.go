@@ -44,6 +44,9 @@ type Settings struct {
 	// UpdateSource is where updates are downloaded from: "" picks by language,
 	// "github" or "tvv" (the tvv.tw mirror) force one.
 	UpdateSource string `json:"updateSource,omitempty"`
+	// Language is the language the app shows: "" follows the system, else a
+	// tag the app speaks ("en", "zh-Hans").
+	Language string `json:"language,omitempty"`
 }
 
 // SetRemote records the remote folder of a working copy.

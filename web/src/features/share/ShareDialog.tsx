@@ -23,6 +23,7 @@ import { useWorkspace } from "../../app/workspace-context";
 import { pageAncestry } from "../../core/page-tree";
 import { useUi } from "../../app/ui-context";
 import { useWorkspaceState } from "../../app/workspace-store";
+import { t } from "../../i18n";
 
 type InviteRole = "admin" | "editor" | "viewer";
 
@@ -39,13 +40,13 @@ const ROLES: RoleOption[] = [
 ];
 
 function roleLabel(role: string): string {
-  return role === "owner" ? "Owner" : ROLES.find((option) => option.value === role)?.label ?? "Can view";
+  return t(role === "owner" ? "Owner" : ROLES.find((option) => option.value === role)?.label ?? "Can view");
 }
 
 function daysLeft(expiresAt: string): string {
   const days = Math.ceil((Date.parse(expiresAt) - Date.now()) / 86_400_000);
-  if (!Number.isFinite(days) || days <= 0) return "expiring";
-  return days === 1 ? "expires tomorrow" : `expires in ${days} days`;
+  if (!Number.isFinite(days) || days <= 0) return t("expiring");
+  return days === 1 ? t("expires tomorrow") : t("expires in {n} days", { n: days });
 }
 
 /** The page a shared page is shared through: the root of its shared tree. */
@@ -160,30 +161,30 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
     setSuggestions([]);
     // A new invitation shows itself under Invited as the roster hears of
     // it; only a repeat, which changes nothing on screen, needs saying.
-    if (!receipt.created) toast(`@${handle} already has an invitation waiting`, "info");
-  }, "Could not invite that person");
+    if (!receipt.created) toast(t("@{handle} already has an invitation waiting", { handle }), "info");
+  }, t("Could not invite that person"));
 
   const changeRole = (member: SpaceMember, next: InviteRole) => run(async () => {
     if (!platform || !spaceId || member.role === next) return;
     setMemberMenu(null);
     await platform.spaces.updateRole(spaceId, member.id, next);
-  }, "Could not change that person's access");
+  }, t("Could not change that person's access"));
 
   const removeMember = (member: SpaceMember) => run(async () => {
     if (!platform || !spaceId) return;
     setMemberMenu(null);
     await platform.spaces.removeMember(spaceId, member.id);
-  }, "Could not remove that person");
+  }, t("Could not remove that person"));
 
   const leave = () => run(async () => {
     await leaveShare(page.id);
     onClose();
-  }, "Could not leave this page");
+  }, t("Could not leave this page"));
 
   const stop = () => run(async () => {
     await stopSharing(page.id);
     onClose();
-  }, "Could not stop sharing this page");
+  }, t("Could not stop sharing this page"));
 
   /* A member's row has a menu only for someone who can do something to them:
      never for the owner, never for yourself (Leave is below), and an admin
@@ -198,16 +199,16 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
   return (
     <Modal open label={`Share ${pageName(page)}`} className="share" onClose={onClose}>
       <header className="share__head">
-        <h1 className="share__title">Share</h1>
-        <button type="button" className="icon-btn" aria-label="Close sharing" onClick={onClose}><X size={17} /></button>
+        <h1 className="share__title">{t("Share")}</h1>
+        <button type="button" className="icon-btn" aria-label={t("Close sharing")} onClick={onClose}><X size={17} /></button>
       </header>
 
       <div className="share__body">
         {inherited && root ? (
           <div className="share__inherited">
             <CornerLeftUp size={15} />
-            <span>Shared through <strong>{pageName(root)}</strong> — everyone there can open this page.</span>
-            <button type="button" className="btn" onClick={() => { selectPage(root.id); requestShare(root.id); }}>Open</button>
+            <span>{t("Shared through")} <strong>{pageName(root)}</strong> — everyone there can open this page.</span>
+            <button type="button" className="btn" onClick={() => { selectPage(root.id); requestShare(root.id); }}>{t("Open")}</button>
           </div>
         ) : null}
 
@@ -218,8 +219,8 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
               <input
                 value={query}
                 autoFocus
-                aria-label="Add people by handle"
-                placeholder="Add people by handle…"
+                aria-label={t("Add people by handle")}
+                placeholder={t("Add people by handle…")}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !imeComposing(event) && query.trim()) void invite();
@@ -230,15 +231,15 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
               {roleLabel(role)}<ChevronDown size={13} />
             </button>
             <button type="button" className="btn btn--primary" onClick={() => void invite()} disabled={busy || !query.trim()}>
-              {busy ? "Inviting…" : "Invite"}
+              {busy ? t("Inviting…") : t("Invite")}
             </button>
           </div>
         ) : (
-          <p className="share__note">Only the owner and people with Full access can invite others.</p>
+          <p className="share__note">{t("Only the owner and people with Full access can invite others.")}</p>
         )}
 
         {canInvite && suggestions.length ? (
-          <div className="share__suggestions" role="listbox" aria-label="People">
+          <div className="share__suggestions" role="listbox" aria-label={t("People")}>
             {suggestions.slice(0, 5).map((suggestion) => (
               <button
                 type="button"
@@ -261,7 +262,7 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
         {error ? <div className="share__error" role="alert">{error}</div> : null}
 
         <section className="share__section">
-          <h2>People with access</h2>
+          <h2>{t("People with access")}</h2>
           {members.map((member) => {
             const name = personName(member);
             const you = member.id === me?.id;
@@ -286,7 +287,7 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
 
         {invitations.length ? (
           <section className="share__section">
-            <h2>Invited</h2>
+            <h2>{t("Invited")}</h2>
             {invitations.map((invitation) => (
               <div className="share__member" key={invitation.id}>
                 <ProfileAvatar src={invitation.invitee.avatarUrl} name={personName(invitation.invitee)} size={32} />
@@ -294,7 +295,7 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
                   <strong>{personName(invitation.invitee)}</strong>
                   <small>@{invitation.invitee.handle} · {roleLabel(invitation.role).toLowerCase()} · {daysLeft(invitation.expiresAt)}</small>
                 </span>
-                <span className="share__pending">Waiting to accept</span>
+                <span className="share__pending">{t("Waiting to accept")}</span>
               </div>
             ))}
           </section>
@@ -307,21 +308,21 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
             <>
               <span className="share__exit-copy">
                 {confirming === "stop"
-                  ? "Everyone else loses access, and the page comes back to your private pages."
-                  : "You will lose access to this page and every page inside it."}
+                  ? t("Everyone else loses access, and the page comes back to your private pages.")
+                  : t("You will lose access to this page and every page inside it.")}
               </span>
-              <button type="button" className="btn" onClick={() => setConfirming(null)} disabled={busy}>Cancel</button>
+              <button type="button" className="btn" onClick={() => setConfirming(null)} disabled={busy}>{t("Cancel")}</button>
               <button type="button" className="btn btn--danger" disabled={busy} onClick={() => void (confirming === "stop" ? stop() : leave())}>
                 {confirming === "stop" ? "Stop sharing" : "Leave"}
               </button>
             </>
           ) : canStop ? (
             <button type="button" className="btn share__exit-button" onClick={() => setConfirming("stop")}>
-              <Lock size={14} />Stop sharing
+              <Lock size={14} />{t("Stop sharing")}
             </button>
           ) : (
             <button type="button" className="btn share__exit-button" onClick={() => setConfirming("leave")}>
-              <LogOut size={14} />Leave this page
+              <LogOut size={14} />{t("Leave this page")}
             </button>
           )}
         </div>
@@ -331,14 +332,14 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
         open={Boolean(roleAnchor)}
         anchor={roleAnchor}
         placement="bottom-end"
-        label="Invite as"
+        label={t("Invite as")}
         onDismiss={() => setRoleAnchor(null)}
       >
-        <MenuList label="Invite as" autoFocus>
+        <MenuList label={t("Invite as")} autoFocus>
           {ROLES.filter((option) => option.value !== "admin" || myRole === "owner").map((option) => (
             <MenuItem
               key={option.value}
-              label={option.label}
+              label={t(option.label)}
               selected={role === option.value}
               onSelect={() => { setRole(option.value); setRoleAnchor(null); }}
             />
@@ -350,11 +351,11 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
         open={Boolean(memberMenu)}
         anchor={memberMenu?.anchor ?? null}
         placement="bottom-end"
-        label="Change access"
+        label={t("Change access")}
         onDismiss={() => setMemberMenu(null)}
       >
         {memberMenu ? (
-          <MenuList label="Change access" autoFocus>
+          <MenuList label={t("Change access")} autoFocus>
             {canManageRoles ? ROLES.map((option) => {
               const Icon = option.icon;
               const current = memberMenu.member.role === option.value;
@@ -362,7 +363,7 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
                 <MenuItem
                   key={option.value}
                   icon={<Icon size={16} />}
-                  label={option.label}
+                  label={t(option.label)}
                   selected={current}
                   disabled={option.value === "admin" && myRole !== "owner"}
                   onSelect={() => void changeRole(memberMenu.member, option.value)}
@@ -373,7 +374,7 @@ export function ShareDialog({ page, onClose }: { page: NotePage; onClose(): void
             {canRemove ? (
               <MenuItem
                 icon={<Trash2 size={16} />}
-                label="Remove"
+                label={t("Remove")}
                 tone="danger"
                 onSelect={() => void removeMember(memberMenu.member)}
               />

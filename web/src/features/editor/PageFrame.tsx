@@ -3,6 +3,7 @@ import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { Tooltip } from "../../components/Tooltip";
 import { rectOf, type AnchorRect } from "../../hooks/useAnchoredPosition";
 import { PageIcon } from "./block-registry";
+import { t } from "../../i18n";
 
 /** A page drawn in another — a block, a page or a database shown here — and
  *  marked as a page is wherever one stands: its mark at the start of its
@@ -73,7 +74,7 @@ export function PageFrame({
   onToggle?: (pageId: string) => void;
   children: ReactNode;
 }) {
-  const hint = [locked ? "Read only here" : null, readOnly ? null : "drag to move"].filter(Boolean).join(" · ");
+  const hint = [locked ? t("Read only here") : null, readOnly ? null : t("drag to move")].filter(Boolean).join(" · ");
   const menu = (event: { preventDefault(): void; currentTarget: Element }) => {
     event.preventDefault();
     onMenu(rectOf(event.currentTarget));
@@ -90,13 +91,13 @@ export function PageFrame({
       data-head-kind={headKind}
       style={{ "--depth-base": depth, "--frame-level": level, "--frame-shift": shift } as CSSProperties}
     >
-      <Tooltip label={readOnly ? "Open menu" : "Drag to move"} hint={readOnly ? undefined : "Click to open menu"}>
+      <Tooltip label={readOnly ? t("Open menu") : t("Drag to move")} hint={readOnly ? undefined : t("Click to open menu")}>
         <button
           type="button"
           className="page-frame__handle"
           contentEditable={false}
           tabIndex={-1}
-          aria-label={`Options for ${name}`}
+          aria-label={t("Options for {name}", { name })}
           aria-haspopup="menu"
           draggable={!readOnly}
           onDragStart={readOnly ? undefined : onDragStart}
@@ -108,12 +109,12 @@ export function PageFrame({
         </button>
       </Tooltip>
       {/* Opening it as a page of its own is its name's to do. */}
-      <Tooltip label="Fold" hint={hint ? hint.charAt(0).toUpperCase() + hint.slice(1) : undefined}>
+      <Tooltip label={t("Fold")} hint={hint ? hint.charAt(0).toUpperCase() + hint.slice(1) : undefined}>
         <button
           type="button"
           className="page-frame__mark"
           contentEditable={false}
-          aria-label={`Fold ${name}`}
+          aria-label={t("Fold {name}", { name })}
           aria-expanded
           aria-haspopup="menu"
           draggable={!readOnly}

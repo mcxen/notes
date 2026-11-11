@@ -2,6 +2,7 @@ import { CalendarDays, Columns3, Database, LayoutGrid, LayoutList } from "lucide
 import type { ComponentType } from "react";
 import type { BlockKind, DatabaseViewKind } from "../../core/types";
 import { BLOCK_DEFINITIONS, DatabaseIcon, PageIcon } from "./block-registry";
+import { t } from "../../i18n";
 
 /** The menu's two sections: what a line can become, and the pages and
  *  databases it can make. */
@@ -80,9 +81,10 @@ const DATABASE_PENALTY = 2.5;
 function score(command: Command, query: string): number {
   if (!query) return 0;
   const label = command.label.toLowerCase();
-  if (label.startsWith(query)) return 0;
+  const shown = t(command.label).toLowerCase();
+  if (label.startsWith(query) || shown.startsWith(query)) return 0;
   if (command.aliases.some((alias) => alias.startsWith(query))) return 1;
-  if (label.includes(query)) return 2;
+  if (label.includes(query) || shown.includes(query)) return 2;
   if (command.aliases.some((alias) => alias.includes(query))) return 3;
   return -1;
 }
@@ -110,14 +112,14 @@ export function SlashMenu({
   onSelect(command: Command): void;
 }) {
   if (!commands.length) {
-    return <div className="menu slash"><div className="slash__empty">No results</div></div>;
+    return <div className="menu slash"><div className="slash__empty">{t("No results")}</div></div>;
   }
   const grouped = GROUP_ORDER
     .map((group) => ({ group, items: commands.filter((command) => command.group === group) }))
     .filter((entry) => entry.items.length);
 
   return (
-    <div className="menu slash" role="listbox" aria-label="Blocks">
+    <div className="menu slash" role="listbox" aria-label={t("Blocks")}>
       {grouped.map(({ group, items }) => (
         <div className="menu__section" key={group}>
           <div className="menu__section-title">{group}</div>
@@ -136,7 +138,7 @@ export function SlashMenu({
                 onClick={() => onSelect(command)}
               >
                 <span className="menu__icon"><Icon size={16} /></span>
-                <span className="menu__label">{command.label}</span>
+                <span className="menu__label">{t(command.label)}</span>
                 {command.hint ? <kbd className="menu__hint slash__hint">{command.hint}</kbd> : null}
               </button>
             );

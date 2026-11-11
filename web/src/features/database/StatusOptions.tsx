@@ -8,6 +8,7 @@ import type { DatabaseProperty, OptionColor, StatusGroup, StatusOption } from ".
 import { defaultStatus, OPTION_COLORS, STATUS_GROUPS, statusNameTaken, statusOptions } from "./database-model";
 import { OptionTag } from "./properties";
 import { capitalized } from "../../core/title";
+import { t } from "../../i18n";
 
 /** What editing a status's options does to the database: each is one step
  *  of undo, rows included. `add` and `rename` answer false when the name is
@@ -114,7 +115,7 @@ export function StatusOptionsMenu({
       open
       anchor={anchor}
       placement="right-start"
-      label="Edit property"
+      label={t("Edit property")}
       group={popGroup}
       onDismiss={() => {
         flush.current?.();
@@ -153,7 +154,7 @@ export function StatusOptionsMenu({
                     type="button"
                     className="icon-btn icon-btn--sm"
                     aria-label={`Add an option to ${label}`}
-                    title="Add an option"
+                    title={t("Add an option")}
                     onClick={() => {
                       setAdding(group);
                       setDraft("");
@@ -186,7 +187,7 @@ export function StatusOptionsMenu({
                         onClick={() => setOpenId(option.id)}
                       >
                         <OptionTag property={property} value={option.name} />
-                        {option.id === fallback.id ? <span className="status-menu__default">Default</span> : null}
+                        {option.id === fallback.id ? <span className="status-menu__default">{t("Default")}</span> : null}
                         <ChevronRight size={14} className="status-menu__chevron" />
                       </button>
                     </div>
@@ -197,7 +198,7 @@ export function StatusOptionsMenu({
                     <input
                       autoFocus
                       value={draft}
-                      placeholder="Name the option…"
+                      placeholder={t("Name the option…")}
                       aria-label={`New option in ${label}`}
                       aria-invalid={draftTaken || undefined}
                       onChange={(event) => setDraft(event.target.value)}
@@ -208,7 +209,7 @@ export function StatusOptionsMenu({
                         addDraft(group);
                       }}
                     />
-                    {draftTaken ? <span className="status-menu__hint">An option has this name.</span> : null}
+                    {draftTaken ? <span className="status-menu__hint">{t("An option has this name.")}</span> : null}
                   </div>
                 ) : null}
               </section>
@@ -272,13 +273,13 @@ function OptionSettings({
         }}
       >
         <ChevronLeft size={16} />
-        <span>Options</span>
+        <span>{t("Options")}</span>
       </button>
       <input
         className="option-menu__name"
         autoFocus
         value={name}
-        aria-label="Option name"
+        aria-label={t("Option name")}
         aria-invalid={taken || undefined}
         spellCheck={false}
         onFocus={(event) => event.currentTarget.select()}
@@ -291,14 +292,14 @@ function OptionSettings({
           onBack();
         }}
       />
-      {taken ? <div className="option-menu__hint">An option has this name.</div> : null}
-      <MenuList label="Option">
+      {taken ? <div className="option-menu__hint">{t("An option has this name.")}</div> : null}
+      <MenuList label={t("Option")}>
         {isDefault ? null : (
-          <MenuItem icon={<Star size={16} />} label="Set as default" onSelect={() => editing.makeDefault(option.id)} />
+          <MenuItem icon={<Star size={16} />} label={t("Set as default")} onSelect={() => editing.makeDefault(option.id)} />
         )}
         <MenuItem
           icon={<Trash2 size={16} />}
-          label="Delete"
+          label={t("Delete")}
           tone="danger"
           disabled={only}
           onSelect={() => {
@@ -308,7 +309,7 @@ function OptionSettings({
           }}
         />
         <MenuDivider />
-        <div className="menu__section-title">Colors</div>
+        <div className="menu__section-title">{t("Colors")}</div>
         {OPTION_COLORS.map((color) => (
           <MenuItem
             key={color}

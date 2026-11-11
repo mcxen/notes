@@ -13,6 +13,7 @@ import {
 import { normalizeEmbed } from "./embeds";
 import { normalizeSimpleTable } from "./simple-table";
 import type { Block, BlockKind, BlockTree, InlineContent, NotePage } from "./types";
+import { t } from "../i18n";
 
 export const BLOCK_ORDER_STEP = 1024;
 
@@ -180,7 +181,7 @@ export function pageFirstLine(page: Pick<NotePage, "block_tree">, describe?: Des
  *  "Untitled" when it has neither. A block is a page, and is called the
  *  same way everywhere it is listed. */
 export function pageName(page: Pick<NotePage, "title" | "block_tree">, describe?: DescribeMention): string {
-  return page.title || pageFirstLine(page, describe) || "Untitled";
+  return page.title || pageFirstLine(page, describe) || t("Untitled");
 }
 
 /** The link a line stands for a page by: a line of words holding nothing

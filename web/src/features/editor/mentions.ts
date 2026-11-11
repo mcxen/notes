@@ -1,6 +1,7 @@
 import { blocksInOrder, pageName } from "../../core/block-tree";
 import { dateLabel, isoDate, mentionFromAttributes, type DescribeMention } from "../../core/inline-content";
 import type { BlockTree, NotePage } from "../../core/types";
+import { t } from "../../i18n";
 
 /* Mentions — `@` and `[[` — as Notion has them: a page named among the words
    by its title as it is NOW (renaming the page renames every mention of it),
@@ -20,7 +21,7 @@ export function mentionDescriber(
     if (mention.kind === "date") return { label: dateLabel(mention.date, now()) };
     if (mention.kind === "image") return { label: mention.file.name };
     const page = pages()[mention.page_id];
-    if (!page) return { label: "No access", state: "missing" };
+    if (!page) return { label: t("No access"), state: "missing" };
     const state = page.archived ? "trashed" as const : here.includes(page.id) ? "here" as const : undefined;
     // Links inside an unnamed page's first line read as the titles they
     // link to — but never by a first line again, which could go round

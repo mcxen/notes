@@ -101,7 +101,7 @@ func (r *remoteSync) Run(ctx context.Context) (vsync.Report, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.stopped.Load() {
-		return vsync.Report{}, errors.New("this vault is no longer kept in a remote folder")
+		return vsync.Report{}, errors.New(tr("this vault is no longer kept in a remote folder"))
 	}
 	emitSync(r.s, SyncState{Status: "saving"})
 	if err := r.s.vault.Flush(); err != nil {
@@ -190,7 +190,7 @@ func passwordKey(folder string) string {
 func openRemote(cfg settings.Remote, folder string) (storage.Remote, error) {
 	password, err := mygo.Secrets.Get(passwordKey(folder))
 	if err != nil && !errors.Is(err, mygo.ErrSecretNotFound) {
-		return nil, fmt.Errorf("the password could not be read: %w", err)
+		return nil, fmt.Errorf("%s: %w", tr("the password could not be read"), err)
 	}
 	var remote storage.Remote
 	switch cfg.Kind {
@@ -296,7 +296,7 @@ func (n *Notebooks) SyncNow(ctx context.Context) (vsync.Report, error) {
 		return vsync.Report{}, err
 	}
 	if s.remote == nil {
-		return vsync.Report{}, errors.New("this vault is not kept in a remote folder")
+		return vsync.Report{}, errors.New(tr("this vault is not kept in a remote folder"))
 	}
 	return s.remote.Run(ctx)
 }

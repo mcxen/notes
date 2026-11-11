@@ -47,9 +47,9 @@ func updateSourceName(s string) string {
 	case updateSourceGitHub:
 		return "GitHub"
 	case updateSourceMirror:
-		return "tvv.tw mirror"
+		return tr("tvv.tw mirror")
 	}
-	return "Automatic"
+	return tr("Automatic")
 }
 
 // applyUpdateSource points mygo's updater at the chosen source. Auto uses

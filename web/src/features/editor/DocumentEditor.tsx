@@ -173,6 +173,7 @@ import { blockTyping } from "./useBlockTyping";
 import { spaceOfPage } from "../../core/page-tree";
 import { followHref } from "./RichField";
 import { RemoteCarets } from "./RemoteCarets";
+import { t } from "../../i18n";
 
 /* The icon and cover pickers are loaded the first time one opens. */
 const IconPicker = lazy(() => import("./IconPicker").then((module) => ({ default: module.IconPicker })));
@@ -569,8 +570,8 @@ export function DocumentEditor({
   const copyHoveredLink = (link: HoveredLink) => {
     linkHover.close();
     void navigator.clipboard.writeText(link.href)
-      .then(() => toast("Link copied", "success"))
-      .catch(() => toast("Could not copy that link", "error"));
+      .then(() => toast(t("Link copied"), "success"))
+      .catch(() => toast(t("Could not copy that link"), "error"));
   };
   /** Edit: the link's words selected and the Link box open on them, as ⌘K
    *  opens it — holding the address, with Update and Remove. */
@@ -782,8 +783,8 @@ export function DocumentEditor({
     const root = blocksRef.current;
     if (!root || !ids.length) return;
     copyBlocksAsImage(root, ids).then(
-      () => toast("Copied as image", "success"),
-      (reason: unknown) => toast(`Could not copy as image: ${reason instanceof Error ? reason.message : String(reason)}`, "error"),
+      () => toast(t("Copied as image"), "success"),
+      (reason: unknown) => toast(t("Could not copy as image: {reason}", { reason: reason instanceof Error ? reason.message : String(reason) }), "error"),
     );
   }, [toast]);
 
@@ -837,12 +838,12 @@ export function DocumentEditor({
     const table = tops[0].kind === "table" ? tops[0] : undefined;
     const span = pageSpan(tree, tops.map((top) => top.id));
     if (!span || span.blocks.length !== tops.length) {
-      toast("Only lines that stand together can become a database.", "error");
+      toast(t("Only lines that stand together can become a database."), "error");
       return;
     }
     const refusal = table ? null : listRefusal(tree, tops);
     if (refusal) {
-      toast(refusal, "error");
+      toast(t(refusal), "error");
       return;
     }
     const holder = ownerOf(tops[0].id);
@@ -952,7 +953,7 @@ export function DocumentEditor({
       applyBlockMutations(targetId, appendFragment(latest.block_tree, fragment));
     }
     setBlockSelection(null);
-    toast(`Moved to ${pageName(target)}`, "success");
+    toast(t("Moved to {name}", { name: pageName(target) }), "success");
   }, [applyBlockMutations, composite, execute, movePage, movingPages, store, toast, tree, workspace]);
 
   /* Pasting a block that was CUT moves its page to where it is pasted: what
@@ -1027,7 +1028,7 @@ export function DocumentEditor({
    *  folded: row marks, frame marks, link triangles, menus. */
   const setShown = useCallback((ref: ShownRef, shown: boolean) => {
     if (readOnly) {
-      toast(VIEW_ONLY, "info");
+      toast(t(VIEW_ONLY), "info");
       return;
     }
     if ("line" in ref) {
@@ -1064,7 +1065,7 @@ export function DocumentEditor({
    *  locks it. */
   const setLocked = useCallback((ref: ShownRef, locked: boolean) => {
     if (readOnly) {
-      toast(VIEW_ONLY, "info");
+      toast(t(VIEW_ONLY), "info");
       return;
     }
     if ("line" in ref) {
@@ -1192,7 +1193,7 @@ export function DocumentEditor({
 
   /** What a page drawn here is called: as it is everywhere it is listed. */
   const nameOf = useCallback((id: string) => (
-    pages[id] ? pageName(pages[id], describeMention) : "Untitled"
+    pages[id] ? pageName(pages[id], describeMention) : t("Untitled")
   ), [describeMention, pages]);
 
   /** Where a block drawn here is shown in other pages: each paragraph whose
@@ -1235,7 +1236,7 @@ export function DocumentEditor({
     execute(deleteBlocks(tree, [blockId], createId("block")), undefined, { cut: [blockId] });
     movePage(blockId, target.id);
     applyBlockMutations(target.id, mutations);
-    toast(`Removed from this page — it stays in ${pageName(target)}`, "success");
+    toast(t("Removed from this page — it stays in {name}", { name: pageName(target) }), "success");
   }, [applyBlockMutations, execute, mountsOf, movePage, pages, toast, tree]);
 
   /** Opens a page on one of its paragraphs — where a backlink was written:
@@ -1590,7 +1591,7 @@ export function DocumentEditor({
     const before = stored.table ?? normalizeSimpleTable(undefined);
     const size = tableBytes(applyTableWrites(before, writes));
     if (size > TABLE_BYTE_BUDGET && size > tableBytes(before)) {
-      toast("This table is full — turn it into a database to keep adding to it.", "error");
+      toast(t("This table is full — turn it into a database to keep adding to it."), "error");
       return false;
     }
     const base = ["pages", owner, "block_tree", "by_id", block.id, "table"];
@@ -1665,8 +1666,8 @@ export function DocumentEditor({
       },
       copyCode: (block) => {
         void navigator.clipboard.writeText(inlinePlainText(block.content))
-          .then(() => toast("Code copied", "success"))
-          .catch(() => toast("Could not copy that code", "error"));
+          .then(() => toast(t("Code copied"), "success"))
+          .catch(() => toast(t("Could not copy that code"), "error"));
       },
       change: onBlockChange,
       keyDown: onBlockKeyDown,
@@ -1677,7 +1678,7 @@ export function DocumentEditor({
       downloadFile: (block) => {
         const file = normalizeStoredFile(block.file);
         if (!file || !platform) return;
-        void downloadFile(platform.files, file).catch(() => toast("Could not download that file", "error"));
+        void downloadFile(platform.files, file).catch(() => toast(t("Could not download that file"), "error"));
       },
       resizeCard: (block, width) => execute(updateBlockFields(tree, block.id, { width })),
       retryUpload: (block) => retries.current.get(block.id)?.(),
@@ -1737,12 +1738,12 @@ export function DocumentEditor({
   const uploadCover = useCallback(async (source: File) => {
     if (!platform || readOnly) return;
     if (!isImageType(source.type)) {
-      toast("A cover is a picture — PNG, JPEG, GIF or WebP.", "error");
+      toast(t("A cover is a picture — PNG, JPEG, GIF or WebP."), "error");
       return;
     }
     const refusal = refuseFiles([source]);
     if (refusal) {
-      toast(refusal, "error");
+      toast(t(refusal), "error");
       return;
     }
     const pageId = page.id;
@@ -1751,7 +1752,7 @@ export function DocumentEditor({
     try {
       staged = await stageFile(platform.files, source, { pageId, owner: platform.bootstrap.user.id, space: spaceOfPage(pages, pageId) });
     } catch {
-      toast("Could not read that picture", "error");
+      toast(t("Could not read that picture"), "error");
       return;
     }
     updatePage(pageId, { cover_image: staged.file, cover: undefined });
@@ -1765,7 +1766,7 @@ export function DocumentEditor({
           ? { type: "delete" as const, path: ["pages", pageId, key] }
           : { type: "set" as const, path: ["pages", pageId, key], value: before[key] })), false);
       }
-      toast("Could not upload that picture", "error");
+      toast(t("Could not upload that picture"), "error");
     }
   }, [commitWrites, page.cover, page.cover_image, page.id, pages, platform, readOnly, toast, updatePage, workspace]);
 
@@ -1886,7 +1887,7 @@ export function DocumentEditor({
     if (target.id === here) return null;
     // A database is drawn as the database it is, never as a page's words.
     if (target.kind === "database") return renderDatabase(key, target, handle);
-    if (shownPages.includes(target.id)) return <p key={key} className="mount-note" role="note">This page is shown above.</p>;
+    if (shownPages.includes(target.id)) return <p key={key} className="mount-note" role="note">{t("This page is shown above.")}</p>;
     return mountFrame(key, (
       <DocumentEditor
         page={target}
@@ -1976,7 +1977,7 @@ export function DocumentEditor({
           anchor={slash.anchor}
           placement="bottom-start"
           role="presentation"
-          label="Blocks"
+          label={t("Blocks")}
           onDismiss={() => setSlash(null)}
           closeOnScroll={false}
         >
@@ -2145,7 +2146,7 @@ export function DocumentEditor({
             ...(canTrashPage(page.id) ? {
               onDelete: () => {
                 archivePage(page.id);
-                toast("Moved to trash", "success");
+                toast(t("Moved to trash"), "success");
               },
             } : {}),
           }),
@@ -2205,7 +2206,7 @@ export function DocumentEditor({
       if (!block) return null;
       return {
         tab: "emoji",
-        label: "Callout icon",
+        label: t("Callout icon"),
         current: block.icon || "💡",
         onPick: (icon) => {
           execute(updateBlockFields(tree, block.id, { icon }));
@@ -2337,7 +2338,7 @@ export function DocumentEditor({
         <PageNameEditor
           anchor={naming.anchor}
           name={pages[naming.id].title || undefined}
-          firstLine={pageFirstLine(pages[naming.id], describeMention) || "Untitled"}
+          firstLine={pageFirstLine(pages[naming.id], describeMention) || t("Untitled")}
           onSave={(name) => updatePage(naming.id, { title: name ?? "" })}
           onClose={() => setNaming(null)}
         />
@@ -2394,7 +2395,7 @@ export function DocumentEditor({
             readOnly={readOnly}
             onAlign={(align) => execute(updateBlockFields(tree, link.block.id, { align }))}
             onDownload={() => {
-              if (platform) void downloadFile(platform.files, mention.file).catch(() => toast("Could not download that file", "error"));
+              if (platform) void downloadFile(platform.files, mention.file).catch(() => toast(t("Could not download that file"), "error"));
             }}
             onView={() => setViewing(mention.file)}
             onEnter={() => holdPicture(pictureHover)}
@@ -2408,7 +2409,7 @@ export function DocumentEditor({
           file={viewing}
           actions={actions}
           onDownload={() => {
-            if (platform) void downloadFile(platform.files, viewing).catch(() => toast("Could not download that file", "error"));
+            if (platform) void downloadFile(platform.files, viewing).catch(() => toast(t("Could not download that file"), "error"));
           }}
           onClose={() => setViewing(null)}
         />
@@ -2489,16 +2490,16 @@ export function DocumentEditor({
           {readOnly ? null : (
             <div className="doc__cover-actions">
               <button type="button" className="btn" onClick={(event) => setPicker({ kind: "cover", anchor: rectOf(event.currentTarget) })}>
-                Change cover
+                {t("Change cover")}
               </button>
               <button
                 type="button"
                 className="btn"
                 onClick={() => updatePage(page.id, { cover: randomCoverId(cover.kind === "gradient" ? cover.id : undefined), cover_image: undefined })}
               >
-                <RefreshCw size={13} />Shuffle
+                <RefreshCw size={13} />{t("Shuffle")}
               </button>
-              <button type="button" className="btn" aria-label="Remove cover" onClick={() => updatePage(page.id, { cover: undefined, cover_image: undefined })}>
+              <button type="button" className="btn" aria-label={t("Remove cover")} onClick={() => updatePage(page.id, { cover: undefined, cover_image: undefined })}>
                 <X size={14} />
               </button>
             </div>
@@ -2512,12 +2513,12 @@ export function DocumentEditor({
             <div className="doc__decorate">
               {icon ? null : (
                 <button type="button" className="btn" onClick={() => updatePage(page.id, { icon: randomEmoji() })}>
-                  <Smile size={15} />Add icon
+                  <Smile size={15} />{t("Add icon")}
                 </button>
               )}
               {cover ? null : (
                 <button type="button" className="btn" onClick={() => updatePage(page.id, { cover: randomCoverId(), cover_image: undefined })}>
-                  <ImageIcon size={15} />Add cover
+                  <ImageIcon size={15} />{t("Add cover")}
                 </button>
               )}
             </div>
@@ -2527,7 +2528,7 @@ export function DocumentEditor({
             <button
               type="button"
               className="doc__icon"
-              aria-label="Change page icon"
+              aria-label={t("Change page icon")}
               disabled={readOnly}
               onClick={(event) => setPicker({ kind: "icon", pageId: page.id, anchor: rectOf(event.currentTarget) })}
             >
@@ -2541,11 +2542,11 @@ export function DocumentEditor({
           <TitleField
             elementRef={(element) => { titleRef.current = element; }}
             className="doc__title"
-            label="Page title"
+            label={t("Page title")}
             historyField="title"
             content={titleContent}
             readOnly={readOnly}
-            placeholder={pageFirstLine(page, describeMention) || "Untitled"}
+            placeholder={pageFirstLine(page, describeMention) || t("Untitled")}
             onChange={(next) => updatePage(page.id, titleFields(next))}
             onBlur={() => checkpointPage(page.id, "Renamed page")}
             onOpenPage={(href, full) => {

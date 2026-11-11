@@ -2,6 +2,9 @@
 
 ## 0.1.1
 
+- Chinese and English: Settings › General › Language (Automatic, English, 简体中文). The pages, the menus and the settings change at once; Automatic follows the system's language.
+- The macOS icon now has the margin of Apple's icon template (the artwork is 824 of 1024 pixels), so it is the size of other apps' icons in the Dock instead of one step larger. Windows and Linux keep the full-size icon.
+- "Copy link" for pages and blocks is gone: the address it copied opened nothing outside the window.
 - A vault switcher at the foot of the sidebar: switch this window to another vault, or open it in a window of its own so several vaults are open side by side. Open Folder, New Vault, Connect and the picker are in the same menu.
 - Search (⌘K) takes several words, marks them in the results, cuts the line around the match, and opens the page scrolled to the line that matched.
 - Selected paragraphs have a bar with Copy, Copy as image (⌘⇧C) and Delete; Copy as image is also in the paragraph menu. The picture goes to the system clipboard.

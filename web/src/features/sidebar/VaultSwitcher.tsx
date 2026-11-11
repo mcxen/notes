@@ -6,6 +6,7 @@ import { Tooltip } from "../../components/Tooltip";
 import { imeComposing } from "../../core/keyboard";
 import { rectOf, type AnchorRect } from "../../hooks/useAnchoredPosition";
 import { Connections, type VaultEntry } from "../../platform/mygo";
+import { t } from "../../i18n";
 
 /** How many vaults it takes before the list gets a filter field. */
 const FILTER_FROM = 6;
@@ -48,12 +49,12 @@ export function VaultSwitcher({ name, compact = false }: { name: string; compact
 
   return (
     <>
-      <Tooltip label="Switch vault" placement="top-start">
+      <Tooltip label={t("Switch vault")} placement="top-start">
         <button
           type="button"
           ref={buttonRef}
           className={`vault-switch ${compact ? "vault-switch--compact" : ""} ${open ? "is-on" : ""}`}
-          aria-label={`Vault: ${name}. Switch vault`}
+          aria-label={t("Vault: {name}. Switch vault", { name })}
           aria-haspopup="menu"
           aria-expanded={open}
           onClick={() => setAnchor(open ? null : rectOf(buttonRef.current!))}
@@ -64,16 +65,16 @@ export function VaultSwitcher({ name, compact = false }: { name: string; compact
         </button>
       </Tooltip>
 
-      <Popover open={open} anchor={anchor} placement="top-start" label="Vaults" className="vault-menu" onDismiss={close}>
-        <MenuList label="Vaults" autoFocus={vaults.length < FILTER_FROM}>
-          <div className="menu__section-title">Vaults</div>
+      <Popover open={open} anchor={anchor} placement="top-start" label={t("Vaults")} className="vault-menu" onDismiss={close}>
+        <MenuList label={t("Vaults")} autoFocus={vaults.length < FILTER_FROM}>
+          <div className="menu__section-title">{t("Vaults")}</div>
           {vaults.length >= FILTER_FROM ? (
             <input
               autoFocus
               className="vault-menu__filter"
               value={filter}
-              placeholder="Find a vault…"
-              aria-label="Find a vault"
+              placeholder={t("Find a vault…")}
+              aria-label={t("Find a vault")}
               onChange={(event) => setFilter(event.target.value)}
               onKeyDown={(event) => {
                 if (imeComposing(event)) return;
@@ -92,23 +93,23 @@ export function VaultSwitcher({ name, compact = false }: { name: string; compact
                   role="menuitem"
                   className="menu__item vault-row__main"
                   disabled={entry.missing}
-                  title={entry.missing ? "This folder is no longer there" : entry.path}
+                  title={entry.missing ? t("This folder is no longer there") : entry.path}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => openVault(entry, false)}
                 >
                   <span className="menu__icon">{entry.remote ? <Cloud size={16} /> : <Folder size={16} />}</span>
                   <span className="menu__copy">
                     <span className="menu__label">{entry.name}</span>
-                    <span className="menu__description">{entry.missing ? "Folder missing" : entry.detail}</span>
+                    <span className="menu__description">{entry.missing ? t("Folder missing") : entry.detail}</span>
                   </span>
-                  {entry.current ? <span className="vault-row__state">Here</span> : entry.open ? <span className="vault-row__state">Open</span> : null}
+                  {entry.current ? <span className="vault-row__state">{t("Here")}</span> : entry.open ? <span className="vault-row__state">{t("Open")}</span> : null}
                 </button>
                 {entry.current || entry.missing ? null : (
-                  <Tooltip label="Open in a new window" placement="top-start">
+                  <Tooltip label={t("Open in a new window")} placement="top-start">
                     <button
                       type="button"
                       className="icon-btn vault-row__new"
-                      aria-label={`Open ${entry.name} in a new window`}
+                      aria-label={t("Open {name} in a new window", { name: entry.name })}
                       onMouseDown={(event) => event.preventDefault()}
                       onClick={() => openVault(entry, true)}
                     >
@@ -118,14 +119,14 @@ export function VaultSwitcher({ name, compact = false }: { name: string; compact
                 )}
               </div>
             ))}
-            {!shown.length ? <div className="vault-menu__empty">{vaults.length ? "No vault matches." : "No vaults yet."}</div> : null}
+            {!shown.length ? <div className="vault-menu__empty">{vaults.length ? t("No vault matches.") : t("No vaults yet.")}</div> : null}
           </div>
           {error ? <div className="vault-menu__error" role="alert">{error}</div> : null}
           <MenuDivider />
-          <MenuAction icon={<FolderOpen size={16} />} label="Open Folder…" onSelect={() => act(() => Connections.chooseVault())} />
-          <MenuAction icon={<FolderPlus size={16} />} label="New Vault…" onSelect={() => act(() => Connections.newVault())} />
-          <MenuAction icon={<Link2 size={16} />} label="Connect to a Remote Folder…" onSelect={() => act(() => Connections.openConnect())} />
-          <MenuAction icon={<LayoutGrid size={16} />} label="Vault Picker…" onSelect={() => act(() => Connections.openPicker())} />
+          <MenuAction icon={<FolderOpen size={16} />} label={t("Open Folder…")} onSelect={() => act(() => Connections.chooseVault())} />
+          <MenuAction icon={<FolderPlus size={16} />} label={t("New Vault…")} onSelect={() => act(() => Connections.newVault())} />
+          <MenuAction icon={<Link2 size={16} />} label={t("Connect to a Remote Folder…")} onSelect={() => act(() => Connections.openConnect())} />
+          <MenuAction icon={<LayoutGrid size={16} />} label={t("Vault Picker…")} onSelect={() => act(() => Connections.openPicker())} />
         </MenuList>
       </Popover>
     </>

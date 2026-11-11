@@ -1,5 +1,6 @@
 import { CircleAlert } from "lucide-react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { t } from "../i18n";
 
 interface ErrorBoundaryState {
   error: Error | null;
@@ -28,10 +29,10 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, ErrorBound
     return (
       <main className="state-screen" role="alert">
         <span className="state-screen__mark state-screen__mark--danger"><CircleAlert size={20} /></span>
-        <h1>Something went wrong</h1>
+        <h1>{t("Something went wrong")}</h1>
         <div className="state-screen__actions">
-          <button type="button" className="btn" onClick={() => this.setState({ error: null })}>Try again</button>
-          <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>Reload Notes</button>
+          <button type="button" className="btn" onClick={() => this.setState({ error: null })}>{t("Try again")}</button>
+          <button type="button" className="btn btn--primary" onClick={() => window.location.reload()}>{t("Reload Notes")}</button>
         </div>
       </main>
     );

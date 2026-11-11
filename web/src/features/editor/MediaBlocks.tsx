@@ -4,6 +4,7 @@ import { formatFileSize, normalizeStoredFile } from "../../core/files";
 import type { Block, StoredFile } from "../../core/types";
 import { Modal } from "../../components/Modal";
 import { peekFileUrl, type ShownFile } from "./file-store";
+import { t } from "../../i18n";
 
 export type UploadState = "uploading" | "failed";
 
@@ -107,7 +108,7 @@ function EmptyMedia({ block, readOnly, actions }: { block: Block; readOnly: bool
   return (
     <button type="button" className="block__media-empty" disabled={readOnly} onClick={() => actions.pickFile(block)}>
       <Paperclip size={18} />
-      <span>Add a file</span>
+      <span>{t("Add a file")}</span>
     </button>
   );
 }
@@ -134,15 +135,15 @@ export function FileBlock({
         <span className="block__file-size">{formatFileSize(file.size)}</span>
       </button>
       {readOnly || upload ? null : (
-        <button type="button" className="icon-btn block__file-replace" aria-label="Replace file" onClick={() => actions.pickFile(block)}>
+        <button type="button" className="icon-btn block__file-replace" aria-label={t("Replace file")} onClick={() => actions.pickFile(block)}>
           <Replace size={14} />
         </button>
       )}
-      {upload === "uploading" ? <span className="block__file-status" role="status"><span className="spinner" aria-hidden="true" />Uploading…</span> : null}
+      {upload === "uploading" ? <span className="block__file-status" role="status"><span className="spinner" aria-hidden="true" />{t("Uploading…")}</span> : null}
       {upload === "failed" ? (
         <span className="block__file-status is-failed" role="alert">
-          Upload failed
-          <button type="button" className="btn" onClick={() => actions.retryUpload(block)}><RotateCw size={13} />Try again</button>
+          {t("Upload failed")}
+          <button type="button" className="btn" onClick={() => actions.retryUpload(block)}><RotateCw size={13} />{t("Try again")}</button>
         </span>
       ) : null}
     </div>
@@ -193,23 +194,23 @@ export function ImageViewer({
       <div className="viewer__bar">
         <span className="viewer__name">{file.name}</span>
         {browse && browse.count > 1 ? <span className="viewer__count">{browse.index + 1} of {browse.count}</span> : null}
-        <button type="button" className="icon-btn" aria-label="Download" onClick={onDownload}><Download size={16} /></button>
-        <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><X size={16} /></button>
+        <button type="button" className="icon-btn" aria-label={t("Download")} onClick={onDownload}><Download size={16} /></button>
+        <button type="button" className="icon-btn" aria-label={t("Close")} onClick={onClose}><X size={16} /></button>
       </div>
       <div className="viewer__stage" onClick={onClose}>
         {url ? (
           <img src={url} alt={file.name} onClick={(event) => event.stopPropagation()} />
         ) : failed ? (
-          <p className="viewer__missing">This image could not be loaded.</p>
+          <p className="viewer__missing">{t("This image could not be loaded.")}</p>
         ) : (
-          <span className="spinner" aria-label="Loading" />
+          <span className="spinner" aria-label={t("Loading")} />
         )}
         {browse && browse.count > 1 ? (
           <>
             <button
               type="button"
               className="viewer__step viewer__step--back"
-              aria-label="Previous image"
+              aria-label={t("Previous image")}
               disabled={first}
               onClick={(event) => { event.stopPropagation(); browse.onStep(-1); }}
             >
@@ -218,7 +219,7 @@ export function ImageViewer({
             <button
               type="button"
               className="viewer__step viewer__step--next"
-              aria-label="Next image"
+              aria-label={t("Next image")}
               disabled={last}
               onClick={(event) => { event.stopPropagation(); browse.onStep(1); }}
             >

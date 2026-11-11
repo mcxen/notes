@@ -52,6 +52,7 @@ import { SpaceRosters } from "../platform/rosters";
 import { onRemoteSync } from "../platform/sync-status";
 import { WorkspaceDocument, type SyncStatus, type WorkspaceMutation } from "../platform/workspace-document";
 import { WorkspaceStateStore, WorkspaceStoreContext } from "./workspace-store";
+import { t } from "../i18n";
 
 /** What changes rarely — the actions, the selection, the member's spaces
  *  and preferences — so a view reading it is not redrawn by every keystroke.
@@ -301,7 +302,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           globalThis.document.removeEventListener("visibilitychange", onVisibility);
         };
       })
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Notes could not open"))
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : t("Notes could not open")))
       .finally(() => {
         if (active) setLoading(false);
       });

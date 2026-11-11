@@ -11,5 +11,8 @@
   "updates": {
     "publicKey": "xZ5864QHooA4ypEO11T2eny7aY7ZqsqxZ9a8FAI5nIY=",
     "github": "mcxen/notes"
+  },
+  "macos": {
+    "icon": "assets/macos/AppIcon.icns"
   }
 }

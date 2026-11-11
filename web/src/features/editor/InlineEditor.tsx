@@ -15,6 +15,7 @@ import { blockDefinition } from "./block-registry";
 import { highlighterReady, whenHighlighterReady } from "./code-highlight";
 import { inlineFromNodes, keptOffset } from "./rich-text";
 import { focusRange, selectionOffsets } from "./selection";
+import { t } from "../../i18n";
 
 /** One `contenteditable` per block.
  *
@@ -106,8 +107,8 @@ export const InlineEditor = memo(function InlineEditor({
       dir="ltr"
       role="textbox"
       aria-multiline="true"
-      aria-label={definition.label}
-      data-placeholder={definition.placeholder}
+      aria-label={t(definition.label)}
+      data-placeholder={definition.placeholder ? t(definition.placeholder) : undefined}
       spellCheck={!code}
       onInput={(event: FormEvent<HTMLElement>) => {
         const element = event.currentTarget;

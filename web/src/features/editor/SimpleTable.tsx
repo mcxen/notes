@@ -44,6 +44,7 @@ import { CELL_GRAMMAR, RichField } from "./RichField";
 import { focusRange, caretOnFirstLine, caretOnLastLine, caretOffset, placeCaretNear, selectionOffsets } from "./selection";
 import { gridFromClipboard } from "./table-clipboard";
 import { markForKey } from "./marks";
+import { t } from "../../i18n";
 
 /* A simple table — Notion's: a grid of cells in a page, drawn and edited in
    place (the model, and every way reading one can go wrong, head
@@ -657,24 +658,24 @@ export const SimpleTable = memo(function SimpleTable({
       write(writes);
     };
     return (
-      <MenuList label="Row" autoFocus>
+      <MenuList label={t("Row")} autoFocus>
         {index === 0 ? (
           <>
             <MenuItem
               icon={<Rows3 size={16} />}
-              label="Header row"
+              label={t("Header row")}
               selected={grid.header_row}
               onSelect={() => run([{ kind: "header", which: "header_row", on: !grid.header_row }])}
             />
             <MenuDivider />
           </>
         ) : null}
-        <MenuItem icon={<ArrowUp size={16} />} label="Insert above" disabled={grid.rows.length >= MAX_TABLE_ROWS} onSelect={() => { closeMenu(); addRow(index, 0); }} />
-        <MenuItem icon={<ArrowDown size={16} />} label="Insert below" disabled={grid.rows.length >= MAX_TABLE_ROWS} onSelect={() => { closeMenu(); addRow(index + 1, 0); }} />
-        <MenuItem icon={<Copy size={16} />} label="Duplicate" disabled={grid.rows.length >= MAX_TABLE_ROWS} onSelect={() => run([duplicateRow(grid, row.id, newId("row"))])} />
-        <MenuItem icon={<Eraser size={16} />} label="Clear contents" onSelect={() => run(clearRows(grid, [row.id]))} />
+        <MenuItem icon={<ArrowUp size={16} />} label={t("Insert above")} disabled={grid.rows.length >= MAX_TABLE_ROWS} onSelect={() => { closeMenu(); addRow(index, 0); }} />
+        <MenuItem icon={<ArrowDown size={16} />} label={t("Insert below")} disabled={grid.rows.length >= MAX_TABLE_ROWS} onSelect={() => { closeMenu(); addRow(index + 1, 0); }} />
+        <MenuItem icon={<Copy size={16} />} label={t("Duplicate")} disabled={grid.rows.length >= MAX_TABLE_ROWS} onSelect={() => run([duplicateRow(grid, row.id, newId("row"))])} />
+        <MenuItem icon={<Eraser size={16} />} label={t("Clear contents")} onSelect={() => run(clearRows(grid, [row.id]))} />
         <MenuDivider />
-        <MenuItem icon={<Trash2 size={16} />} label="Delete" tone="danger" disabled={grid.rows.length <= 1} onSelect={() => run([deleteRow(grid, row.id)])} />
+        <MenuItem icon={<Trash2 size={16} />} label={t("Delete")} tone="danger" disabled={grid.rows.length <= 1} onSelect={() => run([deleteRow(grid, row.id)])} />
       </MenuList>
     );
   };
@@ -688,24 +689,24 @@ export const SimpleTable = memo(function SimpleTable({
     };
     const full = grid.columns.length >= MAX_TABLE_COLUMNS;
     return (
-      <MenuList label="Column" autoFocus>
+      <MenuList label={t("Column")} autoFocus>
         {index === 0 ? (
           <>
             <MenuItem
               icon={<Columns3 size={16} />}
-              label="Header column"
+              label={t("Header column")}
               selected={grid.header_column}
               onSelect={() => run([{ kind: "header", which: "header_column", on: !grid.header_column }])}
             />
             <MenuDivider />
           </>
         ) : null}
-        <MenuItem icon={<ArrowLeft size={16} />} label="Insert left" disabled={full} onSelect={() => run([insertColumn(grid, index, newId("column"))])} />
-        <MenuItem icon={<ArrowRight size={16} />} label="Insert right" disabled={full} onSelect={() => run([insertColumn(grid, index + 1, newId("column"))])} />
-        <MenuItem icon={<Copy size={16} />} label="Duplicate" disabled={full} onSelect={() => run(duplicateColumn(grid, column.id, newId("column")))} />
-        <MenuItem icon={<Eraser size={16} />} label="Clear contents" onSelect={() => run(clearRows(grid, grid.rows.map((row) => row.id), [column.id]))} />
+        <MenuItem icon={<ArrowLeft size={16} />} label={t("Insert left")} disabled={full} onSelect={() => run([insertColumn(grid, index, newId("column"))])} />
+        <MenuItem icon={<ArrowRight size={16} />} label={t("Insert right")} disabled={full} onSelect={() => run([insertColumn(grid, index + 1, newId("column"))])} />
+        <MenuItem icon={<Copy size={16} />} label={t("Duplicate")} disabled={full} onSelect={() => run(duplicateColumn(grid, column.id, newId("column")))} />
+        <MenuItem icon={<Eraser size={16} />} label={t("Clear contents")} onSelect={() => run(clearRows(grid, grid.rows.map((row) => row.id), [column.id]))} />
         <MenuDivider />
-        <MenuItem icon={<Trash2 size={16} />} label="Delete" tone="danger" disabled={grid.columns.length <= 1} onSelect={() => run([deleteColumn(grid, column.id)])} />
+        <MenuItem icon={<Trash2 size={16} />} label={t("Delete")} tone="danger" disabled={grid.columns.length <= 1} onSelect={() => run([deleteColumn(grid, column.id)])} />
       </MenuList>
     );
   };
@@ -752,7 +753,7 @@ export const SimpleTable = memo(function SimpleTable({
           className="stbl__frame"
           tabIndex={-1}
           role="grid"
-          aria-label="Table"
+          aria-label={t("Table")}
           aria-rowcount={grid.rows.length}
           aria-colcount={grid.columns.length}
           onKeyDown={onFrameKey}
@@ -914,12 +915,12 @@ export const SimpleTable = memo(function SimpleTable({
                 />
               ))}
 
-              <Tooltip label="Add a row">
+              <Tooltip label={t("Add a row")}>
                 <button
                   type="button"
                   className="stbl__add stbl__add--row"
                   style={{ width: total }}
-                  aria-label="Add a row"
+                  aria-label={t("Add a row")}
                   disabled={grid.rows.length >= MAX_TABLE_ROWS}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => addRow(grid.rows.length, 0)}
@@ -927,12 +928,12 @@ export const SimpleTable = memo(function SimpleTable({
                   <Plus size={14} />
                 </button>
               </Tooltip>
-              <Tooltip label="Add a column">
+              <Tooltip label={t("Add a column")}>
                 <button
                   type="button"
                   className="stbl__add stbl__add--column"
                   style={{ left: total }}
-                  aria-label="Add a column"
+                  aria-label={t("Add a column")}
                   disabled={grid.columns.length >= MAX_TABLE_COLUMNS}
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
@@ -954,7 +955,7 @@ export const SimpleTable = memo(function SimpleTable({
         open={menu?.kind === "row" && menuRowIndex >= 0}
         anchor={menu?.kind === "row" ? menu.anchor : null}
         placement="right-start"
-        label="Row"
+        label={t("Row")}
         onDismiss={closeMenu}
       >
         {menuRowIndex >= 0 ? rowMenuItems(menuRowIndex) : <div />}
@@ -963,7 +964,7 @@ export const SimpleTable = memo(function SimpleTable({
         open={menu?.kind === "column" && menuColumnIndex >= 0}
         anchor={menu?.kind === "column" ? menu.anchor : null}
         placement="bottom-start"
-        label="Column"
+        label={t("Column")}
         onDismiss={closeMenu}
       >
         {menuColumnIndex >= 0 ? columnMenuItems(menuColumnIndex) : <div />}

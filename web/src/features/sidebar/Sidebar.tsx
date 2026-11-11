@@ -59,6 +59,7 @@ import { useWorkspaceState } from "../../app/workspace-store";
 import { capitalized } from "../../core/title";
 import { pageGlyph } from "../editor/block-registry";
 import { TrashMenu } from "./TrashMenu";
+import { language, setLanguage, t } from "../../i18n";
 
 /* The graph is loaded the first time it is looked at. */
 const GraphView = lazy(() => import("./GraphView").then((module) => ({ default: module.GraphView })));
@@ -202,7 +203,7 @@ const TreeRow = memo(function TreeRow({
       <button
         type="button"
         className={`tree-row__mark ${branch ? "is-branch" : ""} ${open ? "is-open" : ""}`}
-        aria-label={branch ? (open ? `Collapse ${label}` : `Expand ${label}`) : `Open ${label}`}
+        aria-label={branch ? (open ? t("Collapse {name}", { name: label }) : t("Expand {name}", { name: label })) : t("Open {name}", { name: label })}
         aria-expanded={branch ? open : undefined}
         onClick={(event) => {
           event.stopPropagation();
@@ -219,7 +220,7 @@ const TreeRow = memo(function TreeRow({
           className="tree-row__rename"
           autoFocus
           defaultValue={page.title}
-          aria-label="Rename page"
+          aria-label={t("Rename page")}
           onBlur={(event) => actions.finishRename(page.id, event.target.value)}
           onKeyDown={(event) => {
             if (imeComposing(event)) return;
@@ -236,7 +237,7 @@ const TreeRow = memo(function TreeRow({
           onDoubleClick={() => { if (editable) actions.rename(page.id); }}
         >
           <span className="tree-row__label">{label}</span>
-          {linked ? <Link className="tree-row__linked" size={11} aria-label="Has backlinks" /> : null}
+          {linked ? <Link className="tree-row__linked" size={11} aria-label={t("Has backlinks")} /> : null}
         </button>
       )}
 
@@ -246,14 +247,14 @@ const TreeRow = memo(function TreeRow({
         <button
           type="button"
           className="icon-btn"
-          aria-label={`Actions for ${label}`}
+          aria-label={t("Actions for {name}", { name: label })}
           onClick={(event) => actions.openMenu(page.id, rectOf(event.currentTarget))}
         >
           <MoreHorizontal size={14} />
         </button>
         {editable ? (
           <Tooltip label={page.kind === "database" ? "Add a row" : "Add a page inside"}>
-            <button type="button" className="icon-btn" aria-label={`New page inside ${label}`} onClick={() => actions.createInside(page.id)}>
+            <button type="button" className="icon-btn" aria-label={t("New page inside {name}", { name: label })} onClick={() => actions.createInside(page.id)}>
               <Plus size={14} />
             </button>
           </Tooltip>
@@ -336,7 +337,7 @@ export function Sidebar() {
      lives — by the one rule, a block's too. */
   const linked = linkedFromOutside(pages);
   const linkedPage = useCallback((page: NotePage) => linked.has(page.id), [linked]);
-  const userName = platform?.bootstrap.user.displayName ?? "Notes";
+  const userName = platform?.bootstrap.user.displayName ?? t("Notes");
 
   const railed = folded || preferences.sidebar_collapsed;
   const drawered = railed && drawerOpen;
@@ -487,8 +488,8 @@ export function Sidebar() {
           const dragged = pages[draggedId];
           if (dragged && (dragged.parent_id ?? null) !== targetId && dragged.id !== targetId) {
             toast(dragged.share_space_id
-              ? "A shared page stays where it is shared"
-              : "Only people with Full access can move a page out of a shared page", "info");
+              ? t("A shared page stays where it is shared")
+              : t("Only people with Full access can move a page out of a shared page"), "info");
           }
           return;
         }
@@ -557,18 +558,18 @@ export function Sidebar() {
         /* An indicator, not a control: there are no account actions to hang
            off it, so it announces who you are and nothing more. */
         <Tooltip label={userName} placement="top-start">
-          <span className="sidebar__me" role="img" aria-label="Local notebook — stored in this browser">
+          <span className="sidebar__me" role="img" aria-label={t("Local notebook — stored in this browser")}>
             <ProfileAvatar src={platform?.bootstrap.user.avatarUrl} name={userName} size={18} />
           </span>
         </Tooltip>
       )}
-      <Tooltip label="Trash" placement="top-start">
-        <button type="button" ref={trashRef} className="icon-btn" aria-label="Trash" onClick={() => setTrashOpen(true)}>
+      <Tooltip label={t("Trash")} placement="top-start">
+        <button type="button" ref={trashRef} className="icon-btn" aria-label={t("Trash")} onClick={() => setTrashOpen(true)}>
           <Trash2 size={16} />
         </button>
       </Tooltip>
-      <Tooltip label="Settings" placement="top-start">
-        <button type="button" ref={settingsRef} className="icon-btn" aria-label="Settings" onClick={() => { if (isMyGo()) void Connections.openSettings("general"); else setSettingsOpen(true); }}>
+      <Tooltip label={t("Settings")} placement="top-start">
+        <button type="button" ref={settingsRef} className="icon-btn" aria-label={t("Settings")} onClick={() => { if (isMyGo()) void Connections.openSettings("general"); else setSettingsOpen(true); }}>
           <Settings size={16} />
         </button>
       </Tooltip>
@@ -601,8 +602,8 @@ export function Sidebar() {
           one showing below them. The row shares its line with the page's top
           bar. */}
       <div className="sidebar__head">
-        <div className="sidebar__views" role="tablist" aria-label="Page list">
-          {SIDEBAR_VIEWS.filter(value => value !== "shared").map((value) => ({ value, label: capitalized(value), Icon: VIEW_ICONS[value] })).map(({ value, label, Icon }) => (
+        <div className="sidebar__views" role="tablist" aria-label={t("Page list")}>
+          {SIDEBAR_VIEWS.filter(value => value !== "shared").map((value) => ({ value, label: t(capitalized(value)), Icon: VIEW_ICONS[value] })).map(({ value, label, Icon }) => (
             <Tooltip key={value} label={label}>
               <button
                 type="button"
@@ -618,17 +619,17 @@ export function Sidebar() {
           ))}
         </div>
         <span className="sidebar__head-gap" />
-        <Tooltip label="Search" hint="⌘K">
-          <button type="button" className="icon-btn" aria-label="Search" onClick={() => setQuickFindOpen(true)}>
+        <Tooltip label={t("Search")} hint="⌘K">
+          <button type="button" className="icon-btn" aria-label={t("Search")} onClick={() => setQuickFindOpen(true)}>
             <Search size={16} />
           </button>
         </Tooltip>
         {!folded ? (
-          <Tooltip label="Collapse to rail" hint="⌘\">
+          <Tooltip label={t("Collapse to rail")} hint="⌘\">
             <button
               type="button"
               className="icon-btn sidebar__collapse"
-              aria-label="Collapse to rail"
+              aria-label={t("Collapse to rail")}
               onClick={() => setPreference("sidebar_collapsed", true)}
             >
               <PanelLeft size={16} />
@@ -638,29 +639,29 @@ export function Sidebar() {
       </div>
 
       {view === "files" ? (
-        <div className="sidebar__tools" role="toolbar" aria-label="Files">
-          <Tooltip label="New page">
-            <button type="button" className="icon-btn" aria-label="New page" onClick={() => createIn(null, "document")}>
+        <div className="sidebar__tools" role="toolbar" aria-label={t("Files")}>
+          <Tooltip label={t("New page")}>
+            <button type="button" className="icon-btn" aria-label={t("New page")} onClick={() => createIn(null, "document")}>
               <SquarePen size={16} />
             </button>
           </Tooltip>
-          <Tooltip label="New database">
-            <button type="button" className="icon-btn" aria-label="New database" onClick={() => createIn(null, "database")}>
+          <Tooltip label={t("New database")}>
+            <button type="button" className="icon-btn" aria-label={t("New database")} onClick={() => createIn(null, "database")}>
               <Table2 size={16} />
             </button>
           </Tooltip>
-          <Tooltip label="Change sort order">
+          <Tooltip label={t("Change sort order")}>
             <button
               type="button"
               className={`icon-btn ${sortMenu ? "is-active" : ""}`}
-              aria-label="Change sort order"
+              aria-label={t("Change sort order")}
               onClick={(event) => setSortMenu(rectOf(event.currentTarget))}
             >
               <ArrowUpNarrowWide size={16} />
             </button>
           </Tooltip>
-          <Tooltip label="Collapse all">
-            <button type="button" className="icon-btn" aria-label="Collapse all" onClick={() => updateExpanded(() => new Set())}>
+          <Tooltip label={t("Collapse all")}>
+            <button type="button" className="icon-btn" aria-label={t("Collapse all")} onClick={() => updateExpanded(() => new Set())}>
               <ChevronsDownUp size={16} />
             </button>
           </Tooltip>
@@ -697,7 +698,7 @@ export function Sidebar() {
           {view === "files" ? (
             tree.roots.length ? tree.roots.map((page) => branch(page, 0, tree)) : (
               <button type="button" className="rail-invite" onClick={() => createIn(null, "document")}>
-                <Plus size={15} />New page
+                <Plus size={15} />{t("New page")}
               </button>
             )
           ) : null}
@@ -706,7 +707,7 @@ export function Sidebar() {
             favorites.length ? favorites.map((favorite) => flatRow(favorite)) : (
               <div className="sidebar__empty">
                 <Star size={18} />
-                <p>Star a page or a block to keep it here.</p>
+                <p>{t("Star a page or a block to keep it here.")}</p>
               </div>
             )
           ) : null}
@@ -715,22 +716,22 @@ export function Sidebar() {
             <>
               {sharedWithMe.length ? (
                 <section className="sidebar__group">
-                  <h3 className="sidebar__group-title">Shared with you</h3>
+                  <h3 className="sidebar__group-title">{t("Shared with you")}</h3>
                   {sharedWithMe.map((page) => branch(page, 0, tree))}
                 </section>
               ) : null}
               <section className="sidebar__group">
                 <h3 className="sidebar__group-title">
-                  <span>Shared by you</span>
-                  <Tooltip label="New shared page">
-                    <button type="button" className="icon-btn icon-btn--sm" aria-label="New shared page" onClick={createShared}>
+                  <span>{t("Shared by you")}</span>
+                  <Tooltip label={t("New shared page")}>
+                    <button type="button" className="icon-btn icon-btn--sm" aria-label={t("New shared page")} onClick={createShared}>
                       <Plus size={15} />
                     </button>
                   </Tooltip>
                 </h3>
                 {sharedByMe.length ? sharedByMe.map((page) => branch(page, 0, tree)) : (
                   <button type="button" className="rail-invite" onClick={createShared}>
-                    <UserPlus size={15} />New shared page
+                    <UserPlus size={15} />{t("New shared page")}
                   </button>
                 )}
               </section>
@@ -749,29 +750,29 @@ export function Sidebar() {
   return (
     <>
       {railed ? (
-        <nav className="rail" aria-label="Notes navigation">
+        <nav className="rail" aria-label={t("Notes navigation")}>
           <div className="rail__group">
             <Tooltip label={folded ? "All pages" : "Show the list"} hint={folded ? undefined : "⌘\\"} placement="right-start">
               <button
                 type="button"
                 className={`icon-btn rail__btn ${drawered ? "is-on" : ""}`}
-                aria-label="All pages"
+                aria-label={t("All pages")}
                 aria-expanded={folded ? drawered : undefined}
                 onClick={showList}
               >
                 <PanelLeft size={17} />
               </button>
             </Tooltip>
-            <Tooltip label="Search" hint="⌘K" placement="right-start">
-              <button type="button" className="icon-btn rail__btn" aria-label="Search" onClick={() => setQuickFindOpen(true)}>
+            <Tooltip label={t("Search")} hint="⌘K" placement="right-start">
+              <button type="button" className="icon-btn rail__btn" aria-label={t("Search")} onClick={() => setQuickFindOpen(true)}>
                 <Search size={17} />
               </button>
             </Tooltip>
-            <Tooltip label="New page" placement="right-start">
+            <Tooltip label={t("New page")} placement="right-start">
               <button
                 type="button"
                 className="icon-btn rail__btn"
-                aria-label="New page"
+                aria-label={t("New page")}
                 onClick={(event) => setNewMenu(rectOf(event.currentTarget))}
               >
                 <Plus size={17} />
@@ -816,7 +817,7 @@ export function Sidebar() {
           drawered ? "is-open" : "",
           resizing ? "is-resizing" : "",
         ].filter(Boolean).join(" ")}
-        aria-label="Pages"
+        aria-label={t("Pages")}
         aria-hidden={railed && !drawered ? true : undefined}
         inert={railed && !drawered ? true : undefined}
       >
@@ -825,7 +826,7 @@ export function Sidebar() {
           <div
             className={`sidebar__resize ${resizing ? "is-dragging" : ""}`}
             role="separator"
-            aria-label="Resize the page list"
+            aria-label={t("Resize the page list")}
             aria-orientation="vertical"
             onPointerDown={onResizeStart}
           />
@@ -833,23 +834,23 @@ export function Sidebar() {
       </aside>
 
       {drawered ? (
-        <button className="sidebar__scrim is-shown" aria-label="Close the page list" onClick={() => setDrawerOpen(false)} />
+        <button className="sidebar__scrim is-shown" aria-label={t("Close the page list")} onClick={() => setDrawerOpen(false)} />
       ) : null}
 
-      <Popover open={Boolean(newMenu)} anchor={newMenu} placement="bottom-start" label="New" onDismiss={() => setNewMenu(null)}>
-        <MenuList label="New" autoFocus>
-          <MenuItem icon={<FileText size={16} />} label="Page" onSelect={() => createIn(null, "document")} />
-          <MenuItem icon={<Table2 size={16} />} label="Database" onSelect={() => createIn(null, "database")} />
+      <Popover open={Boolean(newMenu)} anchor={newMenu} placement="bottom-start" label={t("New")} onDismiss={() => setNewMenu(null)}>
+        <MenuList label={t("New")} autoFocus>
+          <MenuItem icon={<FileText size={16} />} label={t("Page")} onSelect={() => createIn(null, "document")} />
+          <MenuItem icon={<Table2 size={16} />} label={t("Database")} onSelect={() => createIn(null, "database")} />
         </MenuList>
       </Popover>
 
-      <Popover open={Boolean(sortMenu)} anchor={sortMenu} placement="bottom-start" label="Sort" onDismiss={() => setSortMenu(null)}>
-        <MenuList label="Sort" autoFocus>
+      <Popover open={Boolean(sortMenu)} anchor={sortMenu} placement="bottom-start" label={t("Sort")} onDismiss={() => setSortMenu(null)}>
+        <MenuList label={t("Sort")} autoFocus>
           {SORTS.map((sort, index) => (
             <div key={sort}>
               {index === 2 || index === 4 ? <MenuDivider /> : null}
               <MenuItem
-                label={SORT_LABELS[sort]}
+                label={t(SORT_LABELS[sort])}
                 selected={preferences.sidebar_sort === sort}
                 onSelect={() => { setPreference("sidebar_sort", sort); setSortMenu(null); }}
               />
@@ -862,20 +863,20 @@ export function Sidebar() {
         open={Boolean(rowMenu)}
         anchor={rowMenu?.anchor ?? null}
         placement="bottom-start"
-        label="Page actions"
+        label={t("Page actions")}
         onDismiss={() => setRowMenu(null)}
       >
         {menuPage ? (
-          <MenuList label="Page actions" autoFocus>
+          <MenuList label={t("Page actions")} autoFocus>
             <MenuItem
               icon={<Star size={16} />}
-              label={isFavorite(menuPage.id) ? "Remove from favorites" : "Add to favorites"}
+              label={isFavorite(menuPage.id) ? t("Remove from favorites") : t("Add to favorites")}
               onSelect={() => { toggleFavorite(menuPage.id); setRowMenu(null); }}
             />
             {menuEditable ? (
               <>
-                <MenuItem icon={<Copy size={16} />} label="Duplicate" onSelect={() => { duplicatePage(menuPage.id); setRowMenu(null); }} />
-                <MenuItem icon={<FileText size={16} />} label="Rename" onSelect={() => { setRenaming(menuPage.id); setRowMenu(null); }} />
+                <MenuItem icon={<Copy size={16} />} label={t("Duplicate")} onSelect={() => { duplicatePage(menuPage.id); setRowMenu(null); }} />
+                <MenuItem icon={<FileText size={16} />} label={t("Rename")} onSelect={() => { setRenaming(menuPage.id); setRowMenu(null); }} />
               </>
             ) : null}
             {menuTrashable ? (
@@ -883,9 +884,9 @@ export function Sidebar() {
                 <MenuDivider />
                 <MenuItem
                   icon={<Trash2 size={16} />}
-                  label="Move to trash"
+                  label={t("Move to trash")}
                   tone="danger"
-                  onSelect={() => { archivePage(menuPage.id); setRowMenu(null); toast("Moved to trash", "success"); }}
+                  onSelect={() => { archivePage(menuPage.id); setRowMenu(null); toast(t("Moved to trash"), "success"); }}
                 />
               </>
             ) : null}
@@ -899,22 +900,37 @@ export function Sidebar() {
         open={settingsOpen}
         anchor={settingsRef.current ? rectOf(settingsRef.current) : null}
         placement="top-start"
-        label="Settings"
+        label={t("Settings")}
         onDismiss={() => setSettingsOpen(false)}
       >
-        <MenuList label="Appearance" autoFocus>
+        <MenuList label={t("Appearance")} autoFocus>
           <BackupControls />
           <MenuDivider />
-          <div className="menu__section-title">Appearance</div>
+          <div className="menu__section-title">{t("Appearance")}</div>
           {THEMES.map((value) => ({ value, ...THEME_CHOICES[value] })).map(({ value, label, icon: Icon }) => (
             <MenuItem
               key={value}
               icon={<Icon size={16} />}
-              label={label}
+              label={t(label)}
               selected={preferences.theme === value}
               onSelect={() => { setPreference("theme", value); setSettingsOpen(false); }}
             />
           ))}
+          {/* In a browser the language is chosen here; the desktop app has it in Settings. */}
+          {isMyGo() ? null : (
+            <>
+              <MenuDivider />
+              <div className="menu__section-title">{t("Language")}</div>
+              {(["en", "zh"] as const).map((choice) => (
+                <MenuItem
+                  key={choice}
+                  label={choice === "en" ? "English" : "简体中文"}
+                  selected={language() === choice}
+                  onSelect={() => { setLanguage(choice); setSettingsOpen(false); }}
+                />
+              ))}
+            </>
+          )}
         </MenuList>
       </Popover>
     </>

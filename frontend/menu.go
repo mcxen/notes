@@ -10,27 +10,27 @@ import (
 func appMenu(actions *appActions) *mygo.Menu {
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Role: mygo.RoleAppMenu, Submenu: []*mygo.MenuItem{
-			{Label: "Settings…", Accelerator: "CmdOrCtrl+,", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.openSettings("") }},
+			{Label: tr("Settings…"), Accelerator: "CmdOrCtrl+,", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.openSettings("") }},
 			updater.MenuItem(),
 			mygo.Separator(),
 			{Role: mygo.RoleQuit},
 		}},
-		{Label: "File", Submenu: []*mygo.MenuItem{
-			{Label: "New Vault…", Accelerator: "CmdOrCtrl+N", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.newVault() }},
-			{Label: "Open Vault…", Accelerator: "CmdOrCtrl+O", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.openVault() }},
-			{Label: "Vault Picker…", Accelerator: "CmdOrCtrl+Shift+O", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.showPicker() }},
-			{Label: "Open Recent", Submenu: recentItems(actions)},
+		{Label: tr("File"), Submenu: []*mygo.MenuItem{
+			{Label: tr("New Vault…"), Accelerator: "CmdOrCtrl+N", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.newVault() }},
+			{Label: tr("Open Vault…"), Accelerator: "CmdOrCtrl+O", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.openVault() }},
+			{Label: tr("Vault Picker…"), Accelerator: "CmdOrCtrl+Shift+O", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.showPicker() }},
+			{Label: tr("Open Recent"), Submenu: recentItems(actions)},
 			mygo.Separator(),
-			{Label: "Show Vault in Folder", Click: func(_ *mygo.MenuItem, w *mygo.Window) { actions.revealVault(w) }},
-			{Label: "Connect to a Remote Folder…", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.connect() }},
-			{Label: "Sync Now", Accelerator: "CmdOrCtrl+Shift+S", Click: func(_ *mygo.MenuItem, w *mygo.Window) { actions.syncWindow(w) }},
+			{Label: tr("Show Vault in Folder"), Click: func(_ *mygo.MenuItem, w *mygo.Window) { actions.revealVault(w) }},
+			{Label: tr("Connect to a Remote Folder…"), Click: func(*mygo.MenuItem, *mygo.Window) { go actions.connect() }},
+			{Label: tr("Sync Now"), Accelerator: "CmdOrCtrl+Shift+S", Click: func(_ *mygo.MenuItem, w *mygo.Window) { actions.syncWindow(w) }},
 			mygo.Separator(),
 			{Role: mygo.RoleClose},
 		}},
 		{Role: mygo.RoleEditMenu},
-		{Label: "View", Submenu: []*mygo.MenuItem{
-			{Label: "Toggle Sidebar", Accelerator: "CmdOrCtrl+\\", Click: func(_ *mygo.MenuItem, w *mygo.Window) { sendViewCommand(actions.notebooks, w, "sidebar") }},
-			{Label: "Toggle Dark Appearance", Accelerator: "CmdOrCtrl+Shift+D", Click: func(_ *mygo.MenuItem, w *mygo.Window) { sendViewCommand(actions.notebooks, w, "dark") }},
+		{Label: tr("View"), Submenu: []*mygo.MenuItem{
+			{Label: tr("Toggle Sidebar"), Accelerator: "CmdOrCtrl+\\", Click: func(_ *mygo.MenuItem, w *mygo.Window) { sendViewCommand(actions.notebooks, w, "sidebar") }},
+			{Label: tr("Toggle Dark Appearance"), Accelerator: "CmdOrCtrl+Shift+D", Click: func(_ *mygo.MenuItem, w *mygo.Window) { sendViewCommand(actions.notebooks, w, "dark") }},
 			mygo.Separator(),
 			{Role: mygo.RoleViewMenu},
 		}},

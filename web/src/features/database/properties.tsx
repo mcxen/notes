@@ -5,6 +5,7 @@ import type { DatabaseProperty, NotePage } from "../../core/types";
 import { propertyName, propertyOptions, STATUS_GROUPS, statusOf, statusOptions } from "./database-model";
 import { ImageProperty } from "./ImageProperty";
 import { useColumnIcon } from "./property-icon-store";
+import { t } from "../../i18n";
 
 /* The pieces every place that shows a database value shares: the table's
    cells, the cards, and the page opened from a row. One module, so a status
@@ -86,7 +87,7 @@ function TextValue({
         value={value}
         aria-label={propertyName(property)}
         data-history-field={`property:${property.id}`}
-        placeholder="Empty"
+        placeholder={t("Empty")}
         readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
@@ -164,7 +165,7 @@ export function PropertyEditor({
           onChange={(event) => onChange(event.target.value)}
           className="db__cell-select-input"
         >
-          <option value="">Empty</option>
+          <option value="">{t("Empty")}</option>
           {options.map((option) => <option key={option}>{option}</option>)}
         </select>
       </span>
@@ -178,7 +179,7 @@ export function PropertyEditor({
           value={value}
           aria-label={propertyName(property)}
           data-history-field={`property:${property.id}`}
-          placeholder="Empty"
+          placeholder={t("Empty")}
           readOnly={readOnly}
           onChange={(event) => onChange(event.target.value)}
         />
