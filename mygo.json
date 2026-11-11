@@ -1,11 +1,15 @@
 {
   "name": "Notes",
   "identifier": "app.openspring.notes",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "out": "build",
   "bindings": "web/src/platform/mygo.ts",
   "devUrl": "http://127.0.0.1:5173",
   "devCommand": "npm --prefix web run dev:mygo",
   "buildCommand": "npm --prefix web run build",
-  "frontendDist": "web/dist"
+  "frontendDist": "web/dist",
+  "updates": {
+    "publicKey": "xZ5864QHooA4ypEO11T2eny7aY7ZqsqxZ9a8FAI5nIY=",
+    "github": "mcxen/notes"
+  }
 }

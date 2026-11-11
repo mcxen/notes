@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
 
 	"notes/internal/settings"
 )
@@ -23,6 +24,10 @@ func Run() error {
 	if !app.RequestSingleInstanceLock() {
 		return nil
 	}
+
+	// Looks for a signed release in the background a few seconds after launch,
+	// then daily, and shows the release notes with Install / Later / Skip.
+	mygo.Use(updater.Plugin)
 
 	notebooks := newNotebooks()
 	connections := &Connections{n: notebooks}

@@ -2,8 +2,9 @@ name: Desktop Release
 
 # A tag v<version> builds the app for macOS, Windows and Linux and publishes
 # the installers as a GitHub release. The tag must match mygo.json's version.
-# There are no automatic updates yet (no `updates` in mygo.json), so the
-# builds run without -upload and the publish job attaches what they made.
+# Each build signs its update with the MYGO_UPDATER_PRIVATE_KEY secret and
+# uploads it with the installers (-upload) to a draft release, which the last
+# job publishes: installed apps then read the manifests from the latest release.
 
 on:
   push:
@@ -11,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write # the draft release, and the uploads to it
 
 concurrency:
   group: desktop-release-${{ github.ref }}
@@ -46,19 +47,43 @@ jobs:
       - run: npm test
         working-directory: web
 
+  draft-release:
+    name: Draft release
+    if: github.ref_type == 'tag'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            notes="$RUNNER_TEMP/notes.md"
+            cat > "$notes" <<'EOF'
+          ## Before you install
+
+          - The macOS app is signed ad hoc and not notarized. After dragging it to Applications, open it with right-click › Open the first time, or run `xattr -dr com.apple.quarantine /Applications/Notes.app`.
+          - The Windows installer is not code-signed: SmartScreen may ask you to confirm (More info › Run anyway).
+          - From 0.1.1 on, Notes checks for signed updates itself (Notes › Check for Updates…). Version 0.1.0 does not: install a newer release over it by hand once.
+          - The `.deb` package is installed under /opt, where the app cannot replace itself: install the next release's package to update. The `.tar.gz` build, extracted somewhere you can write to, updates itself.
+          EOF
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+              --draft --verify-tag --title "Notes $GITHUB_REF_NAME" --notes-file "$notes" --generate-notes
+          fi
+
   build:
     name: Build ${{ matrix.platform }}
-    needs: test
+    needs: draft-release
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - { platform: darwin/universal, directory: darwin-universal, os: macos-latest }
-          - { platform: windows/amd64, directory: windows-amd64, os: windows-latest }
-          - { platform: windows/arm64, directory: windows-arm64, os: windows-latest }
-          - { platform: linux/amd64, directory: linux-amd64, os: ubuntu-latest }
-          - { platform: linux/arm64, directory: linux-arm64, os: ubuntu-latest }
+          - { platform: darwin/universal, os: macos-latest }
+          - { platform: windows/amd64, os: windows-latest }
+          - { platform: windows/arm64, os: windows-latest }
+          - { platform: linux/amd64, os: ubuntu-latest }
+          - { platform: linux/arm64, os: ubuntu-latest }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -74,61 +99,34 @@ jobs:
       - run: npm ci --ignore-scripts
         working-directory: web
       # -sign - signs the macOS app ad hoc: the repository has no Developer ID
-      # yet, so the app is not notarized.
-      - name: Build
-        run: go tool mygo build -platform "${{ matrix.platform }}" -sign -
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.directory }}
-          if-no-files-found: error
-          path: |
-            build/${{ matrix.directory }}/*.dmg
-            build/${{ matrix.directory }}/*-setup-*.exe
-            build/${{ matrix.directory }}/*.deb
-            build/${{ matrix.directory }}/*.tar.gz
+      # yet, so the app is not notarized. The update itself is signed with the
+      # key of mygo.json's updates.publicKey, whatever the platform.
+      - name: Build and upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MYGO_UPDATER_PRIVATE_KEY: ${{ secrets.MYGO_UPDATER_PRIVATE_KEY }}
+        run: go tool mygo build -platform "${{ matrix.platform }}" -sign - -upload
 
   publish:
     name: Publish GitHub Release
-    if: github.ref_type == 'tag'
     needs: build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Create the release
+      - name: Check the draft and publish it
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
           version="$(jq -r .version mygo.json)"
-          mkdir out
-          find artifacts -type f -exec mv {} out/ \;
-          (cd out && sha256sum * > SHA256SUMS)
-          ls -la out
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | sort > assets.txt
+          cat assets.txt
+          # The installers, and a manifest for each platform that installed
+          # apps check: a release without them cannot be updated to.
           for want in "notes-$version.dmg" "notes-setup-$version-amd64.exe" "notes-setup-$version-arm64.exe" \
-                      "notes_${version}_amd64.deb" "notes_${version}_arm64.deb"; do
-            test -s "out/$want" || { echo "::error::missing $want" >&2; exit 1; }
+                      "notes_${version}_amd64.deb" "notes_${version}_arm64.deb" \
+                      update-darwin-universal.json update-windows-amd64.json update-windows-arm64.json \
+                      update-linux-amd64.json update-linux-arm64.json; do
+            grep -qxF "$want" assets.txt || { echo "::error::the release lacks $want" >&2; exit 1; }
           done
-          notes="$RUNNER_TEMP/notes.md"
-          cat > "$notes" <<EOF
-          Notes $version: a desktop notes app whose notebook is a vault folder (one JSON file per page), kept on this computer or synced with a WebDAV folder or an SMB share.
-
-          ## Download
-
-          | System | File |
-          |---|---|
-          | macOS (Apple silicon and Intel) | \`notes-$version.dmg\` |
-          | Windows x64 / ARM64 | \`notes-setup-$version-amd64.exe\` / \`notes-setup-$version-arm64.exe\` |
-          | Linux x64 / ARM64 | \`notes_${version}_amd64.deb\`, \`notes-$version-linux-*.tar.gz\` |
-
-          ## Before you install
-
-          - The macOS app is signed ad hoc and not notarized. After dragging it to Applications, open it with right-click › Open the first time, or run \`xattr -dr com.apple.quarantine /Applications/Notes.app\`.
-          - The Windows installer is not code-signed: SmartScreen may ask you to confirm (More info › Run anyway).
-          - This version does not update itself. Download the next release to update.
-          EOF
-          gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" --title "Notes $GITHUB_REF_NAME" --notes-file "$notes"
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false

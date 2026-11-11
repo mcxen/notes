@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
 	"github.com/egoist/mygo/ui"
 
 	"notes/internal/settings"
@@ -507,6 +508,40 @@ func (s *settingsWindow) aboutPage(c *ui.Context, pal *palette) {
 		})
 		s.row(c, pal, "Sync log", shortPath(filepath.Join(filepath.Dir(path), "sync-log.json")), nil)
 	})
+	s.group(c, pal, "Updates", "", func() {
+		s.row(c, pal, "Check for updates", updateLine(), func() {
+			if button(c, "check-updates", "Check Now", false, pal) {
+				updater.CheckForUpdates()
+			}
+		})
+		if !mygo.Updater.Enabled() {
+			return
+		}
+		auto := updater.AutomaticChecks()
+		s.row(c, pal, labelAutoUpdates, "Looks once a day and asks before installing.", func() {
+			toggle(c, "auto-updates", &auto, labelAutoUpdates, pal)
+		})
+		if auto != updater.AutomaticChecks() {
+			updater.SetAutomaticChecks(auto)
+		}
+	})
+}
+
+const labelAutoUpdates = "Check for updates automatically"
+
+// updateLine says whether this build can update itself, and what the last
+// check found.
+func updateLine() string {
+	if !mygo.Updater.Enabled() {
+		return "This copy cannot update itself: it was installed by a package manager or runs from a development build."
+	}
+	if v := updater.AvailableVersion(); v != "" {
+		return "Version " + v + " is available."
+	}
+	if t := updater.LastCheck(); !t.IsZero() {
+		return "Last checked " + t.Local().Format("2 Jan 2006, 15:04") + "."
+	}
+	return "Not checked yet."
 }
 
 func appVersion() string {

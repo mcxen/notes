@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"github.com/egoist/mygo"
+	"github.com/egoist/mygo/plugins/updater"
 )
 
 // appMenu is the menu bar of the app. Its items act on the window that has
@@ -10,6 +11,7 @@ func appMenu(actions *appActions) *mygo.Menu {
 	return mygo.NewMenu([]*mygo.MenuItem{
 		{Role: mygo.RoleAppMenu, Submenu: []*mygo.MenuItem{
 			{Label: "Settings…", Accelerator: "CmdOrCtrl+,", Click: func(*mygo.MenuItem, *mygo.Window) { go actions.openSettings("") }},
+			updater.MenuItem(),
 			mygo.Separator(),
 			{Role: mygo.RoleQuit},
 		}},
