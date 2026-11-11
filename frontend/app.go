@@ -206,7 +206,7 @@ func (a *appActions) bringForward() {
 
 // newVault asks for an empty or new folder and makes it a vault.
 func (a *appActions) newVault() {
-	a.chooseFolder(tr("Choose a folder for the new vault"))
+	a.showNewVault()
 }
 
 // openVault asks for an existing vault folder.

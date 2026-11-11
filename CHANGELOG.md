@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.3
+
+- First launch: with no vault yet, the window offers to create one at once. It asks for the folder (starting at Documents), then shows the location and a name ("My Notes"), both editable; New Vault makes the folder and opens it on a Welcome page. File › New Vault… opens the same form.
+
 ## 0.1.2
 
 - Copy as image: a photo among the words came out as a blank box. The pictures are now painted on the finished image directly, with their rounded corners, instead of going through the page renderer, which could not draw a large photo in a macOS web view.
