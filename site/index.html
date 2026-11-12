@@ -271,8 +271,8 @@
 
     <section class="shot wrap" aria-label="Screenshot">
       <div class="window">
-        <picture class="shot-light"><source type="image/webp" srcset="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-light.webp" data-local="assets/shot-light.webp"><img src="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-light.png" data-local="assets/shot-light.png" alt="Notes, light theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager" decoding="async"></picture>
-        <picture class="shot-dark"><source type="image/webp" srcset="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-dark.webp" data-local="assets/shot-dark.webp"><img src="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-dark.png" data-local="assets/shot-dark.png" alt="Notes, dark theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager" decoding="async"></picture>
+        <picture class="shot-light"><source type="image/webp" srcset="assets/shot-light-1000.webp 1000w, assets/shot-light.webp 1800w" sizes="(max-width: 1160px) 100vw, 1120px"><img src="assets/shot-light.png" alt="Notes, light theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" decoding="async" loading="lazy"></picture>
+        <picture class="shot-dark"><source type="image/webp" srcset="assets/shot-dark-1000.webp 1000w, assets/shot-dark.webp 1800w" sizes="(max-width: 1160px) 100vw, 1120px"><img src="assets/shot-dark.png" alt="Notes, dark theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" decoding="async" loading="lazy"></picture>
       </div>
     </section>
 
@@ -431,15 +431,6 @@
       button.addEventListener("click", function () {
         var open = list.hidden;
         list.hidden = !open; button.setAttribute("aria-expanded", String(open));
-      });
-
-      // The screenshots come from a CDN; if it cannot be reached, from this site.
-      document.querySelectorAll("img[data-local]").forEach(function (img) {
-        img.addEventListener("error", function () {
-          var picture = img.parentElement;
-          if (picture && picture.tagName === "PICTURE") picture.querySelectorAll("source").forEach(function (source) { source.remove(); });
-          if (img.dataset.local && img.getAttribute("src") !== img.dataset.local) img.src = img.dataset.local;
-        }, { once: true });
       });
     })();
   </script>

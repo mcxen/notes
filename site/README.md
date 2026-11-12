@@ -16,4 +16,4 @@ A static page: `index.html` and `assets/`, no build step beyond `latest.json`.
 ## Downloads and images
 
 - Chinese (简体中文) visitors get the `tvv.tw` mirror for the installers, with a link to the release's `SHA256SUMS`; English visitors get GitHub directly.
-- The screenshots are served from jsDelivr (`cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/`, WebP) and fall back to this site's own copies.
+- The screenshots are this site's own WebP files (1000 and 1800 px wide, 25–60 KB), served by Cloudflare Pages. They used to come from jsDelivr, whose domain is slow or unreachable in mainland China, and the page waited for it to fail before using its own copy.
