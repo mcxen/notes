@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.5
 
+- Date and time: `/date` (also `/time`, `/now`) opens a picker of year, month, day, hour, minute and second. Each shows its value now and can be ticked off; the box below previews what Insert writes, as plain text in place of the typed command. A Chinese page gets 2026年11月12日 16时08分21秒, an English one 2026-11-12 16:08:21. Escape leaves the command as it was.
+- Menu bar tray: an icon (a template on macOS, so it follows the bar's light or dark) that shows or hides the vault windows when clicked, and a menu on a right-click with Show Notes or Hide Notes, New Page, Open Vault…, New Vault…, Open Recent, Sync Now, the MCP server (its status, turn on or off, copy the prompt, read only), Settings…, Check for Updates and Quit. Closing a window keeps Notes running in the tray, so an assistant on the MCP server still answers; "Close a window to the tray" turns that off. Settings › General › Menu bar and tray has the rest: hide the tray icon, hide the Dock icon (macOS), and a shortcut to show or hide the windows from anywhere.
 - Model Context Protocol server (Settings › Integrations), off by default. It lets AI assistants search, read, create, update and trash pages in the vaults you allow, over Streamable HTTP on port 8999 (or stdio with `notes --mcp-stdio`, which forwards to the running app). Every request needs the key; "Only this computer" listens on 127.0.0.1, otherwise on every interface, for a proxy such as frp, with an optional public address. Read only turns off the changes. The settings page copies the prompt (address, key, vaults and tools), the Claude Code command and the stdio entry. Changes an assistant makes are kept in the page's history, as "Changed by an assistant".
 
 - Export a page (page menu › Export…) as Markdown or HTML: one file, or a .zip when it has sub-pages (in folders) or pictures and files (in `assets/`, linked from the pages). The choices are remembered.
