@@ -98,6 +98,16 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
       if (!resumed || !composing) resume.current = null;
     }
 
+    // `-`, `#`, `1.`, `[]`, `>>`… and then a space: a line that was exactly the
+    // trigger and now has the space after it. (Not a line that lost a character
+    // and came to end in one, as "- x" does at Backspace.)
+    const lineBefore = inlinePlainText(block.content);
+    const lineNow = element.textContent ?? "";
+    if (!composing && block.kind === "text" && /[ \u00a0\u3000]$/.test(lineNow)
+      && lineNow.slice(0, -1) === lineBefore && applyBlockShortcut(block, element, content)) {
+      return;
+    }
+
     // "->" and "<-" become arrows as they are typed, as in Notion — and ⌘Z
     // gives the two characters back.
     const arrow = block.kind === "code" ? null : typedArrow(content, caret);
@@ -208,10 +218,15 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
   /** `# `, `- `, `1. `, `[] `, `> `, `"` — applied on the space that closes
    *  the trigger, and only when the caret is at the end of an untouched
    *  paragraph. */
-  const applyBlockShortcut = (block: Block, element: HTMLElement): boolean => {
+  const applyBlockShortcut = (block: Block, element: HTMLElement, typed?: InlineContent): boolean => {
     if (block.kind !== "text") return false;
-    const text = element.textContent ?? "";
-    if (caretOffset(element) !== text.length) return false;
+    const whole = element.textContent ?? "";
+    // `typed`: the line as the browser already wrote it, the space in it. That is
+    // how a space arrives from an input method (a Chinese one gives the Space key
+    // no keydown of its own), a phone's keyboard or a text expansion.
+    const text = typed ? whole.replace(/[ \u00a0\u3000]$/, "") : whole;
+    if (typed && text === whole) return false;
+    if (caretOffset(element) !== whole.length) return false;
     const shortcut = markdownShortcut(text);
     if (!shortcut) return false;
     // A fence that names its language (```python) sets it — and is the
@@ -227,7 +242,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     if (!converted || (shortcut.kind === "divider" && !inserted)) return false;
     // The space that set the shortcut off is written first, as typing, so ⌘Z
     // gives back "# " rather than a heading — the way Notion's undo does.
-    execute(updateBlockContent(tree, block.id, replaceRange(block.content, text.length, text.length, " ")));
+    execute(updateBlockContent(tree, block.id, typed ?? replaceRange(block.content, text.length, text.length, " ")));
     annotateHistory("insert");
     checkpointHistory(caretAt(page.id, block.id, text.length + 1));
     element.innerHTML = "";

@@ -18,6 +18,7 @@ import {
   checkLines,
   convertBlock,
   deleteBlock,
+  convertBlocks,
   duplicateBlocks,
   indentBlocks,
   insertBlockAfter,
@@ -43,6 +44,7 @@ import {
 import { CARET_KEYS, type Editor } from "./editor-state";
 import type { BlockTyping } from "./useBlockTyping";
 import { markForKey } from "./marks";
+import { kindForKeys } from "./block-shortcuts";
 
 /** A key pressed in a block: the slash and mention menus' keys while one is
  *  open, then Notion's — Enter and Backspace at a line's edges, Tab and
@@ -91,6 +93,18 @@ export function blockKeys(editor: Editor & BlockTyping) {
           return;
         }
       }
+    }
+
+    // ⌘1–3, ⌘⌥0–8, ⌘⇧7–9: the line (or every line the selection reaches) becomes
+    // that kind; pressed again on lines already of it, they become paragraphs.
+    const wanted = kindForKeys(event);
+    if (wanted) {
+      event.preventDefault();
+      const reached = blocksRef.current ? selectedBlockRanges(blocksRef.current) : [];
+      const ids = reached.length > 1 ? reached.map((range) => range.blockId) : [block.id];
+      const same = ids.every((id) => tree.by_id[id]?.kind === wanted);
+      execute(convertBlocks(tree, ids, same && wanted !== "text" ? "text" : wanted), { id: block.id, start: caretOffset(element) });
+      return;
     }
 
     if (slash) {

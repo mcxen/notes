@@ -87,7 +87,7 @@ export const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
     // away. What it holds is its children (as a list item's are), and whether
     // they are hidden is kept with the line (`collapsed`).
     kind: "toggle", label: "Toggle list",
-    icon: ListCollapse, tag: "div", editable: true, continueAs: "text", shortcuts: [],
+    icon: ListCollapse, tag: "div", editable: true, continueAs: "text", shortcuts: [">>"],
     canHaveChildren: true, placeholder: "Toggle",
     slash: { aliases: ["toggle", "collapse", "fold", "expand", "accordion", "disclosure", "dropdown"] },
   },

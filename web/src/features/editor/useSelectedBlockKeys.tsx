@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createId } from "../../core/ids";
+import { kindForKeys } from "./block-shortcuts";
 import { imeComposing } from "../../core/keyboard";
 import { createBlock, orderedBlocks } from "../../core/block-tree";
 import { inlineFromText } from "../../core/inline-content";
@@ -10,6 +11,7 @@ import {
   indentBlocks,
   insertFragmentAfter,
   outdentBlocks,
+  convertBlocks,
   shiftBlocks,
   topLevelBlocks,
 } from "./editor-commands";
@@ -42,6 +44,14 @@ export function useSelectedBlockKeys(editor: Editor): void {
       const key = event.key;
       const first = rows.findIndex((row) => row.block.id === selectedIds[0]);
       const last = rows.findIndex((row) => row.block.id === selectedIds.at(-1));
+      // The same keys as inside a line: ⌘1–3, ⌘⌥0–8, ⌘⇧7–9 set the kind of every selected line.
+      const wanted = kindForKeys(event);
+      if (wanted) {
+        event.preventDefault();
+        const same = selectedIds.every((id) => tree.by_id[id]?.kind === wanted);
+        executeOnBlocks(convertBlocks(tree, selectedIds, same && wanted !== "text" ? "text" : wanted));
+        return;
+      }
       if (key === "Escape") {
         // Not claimed: in the side peek, the same Escape also closes the
         // page, as SidePeek promises — the selection goes with it.

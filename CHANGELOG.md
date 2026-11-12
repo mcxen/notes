@@ -2,6 +2,8 @@
 
 ## 0.1.3
 
+- Typing shortcuts now work with an input method: `-`, `#`, `1.`, `[]`, `>` and the rest turned a line into a list or heading only when the space came as the Space key, which a Chinese input method does not send, so "- " stayed text. The space is now also read from the text typed. Folded lists have one too: `>>` and a space.
+- Keys for the kind of a line, as Notion's: ⌘1, ⌘2, ⌘3 make a heading; ⌘⌥0 a paragraph, ⌘⌥1–3 headings, ⌘⌥4 a to-do, ⌘⌥5 a bulleted list, ⌘⌥6 a numbered list, ⌘⌥7 a toggle, ⌘⌥8 code; ⌘⇧7, ⌘⇧8, ⌘⇧9 a numbered list, a bulleted list and a to-do. They act on every line a selection reaches, and pressed again on lines already of that kind they turn them back into paragraphs. (Ctrl for ⌘ on Windows and Linux.)
 - Page history thins with age instead of keeping only the newest 20: every version of the last hour, then one an hour for a day, then one a day for 30 days (up to 60 per page, and 10 MB). A long evening of edits can no longer push out yesterday's versions.
 - Page history: a page was only checkpointed when you moved to another page, so editing one page and closing the window left its history empty. It is now checkpointed 20 seconds after an edit, when the window is hidden or closed, and when the history panel opens. Edits within five minutes of the last version replace it instead of adding another.
 - New app icon, the amber concept: three cream lines on amber with one red dot (the macOS icon keeps Apple's template margin).
