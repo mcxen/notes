@@ -39,7 +39,7 @@ func Run() error {
 		return err
 	}
 
-	actions := &appActions{notebooks: notebooks, settings: settingsPath()}
+	actions := &appActions{notebooks: notebooks, settings: settingsPath(), mcp: &mcpRunner{}}
 	connections.app = actions
 	app.WhenReady(func() {
 		if st, err := settings.Load(actions.settings); err == nil {
@@ -49,6 +49,7 @@ func Run() error {
 		rememberLanguage()
 		app.SetMenu(appMenu(actions))
 		actions.startup()
+		actions.applyMCP()
 	})
 	app.OnLocaleChanged(func(string) {
 		rememberLanguage()
@@ -67,7 +68,10 @@ func Run() error {
 			actions.startup()
 		}
 	})
-	app.OnBeforeQuit(func(*mygo.QuitEvent) { notebooks.closeAll() })
+	app.OnBeforeQuit(func(*mygo.QuitEvent) {
+		actions.mcp.stop()
+		notebooks.closeAll()
+	})
 	return app.Run()
 }
 
@@ -90,6 +94,7 @@ type appActions struct {
 	settingsWin  *mygo.Window
 	settingsView *settingsWindow
 	pickerView   *picker
+	mcp          *mcpRunner
 }
 
 // recentFolders are the vault folders opened before, most recent first.

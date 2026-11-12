@@ -4,8 +4,11 @@
 package frontend
 
 import (
+	"fmt"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +16,7 @@ import (
 	"github.com/egoist/mygo/plugins/updater"
 	"github.com/egoist/mygo/ui"
 
+	"notes/internal/mcpsvc"
 	"notes/internal/settings"
 	vsync "notes/internal/sync"
 	"notes/internal/synclog"
@@ -29,6 +33,7 @@ var settingsPages = []settingsPage{
 	{"appearance", "Appearance", appearanceGlyph},
 	{"vaults", "Vaults", vaultsGlyph},
 	{"sync", "Sync", syncGlyph},
+	{"integrations", "Integrations", plugGlyph},
 	{"about", "About", aboutGlyph},
 }
 
@@ -48,6 +53,10 @@ type settingsWindow struct {
 	searchRef ui.Ref
 	hits      map[string]bool
 	rows      int
+
+	// The MCP port and public address as typed, until Return saves them.
+	mcpPort   string
+	mcpPublic string
 }
 
 // openSettings opens the settings window on a page, or brings it forward.
@@ -91,6 +100,8 @@ func (s *settingsWindow) refresh() {
 	st, err := settings.Load(s.a.settings)
 	if err == nil {
 		s.st = st
+		s.mcpPort = fmt.Sprint(st.MCP.PortOrDefault())
+		s.mcpPublic = st.MCP.PublicURL
 	}
 	entries, err := syncLog().Entries()
 	if err == nil {
@@ -156,6 +167,8 @@ func (s *settingsWindow) view(c *ui.Context) {
 							s.vaultsPage(c, pal)
 						case "sync":
 							s.syncPage(c, pal)
+						case "integrations":
+							s.integrationsPage(c, pal)
 						case "about":
 							s.aboutPage(c, pal)
 						default:
@@ -240,6 +253,9 @@ var searchEntries = []searchEntry{
 	{"vaults", "Add a vault", "new open folder"},
 	{"sync", "Remote vaults", "sync webdav smb remote cloud disconnect"},
 	{"sync", "Recent syncs", "log history conflicts trash restore"},
+	{"integrations", "MCP server", "mcp ai assistant claude cursor key token port frp proxy api integrations"},
+	{"integrations", "Vaults for assistants", "mcp vault allow assistants read only"},
+	{"integrations", "Connect an assistant", "prompt copy claude code command stdio config"},
 	{"about", "Version", "version about update"},
 	{"about", "Settings file", "settings file json config path"},
 }
@@ -625,4 +641,137 @@ func logLine(e synclog.Entry) string {
 		line += " · " + e.Message
 	}
 	return line
+}
+
+// integrationsPage is Settings › Integrations: the MCP server that lets AI
+// assistants read and edit the vaults the user allows.
+func (s *settingsWindow) integrationsPage(c *ui.Context, pal *palette) {
+	s.group(c, pal, tr("MCP server"), tr("Lets AI assistants read and edit the vaults you allow. Off by default; every request needs the key."), func() {
+		on := s.st.MCP.Enabled
+		s.row(c, pal, tr("Turn on the MCP server"), s.a.mcp.status(s.st), func() {
+			toggle(c, "mcp-on", &on, tr("Turn on the MCP server"), pal)
+		})
+		if on != s.st.MCP.Enabled {
+			s.st.MCP.Enabled = on
+			if on && s.st.MCP.Key == "" {
+				s.st.MCP.Key = mcpsvc.NewKey()
+			}
+			s.save()
+			s.a.applyMCP()
+			s.refresh()
+		}
+		s.row(c, pal, tr("Port"), tr("Press Return to apply. Default 8999."), func() {
+			var in ui.Element
+			frame := ui.Row(c.Key("mcp-port-frame")).Width(96)
+			frame.Children(func() {
+				in = ui.TextInputBase(c.Key("mcp-port"), &s.mcpPort).Grow(1).MinWidth(0).FontSize(13)
+			})
+			field(frame, in.Focused(), pal)
+			if in.Submitted() {
+				port, err := strconv.Atoi(strings.TrimSpace(s.mcpPort))
+				if err != nil || port < 1 || port > 65535 {
+					s.notes = tr("The port must be a number from 1 to 65535.")
+					return
+				}
+				s.st.MCP.Port = port
+				if port == settings.DefaultMCPPort {
+					s.st.MCP.Port = 0
+				}
+				s.save()
+				s.a.applyMCP()
+				s.refresh()
+			}
+		})
+		local := s.st.MCP.LocalOnly
+		s.row(c, pal, tr("Only this computer"), tr("Off: the server listens on every network interface, so other computers and a proxy such as frp can reach it. The key is still required."), func() {
+			toggle(c, "mcp-local", &local, tr("Only this computer"), pal)
+		})
+		if local != s.st.MCP.LocalOnly {
+			s.st.MCP.LocalOnly = local
+			s.save()
+			s.a.applyMCP()
+			s.refresh()
+		}
+		readOnly := s.st.MCP.ReadOnly
+		s.row(c, pal, tr("Read only"), tr("Assistants can read and search, but not change anything."), func() {
+			toggle(c, "mcp-readonly", &readOnly, tr("Read only"), pal)
+		})
+		if readOnly != s.st.MCP.ReadOnly {
+			s.st.MCP.ReadOnly = readOnly
+			s.save()
+			s.refresh()
+		}
+		s.row(c, pal, tr("Public address"), tr("Optional, e.g. https://notes.example.com/mcp, for a proxy. Shown in the prompt. Press Return to save."), func() {
+			var in ui.Element
+			frame := ui.Row(c.Key("mcp-public-frame")).Width(240)
+			frame.Children(func() {
+				in = ui.TextInputBase(c.Key("mcp-public"), &s.mcpPublic).Grow(1).MinWidth(0).FontSize(13)
+			})
+			field(frame, in.Focused(), pal)
+			if in.Submitted() {
+				s.st.MCP.PublicURL = strings.TrimSpace(s.mcpPublic)
+				s.save()
+				s.refresh()
+			}
+		})
+		s.row(c, pal, tr("Key"), maskedKey(s.st.MCP.Key), func() {
+			if button(c, "mcp-copy-key", tr("Copy key"), false, pal) && s.st.MCP.Key != "" {
+				mygo.Clipboard.WriteText(s.st.MCP.Key)
+				s.toast = tr("Copied.")
+			}
+			if button(c, "mcp-new-key", tr("Make a new key"), false, pal) {
+				s.st.MCP.Key = mcpsvc.NewKey()
+				s.save()
+				s.a.applyMCP()
+				s.refresh()
+				s.toast = tr("A new key is made. The old one no longer works.")
+			}
+		})
+	})
+	s.group(c, pal, tr("Vaults for assistants"), tr("The first vault is the default; a call can name another one."), func() {
+		if len(s.st.Recent) == 0 {
+			s.row(c, pal, tr("No vaults yet"), tr("Open a folder or start a new vault."), nil)
+			return
+		}
+		for _, folder := range s.st.Recent {
+			folder := folder
+			allowed := slices.Contains(s.st.MCP.Vaults, folder)
+			detail := shortPath(folder)
+			if allowed && len(s.st.MCP.Vaults) > 0 && s.st.MCP.Vaults[0] == folder {
+				detail += " · " + tr("default")
+			}
+			s.row(c, pal, s.a.recentLabel(folder), detail, func() {
+				toggle(c, "mcp-vault:"+folder, &allowed, s.a.recentLabel(folder), pal)
+			})
+			if allowed != slices.Contains(s.st.MCP.Vaults, folder) {
+				if allowed {
+					s.st.MCP.Vaults = append(s.st.MCP.Vaults, folder)
+				} else {
+					s.st.MCP.Vaults = slices.DeleteFunc(s.st.MCP.Vaults, func(f string) bool { return f == folder })
+				}
+				s.save()
+				s.refresh()
+			}
+		}
+	})
+	s.group(c, pal, tr("Connect an assistant"), tr("The prompt has the address, the key, the vaults and the tools: paste it into the assistant's instructions."), func() {
+		s.row(c, pal, tr("Copy the prompt"), tr("Everything an assistant needs, in one text."), func() {
+			if button(c, "mcp-copy-prompt", tr("Copy the prompt"), true, pal) {
+				mygo.Clipboard.WriteText(mcpPrompt(s.st))
+				s.toast = tr("The prompt is copied.")
+			}
+		})
+		s.row(c, pal, tr("Copy the Claude Code command"), tr("Adds the server to Claude Code with the key."), func() {
+			if button(c, "mcp-copy-claude", tr("Copy"), false, pal) {
+				mygo.Clipboard.WriteText(claudeCodeCommand(s.st))
+				s.toast = tr("Copied.")
+			}
+		})
+		s.row(c, pal, tr("Copy the stdio entry"), tr("For a client that starts a program instead of an address."), func() {
+			if button(c, "mcp-copy-stdio", tr("Copy"), false, pal) {
+				mygo.Clipboard.WriteText(stdioConfig())
+				s.toast = tr("Copied.")
+			}
+		})
+	})
 }

@@ -50,6 +50,42 @@ type Settings struct {
 	// Language is the language the app shows: "" follows the system, else a
 	// tag the app speaks ("en", "zh-Hans").
 	Language string `json:"language,omitempty"`
+	// MCP is the Model Context Protocol server that lets AI assistants read and
+	// edit the vaults it is allowed. Off unless Enabled.
+	MCP MCP `json:"mcp,omitempty"`
+}
+
+// DefaultMCPPort is the port the MCP server listens on unless another is set.
+const DefaultMCPPort = 8999
+
+// MCP is the settings of the Model Context Protocol server.
+type MCP struct {
+	// Enabled turns the server on. It is off by default.
+	Enabled bool `json:"enabled,omitempty"`
+	// Key is the secret an assistant sends as "Authorization: Bearer <key>".
+	// The settings file is kept readable by its owner only.
+	Key string `json:"key,omitempty"`
+	// Port is the TCP port; 0 means DefaultMCPPort.
+	Port int `json:"port,omitempty"`
+	// LocalOnly listens on 127.0.0.1 only. Off, the server listens on every
+	// network interface, so other computers and a proxy (frp, a tunnel) can reach
+	// it; the key is required either way.
+	LocalOnly bool `json:"localOnly,omitempty"`
+	// PublicURL is the address the server is reached at from outside, copied
+	// into the prompt. Optional.
+	PublicURL string `json:"publicURL,omitempty"`
+	// ReadOnly lets assistants read but not change anything.
+	ReadOnly bool `json:"readOnly,omitempty"`
+	// Vaults are the folders the assistants may use. The first is the default.
+	Vaults []string `json:"vaults,omitempty"`
+}
+
+// PortOrDefault is the port to listen on.
+func (m MCP) PortOrDefault() int {
+	if m.Port == 0 {
+		return DefaultMCPPort
+	}
+	return m.Port
 }
 
 // SetRemote records the remote folder of a working copy.
@@ -98,7 +134,8 @@ func (s Settings) Save(path string) error {
 		return err
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, append(data, '\n'), 0o644); err != nil {
+	// Private to the owner: it holds the key of the MCP server.
+	if err := os.WriteFile(tmp, append(data, '\n'), 0o600); err != nil {
 		return err
 	}
 	return os.Rename(tmp, path)
