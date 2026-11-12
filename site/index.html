@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notes — your notes, in a folder you own</title>
+  <meta name="description" content="A minimal desktop notes app: blocks, nested pages, databases and history, kept as plain files in a folder you choose. For macOS, Windows and Linux.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+  <meta property="og:title" content="Notes">
+  <meta property="og:description" content="Your notes, in a folder you own.">
+  <meta property="og:image" content="assets/shot-light.png">
+  <script>
+    // Before first paint, so a dark visitor never sees a white flash.
+    (function () {
+      var theme = null, lang = null;
+      try { theme = localStorage.getItem("notes-theme"); lang = localStorage.getItem("notes-lang"); } catch (e) {}
+      if (theme !== "light" && theme !== "dark") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.dataset.theme = theme;
+      document.documentElement.lang = lang === "zh" ? "zh-Hans" : "en";
+    })();
+  </script>
+  <style>
+    :root {
+      --amber: #ffc531;
+      --amber-deep: #f0b000;
+      --red: #e04a34;
+      --cream: #f7efde;
+      --ink: #1a1712;
+      --bg: #fbf8f2;
+      --bg-soft: #f4eee2;
+      --text: #1a1712;
+      --muted: #6f6759;
+      --line: rgba(26, 23, 18, 0.12);
+      --card: #ffffff;
+      --shadow: 0 30px 80px -30px rgba(60, 40, 0, 0.35), 0 8px 24px -12px rgba(60, 40, 0, 0.25);
+      --radius: 14px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", Roboto, Helvetica, Arial, sans-serif;
+    }
+    :root[data-theme="dark"] {
+      --bg: #14120e;
+      --bg-soft: #1c1a14;
+      --text: #f4eee2;
+      --muted: #a39a8a;
+      --line: rgba(244, 238, 226, 0.14);
+      --card: #221f18;
+      --shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9), 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+    }
+    a { color: inherit; }
+    button { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid var(--amber-deep); outline-offset: 2px; border-radius: 6px; }
+
+    .wrap { width: min(1120px, 100% - 40px); margin-inline: auto; }
+
+    /* Language: both texts are in the page, the other is hidden. */
+    :root:not([lang="zh-Hans"]) [lang-zh], :root[lang="zh-Hans"] [lang-en] { display: none !important; }
+
+    /* ── Header ───────────────────────────────────────────── */
+    header { position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(1.4) blur(14px); background: color-mix(in srgb, var(--bg) 82%, transparent); border-bottom: 1px solid transparent; }
+    header .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 12px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; font-size: 17px; letter-spacing: -0.01em; text-decoration: none; }
+    .brand img { width: 28px; height: 28px; display: block; }
+    nav { display: flex; align-items: center; gap: 6px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px;
+      border: 1px solid var(--line); border-radius: 10px; background: transparent; cursor: pointer;
+      text-decoration: none; font-size: 14px; font-weight: 500; transition: background .15s, border-color .15s;
+    }
+    .chip:hover { background: var(--bg-soft); }
+    .chip svg { width: 17px; height: 17px; flex: none; }
+    .chip.icon { width: 36px; padding: 0; justify-content: center; }
+    .theme-sun { display: none; }
+    :root[data-theme="dark"] .theme-sun { display: block; }
+    :root[data-theme="dark"] .theme-moon { display: none; }
+
+    /* ── Hero ─────────────────────────────────────────────── */
+    .hero { text-align: center; padding: clamp(56px, 10vw, 112px) 0 0; }
+    .mark { width: 72px; height: 72px; margin: 0 auto 28px; display: block; filter: drop-shadow(0 10px 22px rgba(240, 176, 0, 0.35)); }
+    h1 {
+      margin: 0 auto; max-width: 15ch; font-size: clamp(38px, 7vw, 68px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 750;
+      text-wrap: balance;
+    }
+    :root[lang="zh-Hans"] h1 { letter-spacing: -0.01em; max-width: 12em; line-height: 1.18; }
+    h1 em { font-style: normal; background: linear-gradient(transparent 62%, var(--amber) 62% 92%, transparent 92%); padding: 0 .06em; }
+    .lead { margin: 22px auto 0; max-width: 34em; font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); text-wrap: balance; }
+
+    /* ── Download ─────────────────────────────────────────── */
+    .get { margin: 36px auto 0; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+    .primary {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 26px;
+      border: 0; border-radius: 14px; background: var(--amber); color: var(--ink); font-size: 17px; font-weight: 650;
+      text-decoration: none; cursor: pointer; box-shadow: 0 10px 28px -10px rgba(240, 176, 0, 0.7), inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+      transition: transform .12s, background .15s;
+    }
+    .primary:hover { background: #ffcf52; transform: translateY(-1px); }
+    .primary:active { transform: translateY(0); }
+    .primary svg { width: 20px; height: 20px; }
+    .others { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .menu { position: relative; }
+    .menu > button { cursor: pointer; }
+    .menu > button svg.caret { width: 14px; height: 14px; opacity: .6; transition: transform .15s; }
+    .menu.open > button svg.caret { transform: rotate(180deg); }
+    .menu-list {
+      position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 15; min-width: 230px; padding: 6px;
+      border: 1px solid var(--line); border-radius: 12px; background: var(--card); box-shadow: var(--shadow); display: none; text-align: left;
+    }
+    .menu.open .menu-list { display: block; }
+    .menu-list a { display: flex; justify-content: space-between; gap: 18px; padding: 9px 12px; border-radius: 8px; text-decoration: none; font-size: 14px; }
+    .menu-list a:hover { background: var(--bg-soft); }
+    .menu-list small { color: var(--muted); font-size: 12px; }
+    .meta { margin: 0; font-size: 13px; color: var(--muted); }
+    .meta a { color: inherit; text-underline-offset: 3px; }
+
+    /* ── Screenshot ───────────────────────────────────────── */
+    .shot { margin: clamp(44px, 7vw, 76px) auto 0; position: relative; }
+    .shot::before { /* a warm glow behind the window, the logo's amber */
+      content: ""; position: absolute; inset: 8% 6% -4%; z-index: -1; border-radius: 40px;
+      background: radial-gradient(60% 60% at 50% 40%, rgba(255, 197, 49, 0.55), rgba(255, 197, 49, 0) 70%); filter: blur(30px);
+    }
+    :root[data-theme="dark"] .shot::before { opacity: .35; }
+    .window { border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--line); background: var(--card); line-height: 0; }
+    .window img { width: 100%; height: auto; display: block; }
+    :root[data-theme="dark"] .shot-light, :root:not([data-theme="dark"]) .shot-dark { display: none; }
+
+    /* ── Features ─────────────────────────────────────────── */
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: clamp(56px, 8vw, 96px) auto 0; }
+    .feature { padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
+    .feature i { display: block; width: 28px; height: 8px; border-radius: 4px; background: var(--amber); margin-bottom: 14px; }
+    .feature:nth-child(3n+2) i { width: 20px; }
+    .feature:nth-child(3n) i { width: 12px; }
+    .feature h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.01em; }
+    .feature p { margin: 0; font-size: 14.5px; color: var(--muted); }
+
+    /* ── Footer ───────────────────────────────────────────── */
+    footer { margin-top: clamp(64px, 9vw, 112px); border-top: 1px solid var(--line); padding: 32px 0 44px; font-size: 14px; color: var(--muted); }
+    footer .wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+    footer p { margin: 0; max-width: 46em; }
+    footer a { text-underline-offset: 3px; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-right: 8px; vertical-align: 1px; }
+
+    @media (max-width: 560px) {
+      header .wrap { height: 58px; }
+      .brand span { font-size: 16px; }
+      .chip .label { display: none; }
+      .chip.lang .label { display: inline; }
+      .primary { width: 100%; max-width: 360px; }
+      .menu-list { left: auto; right: 0; transform: none; }
+      .menu:first-child .menu-list { left: 0; right: auto; }
+      .window { border-radius: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="#top" aria-label="Notes">
+        <img src="assets/logo.svg" alt="" width="28" height="28"><span>Notes</span>
+      </a>
+      <nav>
+        <button class="chip lang" id="lang" type="button" aria-label="Language">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/></svg>
+          <span class="label" lang-en>中文</span><span class="label" lang-zh>English</span>
+        </button>
+        <button class="chip icon" id="theme" type="button" aria-label="Theme">
+          <svg class="theme-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+          <svg class="theme-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <a class="chip" href="https://github.com/mcxen/notes" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+          <span class="label" lang-en>Source on GitHub</span><span class="label" lang-zh>GitHub 源码</span>
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero wrap">
+      <img class="mark" src="assets/logo.svg" alt="Notes" width="72" height="72">
+      <h1>
+        <span lang-en>Your notes, in a <em>folder</em> you own.</span>
+        <span lang-zh>你的笔记，存在你自己的<em>文件夹</em>里。</span>
+      </h1>
+      <p class="lead">
+        <span lang-en>A quiet desktop notes app. Blocks, nested pages, databases and history, all kept as plain files you can sync, back up and version with anything.</span>
+        <span lang-zh>安静的桌面笔记应用。块编辑、嵌套页面、数据库与历史记录，全部保存为普通文件，可用任何工具同步、备份和版本管理。</span>
+      </p>
+
+      <div class="get">
+        <a class="primary" id="primary" href="https://github.com/mcxen/notes/releases/latest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+          <span id="primary-label"><span lang-en>Download</span><span lang-zh>下载</span></span>
+        </a>
+        <div class="others" id="others">
+          <a class="chip" id="dl-mac" href="https://github.com/mcxen/notes/releases/latest"><span>macOS</span></a>
+          <div class="menu" id="menu-win">
+            <button class="chip" type="button" aria-haspopup="true" aria-expanded="false"><span>Windows</span>
+              <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+            <div class="menu-list">
+              <a data-dl="win-x64" href="https://github.com/mcxen/notes/releases/latest">x64 <small lang-en>Intel / AMD</small><small lang-zh>Intel / AMD</small></a>
+              <a data-dl="win-arm64" href="https://github.com/mcxen/notes/releases/latest">ARM64 <small>Snapdragon</small></a>
+            </div>
+          </div>
+          <div class="menu" id="menu-linux">
+            <button class="chip" type="button" aria-haspopup="true" aria-expanded="false"><span>Linux</span>
+              <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+            <div class="menu-list">
+              <a data-dl="deb-x64" href="https://github.com/mcxen/notes/releases/latest">.deb · x64 <small>Debian, Ubuntu</small></a>
+              <a data-dl="deb-arm64" href="https://github.com/mcxen/notes/releases/latest">.deb · ARM64 <small>Debian, Ubuntu</small></a>
+              <a data-dl="tar-x64" href="https://github.com/mcxen/notes/releases/latest">.tar.gz · x64 <small lang-en>other distros</small><small lang-zh>其他发行版</small></a>
+              <a data-dl="tar-arm64" href="https://github.com/mcxen/notes/releases/latest">.tar.gz · ARM64 <small lang-en>other distros</small><small lang-zh>其他发行版</small></a>
+            </div>
+          </div>
+        </div>
+        <p class="meta" id="meta">
+          <span id="version">v0.1.3</span> ·
+          <a id="notes-link" href="https://github.com/mcxen/notes/releases/latest" target="_blank" rel="noopener"><span lang-en>Release notes</span><span lang-zh>更新说明</span></a> ·
+          <span lang-en>macOS app is not notarized: open it with right-click › Open the first time.</span>
+          <span lang-zh>macOS 版未经公证，首次请右键 › 打开。</span>
+        </p>
+      </div>
+    </section>
+
+    <section class="shot wrap" aria-label="Screenshot">
+      <div class="window">
+        <img class="shot-light" src="assets/shot-light.png" alt="Notes, light theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager">
+        <img class="shot-dark" src="assets/shot-dark.png" alt="Notes, dark theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager">
+      </div>
+    </section>
+
+    <section class="wrap features">
+      <div class="feature"><i></i>
+        <h3><span lang-en>Blocks, everywhere</span><span lang-zh>处处是块</span></h3>
+        <p><span lang-en>Type / for headings, to-dos, toggles, callouts, code, tables. Restyle many paragraphs at once.</span><span lang-zh>输入 / 插入标题、待办、折叠列表、提示框、代码和表格；多选段落可一次改样式。</span></p></div>
+      <div class="feature"><i></i>
+        <h3><span lang-en>Plain files</span><span lang-zh>普通文件</span></h3>
+        <p><span lang-en>One JSON file per page in a folder you pick. No account, no lock-in.</span><span lang-zh>每个页面一个 JSON 文件，放在你选的文件夹里。无需账号，不被锁定。</span></p></div>
+      <div class="feature"><i></i>
+        <h3><span lang-en>Pages in pages</span><span lang-zh>页面套页面</span></h3>
+        <p><span lang-en>Nested pages, links, backlinks, a graph, and databases as tables, boards and calendars.</span><span lang-zh>嵌套页面、链接与反向链接、关系图，以及表格、看板、日历视图的数据库。</span></p></div>
+      <div class="feature"><i></i>
+        <h3><span lang-en>History and sync</span><span lang-zh>历史与同步</span></h3>
+        <p><span lang-en>Every page keeps its recent versions. Sync with a WebDAV or SMB folder.</span><span lang-zh>每个页面保留近期版本，可与 WebDAV 或 SMB 文件夹同步。</span></p></div>
+      <div class="feature"><i></i>
+        <h3><span lang-en>Light and dark</span><span lang-zh>浅色与深色</span></h3>
+        <p><span lang-en>Follows your system, with a translucent sidebar on macOS. English and 简体中文.</span><span lang-zh>跟随系统，macOS 上带半透明侧边栏。支持 English 与简体中文。</span></p></div>
+      <div class="feature"><i></i>
+        <h3><span lang-en>Small and fast</span><span lang-zh>小而快</span></h3>
+        <p><span lang-en>One small binary written in Go, using your system's own web view.</span><span lang-zh>Go 编写的单个小体积程序，使用系统自带的网页视图。</span></p></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p><span class="dot"></span>
+        <span lang-en>With thanks to <strong>Terminus</strong>, whose Terminus Notes (<code>@terminus/notes</code>) provided the original editor and interface code this app is adapted from.</span>
+        <span lang-zh>感谢 <strong>Terminus</strong>：本应用改编自其 Terminus Notes（<code>@terminus/notes</code>），原始编辑器与界面前端代码由其提供。</span>
+      </p>
+      <p>
+        <span lang-en>An independent adaptation, not an official release of the original. Built with <a href="https://github.com/egoist/mygo" target="_blank" rel="noopener">MyGo</a>.</span>
+        <span lang-zh>本项目是独立改编，并非原作者的官方版本。基于 <a href="https://github.com/egoist/mygo" target="_blank" rel="noopener">MyGo</a> 构建。</span>
+        · <a href="https://github.com/mcxen/notes" target="_blank" rel="noopener">GitHub</a>
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var REPO = "mcxen/notes";
+      var FALLBACK_VERSION = "v0.1.3";
+      var RELEASES = "https://github.com/" + REPO + "/releases";
+
+      function store(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+
+      // ── Theme and language ─────────────────────────────────
+      document.getElementById("theme").addEventListener("click", function () {
+        var next = root.dataset.theme === "dark" ? "light" : "dark";
+        root.dataset.theme = next; store("notes-theme", next);
+      });
+      function setLang(zh) {
+        root.lang = zh ? "zh-Hans" : "en";
+        document.title = zh ? "Notes — 你的笔记，存在你自己的文件夹里" : "Notes — your notes, in a folder you own";
+      }
+      document.getElementById("lang").addEventListener("click", function () {
+        var zh = root.lang !== "zh-Hans"; setLang(zh); store("notes-lang", zh ? "zh" : "en");
+      });
+      // English unless the visitor chose otherwise.
+      setLang(root.lang === "zh-Hans");
+
+      // ── Downloads: the latest release's own files ──────────
+      var links = {}; // key → URL
+      var PATTERNS = {
+        "mac": /^notes-[\d.]+\.dmg$/,
+        "win-x64": /^notes-setup-[\d.]+-amd64\.exe$/,
+        "win-arm64": /^notes-setup-[\d.]+-arm64\.exe$/,
+        "deb-x64": /^notes_[\d.]+_amd64\.deb$/,
+        "deb-arm64": /^notes_[\d.]+_arm64\.deb$/,
+        "tar-x64": /^notes-[\d.]+-linux-amd64\.tar\.gz$/,
+        "tar-arm64": /^notes-[\d.]+-linux-arm64\.tar\.gz$/
+      };
+      function fallbackLinks(tag) {
+        var v = tag.replace(/^v/, ""), base = RELEASES + "/download/" + tag + "/";
+        return {
+          "mac": base + "notes-" + v + ".dmg",
+          "win-x64": base + "notes-setup-" + v + "-amd64.exe",
+          "win-arm64": base + "notes-setup-" + v + "-arm64.exe",
+          "deb-x64": base + "notes_" + v + "_amd64.deb",
+          "deb-arm64": base + "notes_" + v + "_arm64.deb",
+          "tar-x64": base + "notes-" + v + "-linux-amd64.tar.gz",
+          "tar-arm64": base + "notes-" + v + "-linux-arm64.tar.gz"
+        };
+      }
+
+      // The visitor's system, to offer its download first.
+      var ua = navigator.userAgent, platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+      var os = /Android|iPhone|iPad|iPod/i.test(ua) ? "mobile"
+        : /Win/i.test(platform) || /Windows/i.test(ua) ? "win"
+        : /Mac/i.test(platform) || /Mac OS X/i.test(ua) ? "mac"
+        : /Linux|X11|CrOS/i.test(platform + ua) ? "linux" : "other";
+
+      function apply() {
+        var primary = document.getElementById("primary"), label = document.getElementById("primary-label");
+        document.getElementById("dl-mac").href = links["mac"];
+        document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = links[a.dataset.dl]; });
+        var pick = {
+          mac: ["mac", "macOS", "macOS"],
+          win: ["win-x64", "Windows (x64)", "Windows（x64）"],
+          linux: ["deb-x64", "Linux (.deb, x64)", "Linux（.deb，x64）"]
+        }[os];
+        if (pick) {
+          primary.href = links[pick[0]];
+          label.innerHTML = '<span lang-en>Download for ' + pick[1] + '</span><span lang-zh>下载 ' + pick[2] + ' 版</span>';
+        } else {
+          primary.href = links["mac"];
+          label.innerHTML = '<span lang-en>Download for macOS</span><span lang-zh>下载 macOS 版</span>';
+          if (os === "mobile") label.innerHTML = '<span lang-en>Get the desktop app</span><span lang-zh>获取桌面版</span>';
+        }
+        if (os === "mobile") primary.href = RELEASES + "/latest";
+      }
+
+      links = fallbackLinks(FALLBACK_VERSION); apply();
+
+      fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function (release) {
+          var found = fallbackLinks(release.tag_name);
+          (release.assets || []).forEach(function (asset) {
+            Object.keys(PATTERNS).forEach(function (key) { if (PATTERNS[key].test(asset.name)) found[key] = asset.browser_download_url; });
+          });
+          links = found; apply();
+          document.getElementById("version").textContent = release.tag_name;
+          document.getElementById("notes-link").href = release.html_url;
+        })
+        .catch(function () { /* the fixed addresses stand */ });
+
+      // ── Drop-down menus ────────────────────────────────────
+      var menus = document.querySelectorAll(".menu");
+      function closeAll(except) {
+        menus.forEach(function (m) { if (m !== except) { m.classList.remove("open"); m.firstElementChild.setAttribute("aria-expanded", "false"); } });
+      }
+      menus.forEach(function (menu) {
+        var button = menu.firstElementChild;
+        button.addEventListener("click", function (event) {
+          event.stopPropagation();
+          var open = !menu.classList.contains("open");
+          closeAll(menu); menu.classList.toggle("open", open); button.setAttribute("aria-expanded", String(open));
+        });
+      });
+      document.addEventListener("click", function () { closeAll(null); });
+      document.addEventListener("keydown", function (event) { if (event.key === "Escape") closeAll(null); });
+    })();
+  </script>
+</body>
+</html>
