@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Notes — your notes, in a folder you own</title>
-  <meta name="description" content="A minimal desktop notes app: blocks, nested pages, databases and history, kept as plain files in a folder you choose. For macOS, Windows and Linux.">
+  <title>Notes — a local Notion: free, light and fast</title>
+  <meta name="description" content="A completely free, local Notion-style notes app: blocks, nested pages, databases and history, kept as plain files in a folder you choose. For macOS, Windows and Linux.">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <meta property="og:title" content="Notes">
-  <meta property="og:description" content="Your notes, in a folder you own.">
+  <meta property="og:description" content="A local Notion. Free, light and fast.">
   <meta property="og:image" content="assets/shot-light.png">
   <script>
     // Before first paint, so a dark visitor never sees a white flash.
@@ -89,11 +89,11 @@
     .hero { text-align: center; padding: clamp(56px, 10vw, 112px) 0 0; }
     .mark { width: 72px; height: 72px; margin: 0 auto 28px; display: block; filter: drop-shadow(0 10px 22px rgba(240, 176, 0, 0.35)); }
     h1 {
-      margin: 0 auto; max-width: 15ch; font-size: clamp(38px, 7vw, 68px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 750;
+      margin: 0 auto; max-width: 16ch; font-size: clamp(38px, 7vw, 68px); line-height: 1.04; letter-spacing: -0.035em; font-weight: 750;
       text-wrap: balance;
     }
     :root[lang="zh-Hans"] h1 { letter-spacing: -0.01em; max-width: 12em; line-height: 1.18; }
-    h1 em { font-style: normal; background: linear-gradient(transparent 62%, var(--amber) 62% 92%, transparent 92%); padding: 0 .06em; }
+    h1 em { white-space: nowrap; font-style: normal; background: linear-gradient(transparent 62%, var(--amber) 62% 92%, transparent 92%); padding: 0 .06em; }
     .lead { margin: 22px auto 0; max-width: 34em; font-size: clamp(16px, 2.2vw, 19px); color: var(--muted); text-wrap: balance; }
 
     /* ── Download ─────────────────────────────────────────── */
@@ -190,12 +190,12 @@
     <section class="hero wrap">
       <img class="mark" src="assets/logo.svg" alt="Notes" width="72" height="72">
       <h1>
-        <span lang-en>Your notes, in a <em>folder</em> you own.</span>
-        <span lang-zh>你的笔记，存在你自己的<em>文件夹</em>里。</span>
+        <span lang-en>A local Notion. <em>Free</em>, light and fast.</span>
+        <span lang-zh>本地 Notion，<em>完全免费</em>，轻快流畅。</span>
       </h1>
       <p class="lead">
-        <span lang-en>A quiet desktop notes app. Blocks, nested pages, databases and history, all kept as plain files you can sync, back up and version with anything.</span>
-        <span lang-zh>安静的桌面笔记应用。块编辑、嵌套页面、数据库与历史记录，全部保存为普通文件，可用任何工具同步、备份和版本管理。</span>
+        <span lang-en>A completely free desktop notes app with the blocks, nested pages and databases you know, small and quick to start. Your notes stay as plain files in a folder you own: no account, no lock-in.</span>
+        <span lang-zh>完全免费的桌面笔记软件：熟悉的块编辑、嵌套页面和数据库，体积小、启动快。笔记以普通文件保存在你自己的文件夹里，无需账号，不被锁定。</span>
       </p>
 
       <div class="get">
@@ -292,7 +292,7 @@
       });
       function setLang(zh) {
         root.lang = zh ? "zh-Hans" : "en";
-        document.title = zh ? "Notes — 你的笔记，存在你自己的文件夹里" : "Notes — your notes, in a folder you own";
+        document.title = zh ? "Notes — 本地 Notion，完全免费，轻快流畅" : "Notes — a local Notion: free, light and fast";
       }
       document.getElementById("lang").addEventListener("click", function () {
         var zh = root.lang !== "zh-Hans"; setLang(zh); store("notes-lang", zh ? "zh" : "en");
