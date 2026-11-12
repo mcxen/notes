@@ -46,12 +46,17 @@ export function HistoryPanel({
   onClose(): void;
   onPreview(page: NotePage | null): void;
 }) {
-  const { ensureHistory, restoreVersion, rosters } = useWorkspace();
+  const { checkpointPage, ensureHistory, restoreVersion, rosters } = useWorkspace();
   const { toast } = useUi();
   // The page's versions come with the panel: the desktop app keeps history out of the workspace until it is shown.
   useEffect(() => {
     if (open && pageId) void ensureHistory(pageId).catch(() => undefined);
   }, [ensureHistory, open, pageId]);
+  // What was written since the last checkpoint is a version too, so the panel
+  // shows it: otherwise a page edited and not yet left has nothing to restore.
+  useEffect(() => {
+    if (open && pageId) checkpointPage(pageId, "Edited page");
+  }, [checkpointPage, open, pageId]);
   const { mounted, shown } = useMountTransition(open && Boolean(pageId), PANEL_EXIT_MS);
   const page = useWorkspaceState((state) => (pageId ? state.pages[pageId] : undefined));
   const stored = useWorkspaceState((state) => (pageId ? state.versions[pageId] : undefined));

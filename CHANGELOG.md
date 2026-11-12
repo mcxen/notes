@@ -2,6 +2,7 @@
 
 ## 0.1.3
 
+- Page history: a page was only checkpointed when you moved to another page, so editing one page and closing the window left its history empty. It is now checkpointed 20 seconds after an edit, when the window is hidden or closed, and when the history panel opens. Edits within five minutes of the last version replace it instead of adding another.
 - New app icon, the amber concept: three cream lines on amber with one red dot (the macOS icon keeps Apple's template margin).
 - Toggle list, as in Notion: "/toggle" (or Turn into › Toggle list) makes a line with a triangle that folds what is under it. Whether it is open is kept with the line, so it is the same for everyone who reads the page; on a page you can only read, the triangle opens it for you alone. Enter in an open toggle starts a line inside it. Folded, its lines are left out of arrow-key movement, and still written out when the page is exported or copied.
 - Several selected paragraphs can be styled at once from the bar at the foot of the page: Turn into (headings, lists, toggle…), bold, italic, underline, strikethrough, code and colour, across all their words. The marks show pressed when every selected line has them, and a second press clears them.

@@ -212,6 +212,9 @@ function versionFor(page: NotePage, platform: PlatformClient, summary: string, r
 /** The page a window opens on: the member's first page not in the trash —
  *  or, for someone whose pages are all shared with them, the first of those —
  *  leaving out `except`. */
+/** How long a page is left alone after an edit before it is checkpointed. */
+const CHECKPOINT_IDLE_MS = 20_000;
+
 function firstOpenPage(state: WorkspaceState, except?: string): string {
   const open = (page: NotePage | undefined) => Boolean(page && page.id !== except && !page.archived);
   return state.roots.find((id) => open(state.pages[id]))
@@ -582,6 +585,36 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (selectedPageId) void ensureHistory(selectedPageId).catch(() => undefined);
   }, [ensureHistory, selectedPageId]);
+
+  /* Leaving a page is not the only time its words are worth keeping: someone
+     who edits one page and closes the window never leaves it, and its history
+     stayed empty. A page edited is checkpointed once it has been quiet for a
+     while, and at once when the window is hidden or closed. A checkpoint of
+     what is already the last one writes nothing, and edits within five minutes
+     of one replace it rather than add to it (core/versions.ts). */
+  const lastEdit = useRef<{ id: string; at: string | undefined }>({ id: "", at: undefined });
+  const editedAt = state.pages[selectedPageId]?.updated_at;
+  useEffect(() => {
+    const seen = lastEdit.current;
+    lastEdit.current = { id: selectedPageId, at: editedAt };
+    // Opening a page is not editing it: only a change to the page already open counts.
+    if (!selectedPageId || seen.id !== selectedPageId || seen.at === editedAt) return;
+    const timer = window.setTimeout(() => { checkpointRef.current(selectedPageId, "Edited page"); }, CHECKPOINT_IDLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [editedAt, selectedPageId]);
+
+  const openPageRef = useRef(selectedPageId);
+  openPageRef.current = selectedPageId;
+  useEffect(() => {
+    const keep = () => { if (openPageRef.current) checkpointRef.current(openPageRef.current, "Edited page"); };
+    const onVisibility = () => { if (globalThis.document.visibilityState === "hidden") keep(); };
+    window.addEventListener("pagehide", keep);
+    globalThis.document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", keep);
+      globalThis.document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     const leaving = previousPageId.current;
