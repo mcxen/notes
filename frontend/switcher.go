@@ -89,7 +89,7 @@ func (c *Connections) OpenVault(ctx context.Context, path string, newWindow bool
 		return err
 	}
 	if !newWindow && caller != nil && here != "" {
-		caller.Close()
+		c.n.closeWindow(caller)
 	}
 	return nil
 }

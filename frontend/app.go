@@ -41,14 +41,20 @@ func Run() error {
 
 	actions := &appActions{notebooks: notebooks, settings: settingsPath(), mcp: &mcpRunner{}}
 	connections.app = actions
+	notebooks.keepInTray = actions.keepsInTray
+	notebooks.onVisibility = actions.applyDock
 	app.WhenReady(func() {
-		if st, err := settings.Load(actions.settings); err == nil {
-			applyUpdateSource(st.UpdateSource)
-			applyLanguage(st.Language)
-		}
+		st := actions.loadSettings()
+		applyUpdateSource(st.UpdateSource)
+		applyLanguage(st.Language)
 		rememberLanguage()
 		app.SetMenu(appMenu(actions))
+		actions.installTray()
+		if err := actions.applyHotkey(st.Hotkey); err != nil {
+			log.Printf("notes: shortcut %q: %v", st.Hotkey, err)
+		}
 		actions.startup()
+		actions.applyDock()
 		actions.applyMCP()
 	})
 	app.OnLocaleChanged(func(string) {
@@ -63,12 +69,14 @@ func Run() error {
 	if runtime.GOOS == "darwin" {
 		app.OnWindowAllClosed(func() {})
 	}
+	// The Dock icon brings the windows back, the ones hidden to the tray too.
 	app.OnActivate(func(hasVisibleWindows bool) {
 		if !hasVisibleWindows {
-			actions.startup()
+			actions.bringForward()
 		}
 	})
 	app.OnBeforeQuit(func(*mygo.QuitEvent) {
+		notebooks.leaving.Store(true)
 		actions.mcp.stop()
 		notebooks.closeAll()
 	})
@@ -95,6 +103,10 @@ type appActions struct {
 	settingsView *settingsWindow
 	pickerView   *picker
 	mcp          *mcpRunner
+	// tray is the tray icon, nil when it is off or unavailable; hotkey is the
+	// shortcut that shows or hides the windows, as registered.
+	tray   *mygo.Tray
+	hotkey string
 }
 
 // recentFolders are the vault folders opened before, most recent first.

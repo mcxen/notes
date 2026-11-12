@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/egoist/mygo"
@@ -31,6 +32,9 @@ type session struct {
 	window *mygo.Window
 	cancel context.CancelFunc
 	remote *remoteSync
+	// pending is a command the window's page has not taken yet, such as
+	// "newPage" from the tray. The page takes it once it is ready (TakeCommand).
+	pending string
 }
 
 // Notebooks is the bound service. Each method acts on the vault of the
@@ -39,13 +43,45 @@ type Notebooks struct {
 	mu       sync.Mutex
 	byWindow map[*mygo.Window]*session
 	byID     map[string]*session
+	// forceClose lists the windows that are to close for real, though closing
+	// hides them to the tray: a window that is replaced by another vault.
+	forceClose map[*mygo.Window]bool
+
+	// keepInTray says whether closing a window hides it to the tray instead,
+	// and onVisibility runs whenever a window shows or hides (the Dock follows
+	// it). The app sets both. leaving is set when the app quits, so its windows
+	// really close.
+	keepInTray   func() bool
+	onVisibility func()
+	leaving      atomic.Bool
 }
 
 func newNotebooks() *Notebooks {
 	return &Notebooks{
-		byWindow: map[*mygo.Window]*session{},
-		byID:     map[string]*session{},
+		byWindow:   map[*mygo.Window]*session{},
+		byID:       map[string]*session{},
+		forceClose: map[*mygo.Window]bool{},
 	}
+}
+
+// closeWindow closes a window for real, as a window that is replaced: the
+// tray does not take it.
+func (n *Notebooks) closeWindow(w *mygo.Window) {
+	n.mu.Lock()
+	n.forceClose[w] = true
+	n.mu.Unlock()
+	w.Close()
+}
+
+// sessionList lists the open vaults, in no particular order.
+func (n *Notebooks) sessionList() []*session {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	out := make([]*session, 0, len(n.byWindow))
+	for _, s := range n.byWindow {
+		out = append(out, s)
+	}
+	return out
 }
 
 // Info describes the vault this window shows.

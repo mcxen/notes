@@ -53,6 +53,18 @@ type Settings struct {
 	// MCP is the Model Context Protocol server that lets AI assistants read and
 	// edit the vaults it is allowed. Off unless Enabled.
 	MCP MCP `json:"mcp,omitempty"`
+	// HideTray takes the tray icon away. It is shown unless this is set.
+	HideTray bool `json:"hideTray,omitempty"`
+	// QuitOnClose makes closing a window quit the app (on Windows and Linux) or
+	// leave it with no window (macOS), as before the tray. Off, closing a
+	// window hides it to the tray, and the vaults stay open.
+	QuitOnClose bool `json:"quitOnClose,omitempty"`
+	// HideDock takes the Dock icon away on macOS while no window is open, so
+	// the app lives in the menu bar. Only with the tray icon shown.
+	HideDock bool `json:"hideDock,omitempty"`
+	// Hotkey shows or hides the windows from anywhere, as "CmdOrCtrl+Shift+N".
+	// Empty means no shortcut.
+	Hotkey string `json:"hotkey,omitempty"`
 }
 
 // DefaultMCPPort is the port the MCP server listens on unless another is set.

@@ -29,6 +29,9 @@ func openVault(n *Notebooks, folder string) error {
 	s.window = mygo.NewWindow(windowOptions(v.Info()))
 	cascade(n, s.window)
 	n.add(s)
+	if n.onVisibility != nil {
+		n.onVisibility()
+	}
 	if cfg, ok := remoteOf(folder); ok {
 		s.remote = newRemoteSync(n, s, cfg)
 		goSafe("remote sync", func() { s.remote.loop(ctx) })
@@ -37,6 +40,14 @@ func openVault(n *Notebooks, folder string) error {
 	s.window.OnFocus(func() {
 		if s.remote != nil {
 			s.remote.Wake()
+		}
+	})
+	// Closing a window hides it to the tray when the tray keeps the app; its
+	// vault stays open, so the tray and the MCP server still have it.
+	s.window.OnClose(func(e *mygo.CloseEvent) {
+		if n.shouldHide(s.window) {
+			e.PreventDefault()
+			n.hideVault(s)
 		}
 	})
 	s.window.OnBlur(func() { goSafe("save", func() { _ = v.Flush() }) })

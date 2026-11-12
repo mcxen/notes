@@ -188,6 +188,13 @@ export const Notebooks = {
   syncNow(): Promise<Report> {
     return call("Notebooks.SyncNow");
   },
+  /**
+   * TakeCommand is the command the window's page has been asked to do, if any,
+   * and it is taken: a command is done once.
+   */
+  takeCommand(): Promise<string> {
+    return call("Notebooks.TakeCommand");
+  },
   /** Versions returns the history records of one page: its versions, by part. */
   versions(pageID: string): Promise<Row[]> {
     return call("Notebooks.Versions", pageID);

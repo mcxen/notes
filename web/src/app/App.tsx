@@ -12,7 +12,7 @@ import { useFold } from "../hooks/useFold";
 import type { NotePage } from "../core/types";
 import { SIDEBAR_RAIL_WIDTH } from "../core/workspace-state";
 import { isMyGo } from "mygo-runtime";
-import { events } from "../platform/mygo";
+import { events, Notebooks } from "../platform/mygo";
 import { onRemoteSync } from "../platform/sync-status";
 import { imeComposing } from "../core/keyboard";
 import { useUi } from "./ui-context";
@@ -45,6 +45,13 @@ export function App() {
     selectedPageId, loading, error, preferences, createPage, selectPage, setPreference, canEdit, graphOpen, restorePage, deletePage,
   } = useWorkspace();
   const store = useWorkspaceStore();
+  /* Takes the command the tray left for this window, if any, and does it. */
+  const createPageRef = useRef(createPage);
+  createPageRef.current = createPage;
+  const runPendingCommand = useCallback(async () => {
+    const command = await Notebooks.takeCommand().catch(() => "");
+    if (command === "newPage") createPageRef.current(null, "document");
+  }, []);
   const { setQuickFindOpen, drawerOpen, setDrawerOpen, sharePageId, closeShare, peekPageId, openPeek, closePeek, toast } = useUi();
   const [historyOpen, setHistoryOpen] = useState(false);
   /* Opened once, the panel stays mounted, so it can slide out as it closes. */
@@ -63,8 +70,17 @@ export function App() {
       // Toggles what is shown: with the theme left to the system, the first press
       // must not "choose" the dark the system already shows.
       else if (command === "dark") setPreference("theme", document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+      // A command from the tray (a new page) waits in Go until the page takes it.
+      else if (command === "pending" && !loading) void runPendingCommand();
     });
-  }, [preferences.sidebar_collapsed, setPreference]);
+  }, [loading, preferences.sidebar_collapsed, setPreference, runPendingCommand]);
+
+  /* A command the tray left for this window (a new page) is done once the
+     workspace is loaded, whether it came while the page loaded or after. */
+  useEffect(() => {
+    if (!isMyGo() || loading) return;
+    void runPendingCommand();
+  }, [loading, runPendingCommand]);
 
   /* A remote folder's sync tells the writer what needs their attention: the
      pages both sides changed, and a folder that could not be reached (once,

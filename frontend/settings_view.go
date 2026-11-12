@@ -57,6 +57,8 @@ type settingsWindow struct {
 	// The MCP port and public address as typed, until Return saves them.
 	mcpPort   string
 	mcpPublic string
+	// The shortcut as typed, until Return applies it.
+	hotkey string
 }
 
 // openSettings opens the settings window on a page, or brings it forward.
@@ -102,6 +104,7 @@ func (s *settingsWindow) refresh() {
 		s.st = st
 		s.mcpPort = fmt.Sprint(st.MCP.PortOrDefault())
 		s.mcpPublic = st.MCP.PublicURL
+		s.hotkey = st.Hotkey
 	}
 	entries, err := syncLog().Entries()
 	if err == nil {
@@ -247,6 +250,10 @@ type searchEntry struct{ page, label, words string }
 
 var searchEntries = []searchEntry{
 	{"general", labelPickerAtLaunch, "startup launch open picker last vault 启动 选择器 笔记库"},
+	{"general", "Show the tray icon", "tray menu bar notification area icon 托盘 菜单栏 图标"},
+	{"general", "Close a window to the tray", "close window tray quit hide 关闭 窗口 托盘 退出"},
+	{"general", "Hide the Dock icon", "dock hide macos 程序坞 隐藏 图标"},
+	{"general", "Shortcut to show or hide", "shortcut hotkey keyboard show hide 快捷键 显示 隐藏"},
 	{"appearance", labelTranslucent, "translucent vibrancy material transparent glass 半透明 侧栏 材质"},
 	{"appearance", labelOutline, "outline headings table of contents toc 大纲 目录 标题"},
 	{"vaults", "Recent vaults", "vault folder recent remove show finder explorer"},
@@ -378,6 +385,57 @@ func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
 			s.st.PickerAtLaunch = picker
 			s.save()
 		}
+	})
+	s.group(c, pal, tr("Menu bar and tray"), tr("Notes stays in the menu bar, or the notification area, so its windows and vaults can be reached with no window open."), func() {
+		shown := !s.st.HideTray
+		s.row(c, pal, tr("Show the tray icon"), tr("The icon opens the menu: the windows, new pages, vaults, the MCP server and quit."), func() {
+			toggle(c, "tray-shown", &shown, tr("Show the tray icon"), pal)
+		})
+		if shown == s.st.HideTray {
+			s.st.HideTray = !shown
+			s.save()
+			s.a.setTrayShown(shown)
+		}
+		quit := s.st.QuitOnClose
+		s.row(c, pal, tr("Close a window to the tray"), tr("The window hides and its vault stays open. Off, closing the last window quits on Windows and Linux; macOS keeps the app in the Dock."), func() {
+			toggle(c, "tray-close", &quit, tr("Close a window to the tray"), pal)
+		})
+		if quit != s.st.QuitOnClose {
+			s.st.QuitOnClose = quit
+			s.save()
+		}
+		if runtime.GOOS != "darwin" {
+			s.row(c, pal, tr("Hide the Dock icon"), tr("Available on macOS."), nil)
+		} else {
+			hideDock := s.st.HideDock
+			s.row(c, pal, tr("Hide the Dock icon"), tr("Only with the tray icon shown: the Dock icon hides while no window is open."), func() {
+				toggle(c, "tray-dock", &hideDock, tr("Hide the Dock icon"), pal)
+			})
+			if hideDock != s.st.HideDock {
+				s.st.HideDock = hideDock
+				s.save()
+				s.a.applyDock()
+			}
+		}
+		s.row(c, pal, tr("Shortcut to show or hide"), tr("For example CmdOrCtrl+Shift+N. Press Return to set it; empty turns it off."), func() {
+			var in ui.Element
+			frame := ui.Row(c.Key("hotkey-frame")).Width(200)
+			frame.Children(func() {
+				in = ui.TextInputBase(c.Key("hotkey"), &s.hotkey).Grow(1).MinWidth(0).FontSize(13).Placeholder(tr("None"))
+			})
+			field(frame, in.Focused(), pal)
+			if in.Submitted() && strings.TrimSpace(s.hotkey) != s.st.Hotkey {
+				if err := s.a.applyHotkey(s.hotkey); err != nil {
+					s.notes = tr("The shortcut could not be set: %v", err)
+					_ = s.a.applyHotkey(s.st.Hotkey)
+					s.hotkey = s.st.Hotkey
+					return
+				}
+				s.st.Hotkey = strings.TrimSpace(s.hotkey)
+				s.hotkey = s.st.Hotkey
+				s.save()
+			}
+		})
 	})
 	s.group(c, pal, tr("Shortcuts"), "", func() {
 		mod := "⌘"
