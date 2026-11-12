@@ -3,6 +3,7 @@ import {
   Copy,
   CornerDownRight,
   CornerUpLeft,
+  FileDown,
   MoreHorizontal,
   MoveHorizontal,
   Redo2,
@@ -11,6 +12,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ExportDialog } from "../export/ExportDialog";
 import { MenuDivider, MenuItem, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
 import { Tooltip } from "../../components/Tooltip";
@@ -69,6 +71,7 @@ export function PageActions({
   const { toast, closePeek } = useUi();
   const [moreAnchor, setMoreAnchor] = useState<AnchorRect | null>(null);
   const [moveAnchor, setMoveAnchor] = useState<AnchorRect | null>(null);
+  const [exporting, setExporting] = useState(false);
   // Where the page may go, read only while the picker is open.
   const moveTargets = useWorkspaceState(
     (state) => (moveAnchor ? Object.values(state.pages).filter((candidate) => canMovePage(page.id, candidate.id)) : null),
@@ -210,6 +213,7 @@ export function PageActions({
               onSelect={() => { updatePage(page.id, { full_width: !page.full_width }); setMoreAnchor(null); }}
             />
           ) : null}
+          <MenuItem icon={<FileDown size={16} />} label={t("Export…")} onSelect={() => { setMoreAnchor(null); setExporting(true); }} />
           {onHistory ? (
             <MenuItem icon={<Clock3 size={16} />} label={t("Page history")} onSelect={() => { setMoreAnchor(null); onHistory(); }} />
           ) : null}
@@ -247,6 +251,7 @@ export function PageActions({
           onClose={() => setMoveAnchor(null)}
         />
       ) : null}
+      {exporting ? <ExportDialog page={page} onClose={() => setExporting(false)} /> : null}
     </>
   );
 }

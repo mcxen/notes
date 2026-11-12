@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Export a page (page menu › Export…) as Markdown or HTML: one file, or a .zip when it has sub-pages (in folders) or pictures and files (in `assets/`, linked from the pages). The choices are remembered.
+- The picture viewer zooms: a toolbar at the foot of the picture (− · % · + · fit · 1:1), the wheel or a trackpad's pinch about the pointer, + − 0 1 on the keyboard, a drag pans, and a double-click goes to 1:1.
+
 ## 0.1.4
 
 - Typing shortcuts now work with an input method: `-`, `#`, `1.`, `[]`, `>` and the rest turned a line into a list or heading only when the space came as the Space key, which a Chinese input method does not send, so "- " stayed text. The space is now also read from the text typed. Folded lists have one too: `>>` and a space.

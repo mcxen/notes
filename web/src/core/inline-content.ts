@@ -147,9 +147,11 @@ export function inlineReadableText(content: InlineContent, describe: DescribeMen
 
 /** Content with each mention written out as words, keeping its marks — for
  *  HTML and Markdown that leave Notes. */
-export function inlineReadable(content: InlineContent, describe: DescribeMention): InlineContent {
+export function inlineReadable(content: InlineContent, describe: DescribeMention, keepPictures = false): InlineContent {
   return normalizeInlineContent(content.map((run) => (
-    run.mention ? { text: describe(run.mention).label, ...(run.marks ? { marks: run.marks } : {}) } : run
+    run.mention && !(keepPictures && run.mention.kind === "image")
+      ? { text: describe(run.mention).label, ...(run.marks ? { marks: run.marks } : {}) }
+      : run
   )));
 }
 

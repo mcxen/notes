@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight, Download, Paperclip, Replace, RotateCw, X } from "lucide-react";
-import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { ChevronLeft, ChevronRight, Download, Maximize, Paperclip, Replace, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { formatFileSize, normalizeStoredFile } from "../../core/files";
 import type { Block, StoredFile } from "../../core/types";
 import { Modal } from "../../components/Modal";
 import { peekFileUrl, type ShownFile } from "./file-store";
+import { actualSize, FIT, limitsFor, percentOf, wheelFactor, zoomAbout, type Zoom } from "./viewer-zoom";
 import { t } from "../../i18n";
 
 export type UploadState = "uploading" | "failed";
@@ -173,13 +174,79 @@ export function ImageViewer({
   onClose(): void;
 }) {
   const { url, failed } = useFileUrl(file, "original", actions);
+  const stage = useRef<HTMLDivElement | null>(null);
+  const image = useRef<HTMLImageElement | null>(null);
+  const [zoom, setZoom] = useState<Zoom>(FIT);
+  // The picture fitted in the window, and its own size: what 100% is measured against.
+  const [size, setSize] = useState({ fit: 0, natural: 0 });
+  const dragged = useRef(false);
+  const measure = useCallback(() => {
+    const element = image.current;
+    if (!element || !element.naturalWidth) return;
+    // The fitted width is the layout's, whatever the zoom transform is now doing.
+    setSize({ fit: element.offsetWidth, natural: element.naturalWidth });
+  }, []);
+  // Another picture (← →) starts fitted.
+  useEffect(() => { setZoom(FIT); }, [file.path]);
+  useEffect(() => {
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
+  const limits = limitsFor(size.fit, size.natural);
+  const centred = (clientX: number, clientY: number) => {
+    const box = stage.current?.getBoundingClientRect();
+    return box ? { x: clientX - (box.left + box.width / 2), y: clientY - (box.top + box.height / 2) } : { x: 0, y: 0 };
+  };
+  const zoomBy = (factor: number, point = { x: 0, y: 0 }) => setZoom((current) => zoomAbout(current, factor, point, limits));
+  const toActual = () => {
+    const target = actualSize(size.fit, size.natural);
+    setZoom((current) => (Math.abs(current.scale - target) < 0.01 ? FIT : zoomAbout(current, target / current.scale, { x: 0, y: 0 }, limits)));
+  };
+  // The wheel and a trackpad's pinch zoom about the pointer; it needs a listener
+  // that may stop the page scrolling, which React's onWheel may not.
+  useEffect(() => {
+    const element = stage.current;
+    if (!element) return;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      zoomBy(wheelFactor(event.deltaY, event.ctrlKey), centred(event.clientX, event.clientY));
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
+  });
+  // A press and a drag pan a picture that is zoomed.
+  const startPan = (event: ReactPointerEvent<HTMLImageElement>) => {
+    dragged.current = false;
+    if (zoom.scale <= 1 || event.button !== 0) return;
+    event.preventDefault();
+    const start = { x: event.clientX, y: event.clientY, zoom };
+    const onMove = (move: PointerEvent) => {
+      const dx = move.clientX - start.x;
+      const dy = move.clientY - start.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3) dragged.current = true;
+      setZoom({ ...start.zoom, x: start.zoom.x + dx, y: start.zoom.y + dy });
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  };
   const first = !browse || browse.index <= 0;
   const last = !browse || browse.index >= browse.count - 1;
   /* ← and → step through them, as Notion's viewer does; at either end there
      is nowhere further to go. */
   useEffect(() => {
-    if (!browse) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      // + and − zoom, 0 fits, 1 shows the picture's own pixels.
+      if (!event.metaKey && !event.ctrlKey && !event.altKey) {
+        if (event.key === "+" || event.key === "=") { event.preventDefault(); event.stopPropagation(); zoomBy(1.25); return; }
+        if (event.key === "-" || event.key === "_") { event.preventDefault(); event.stopPropagation(); zoomBy(0.8); return; }
+        if (event.key === "0") { event.preventDefault(); event.stopPropagation(); setZoom(FIT); return; }
+        if (event.key === "1") { event.preventDefault(); event.stopPropagation(); toActual(); return; }
+      }
+      if (!browse) return;
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       event.preventDefault();
       event.stopPropagation();
@@ -188,7 +255,7 @@ export function ImageViewer({
     };
     window.addEventListener("keydown", onKeyDown, true);
     return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [browse]);
+  });
   return (
     <Modal open label={file.name} className="viewer" onClose={onClose}>
       <div className="viewer__bar">
@@ -197,9 +264,20 @@ export function ImageViewer({
         <button type="button" className="icon-btn" aria-label={t("Download")} onClick={onDownload}><Download size={16} /></button>
         <button type="button" className="icon-btn" aria-label={t("Close")} onClick={onClose}><X size={16} /></button>
       </div>
-      <div className="viewer__stage" onClick={onClose}>
+      <div className="viewer__stage" ref={stage} onClick={() => { if (!dragged.current) onClose(); dragged.current = false; }}>
         {url ? (
-          <img src={url} alt={file.name} onClick={(event) => event.stopPropagation()} />
+          <img
+            ref={image}
+            src={url}
+            alt={file.name}
+            draggable={false}
+            className={zoom.scale > 1 ? "is-zoomed" : undefined}
+            style={{ transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})` }}
+            onLoad={measure}
+            onPointerDown={startPan}
+            onDoubleClick={(event) => { event.stopPropagation(); toActual(); }}
+            onClick={(event) => event.stopPropagation()}
+          />
         ) : failed ? (
           <p className="viewer__missing">{t("This image could not be loaded.")}</p>
         ) : (
@@ -226,6 +304,16 @@ export function ImageViewer({
               <ChevronRight size={20} />
             </button>
           </>
+        ) : null}
+        {url ? (
+          <div className="viewer__tools" role="toolbar" aria-label={t("Zoom")} onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="viewer__tool" aria-label={t("Zoom out")} title={`${t("Zoom out")}  −`} onClick={() => zoomBy(0.8)}><ZoomOut size={16} /></button>
+            <span className="viewer__zoom" aria-live="polite">{percentOf(zoom.scale, size.fit, size.natural)}%</span>
+            <button type="button" className="viewer__tool" aria-label={t("Zoom in")} title={`${t("Zoom in")}  +`} onClick={() => zoomBy(1.25)}><ZoomIn size={16} /></button>
+            <span className="viewer__rule" aria-hidden="true" />
+            <button type="button" className="viewer__tool" aria-label={t("Fit to window")} title={`${t("Fit to window")}  0`} onClick={() => setZoom(FIT)}><Maximize size={16} /></button>
+            <button type="button" className="viewer__tool viewer__tool--text" aria-label={t("Actual size")} title={`${t("Actual size")}  1`} onClick={toActual}>1:1</button>
+          </div>
         ) : null}
       </div>
     </Modal>

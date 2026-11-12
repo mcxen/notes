@@ -230,7 +230,7 @@ export function notShown(): ShownFile {
 
 /** A file's bytes themselves (to save or copy on): in hand, or from this
  *  session's copy, read once. */
-async function bytesOf(files: Files, file: StoredFile, path: string): Promise<Blob> {
+export async function bytesOf(files: Files, file: StoredFile, path: string): Promise<Blob> {
   const held = inHand.get(keyOf(file, path));
   if (held) return held.blob;
   const shown = shownStored(files, file, path);

@@ -2,7 +2,8 @@ import { BLOCK_ORDER_STEP, createBlock } from "../../core/block-tree";
 import { normalizeEmbed } from "../../core/embeds";
 import { type DescribeMention, inlinePlainText, inlineReadable } from "../../core/inline-content";
 import { isMarkdownTableStart, markdownTableLines, tableFromCells, tableGrid, tableToMarkdown } from "../../core/simple-table";
-import type { Block, BlockKind, BlockTree, InlineContent, InlineMarks, SimpleTable } from "../../core/types";
+import { isImageType } from "../../core/files";
+import type { Block, BlockKind, BlockTree, InlineContent, InlineMarks, SimpleTable, StoredFile } from "../../core/types";
 import { blockShortcut } from "./block-registry";
 import { codeLanguage } from "./code-highlight";
 import { markdownInlineToContent } from "./inline-markdown";
@@ -31,7 +32,10 @@ function wrapMarkdown(value: string, marks?: InlineMarks): string {
 
 /** A mention's run is one invisible character: in Markdown it is written out
  *  as `describe` reads it, one with the words beside it that share its marks. */
-export function inlineContentToMarkdown(content: InlineContent, describe: DescribeMention): string {
+/** Where an export keeps a file, as a path to write in a link, or null to write its name alone. */
+export type FileRef = (file: StoredFile) => string | null;
+
+export function inlineContentToMarkdown(content: InlineContent, describe: DescribeMention, fileRef?: FileRef): string {
   // The bytes stay in Notes; outside it a picture is Markdown's, by its name.
   const parts: string[] = [];
   let words: InlineContent = [];
@@ -45,7 +49,7 @@ export function inlineContentToMarkdown(content: InlineContent, describe: Descri
       continue;
     }
     flush();
-    parts.push(`![${run.mention.file.name}](${encodeURI(run.mention.file.name)})`);
+    parts.push(`![${run.mention.file.name}](${encodeURI(fileRef?.(run.mention.file) ?? run.mention.file.name)})`);
   }
   flush();
   return parts.join("");
@@ -167,8 +171,8 @@ export function markdownToBlockTree(value: string, idFactory: () => string): Blo
 }
 
 /** One line as Markdown; `number`, a numbered line's place in its list. */
-function markdownLine(block: Block, number: number, describe: DescribeMention): string {
-  const text = inlineContentToMarkdown(block.content, describe);
+function markdownLine(block: Block, number: number, describe: DescribeMention, fileRef?: FileRef): string {
+  const text = inlineContentToMarkdown(block.content, describe, fileRef);
   switch (block.kind) {
     case "heading1": return `# ${text}`;
     case "heading2": return `## ${text}`;
@@ -183,7 +187,12 @@ function markdownLine(block: Block, number: number, describe: DescribeMention): 
     case "table": return tableToMarkdown(tableGrid(block.table), (content) => inlineContentToMarkdown(content, describe));
     case "code": return `\`\`\`${block.language ?? ""}\n${inlinePlainText(block.content)}\n\`\`\``;
     // The bytes stay in Notes; outside it a file is its name.
-    case "file": return `[${block.file?.name || "file"}](${encodeURI(block.file?.name ?? "")})${text ? ` ${text}` : ""}`;
+    case "file": {
+      const where = block.file ? fileRef?.(block.file) ?? block.file.name : "";
+      // A picture is drawn in the page it is written in; any other file is its link.
+      if (block.file && isImageType(block.file.type) && fileRef?.(block.file)) return `![${text || block.file.name}](${encodeURI(where)})`;
+      return `[${block.file?.name || "file"}](${encodeURI(where)})${text ? ` ${text}` : ""}`;
+    }
     // Outside Notes a card is its link.
     case "embed": return normalizeEmbed(block.embed)?.url ?? "";
     default: return text;
@@ -192,11 +201,11 @@ function markdownLine(block: Block, number: number, describe: DescribeMention): 
 
 /** What a page block — or a mention — reads as outside Notes: the page's
  *  name; a date mention, the date written out. */
-export function readableTree(tree: BlockTree, titleOf: (pageId: string) => string): BlockTree {
+export function readableTree(tree: BlockTree, titleOf: (pageId: string) => string, keepPictures = false): BlockTree {
   const describe = readableDescriber(titleOf);
   const byId: Record<string, Block> = {};
   for (const block of Object.values(tree.by_id)) {
-    byId[block.id] = { ...block, content: inlineReadable(block.content, describe) };
+    byId[block.id] = { ...block, content: inlineReadable(block.content, describe, keepPictures) };
   }
   return { by_id: byId };
 }
@@ -205,10 +214,11 @@ export function readableTree(tree: BlockTree, titleOf: (pageId: string) => strin
  *  by its name, its rows too, and a date written out — line by line as the
  *  editor draws them (`layout`), a block's paragraphs at the level it sits
  *  and a list numbered as it shows. */
-export function blockTreeToMarkdown(source: BlockTree, titleOf: (pageId: string) => string): string {
+export function blockTreeToMarkdown(source: BlockTree, titleOf: (pageId: string) => string, fileRef?: FileRef): string {
   const describe = readableDescriber(titleOf);
   // Outside Notes nothing is folded: a toggle's lines are all written.
-  return layout(readableTree(source, titleOf), () => true).rows
-    .map(({ block, depth, index }) => `${"  ".repeat(depth)}${markdownLine(block, index, describe)}`)
+  // A picture among the words stays one when the export keeps the files (`fileRef`).
+  return layout(readableTree(source, titleOf, Boolean(fileRef)), () => true).rows
+    .map(({ block, depth, index }) => `${"  ".repeat(depth)}${markdownLine(block, index, describe, fileRef)}`)
     .join("\n");
 }
