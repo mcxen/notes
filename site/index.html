@@ -9,7 +9,9 @@
   <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
   <meta property="og:title" content="Notes">
   <meta property="og:description" content="A local Notion. Free, light and fast.">
-  <meta property="og:image" content="assets/shot-light.png">
+  <meta property="og:image" content="https://notes.xpai.uk/assets/shot-light.png">
+  <meta property="og:url" content="https://notes.xpai.uk/">
+  <link rel="canonical" href="https://notes.xpai.uk/">
   <script>
     // Before first paint, so a dark visitor never sees a white flash.
     (function () {
@@ -148,6 +150,7 @@
     :root[data-theme="dark"] .shot::before { opacity: .35; }
     .window { border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--line); background: var(--card); line-height: 0; }
     .window img { width: 100%; height: auto; display: block; }
+    .window picture { display: block; }
     :root[data-theme="dark"] .shot-light, :root:not([data-theme="dark"]) .shot-dark { display: none; }
 
     /* ── Features ─────────────────────────────────────────── */
@@ -261,14 +264,15 @@
           <a id="notes-link" href="https://github.com/mcxen/notes/releases/latest" target="_blank" rel="noopener"><span lang-en>Release notes</span><span lang-zh>更新说明</span></a> ·
           <span lang-en>The macOS app is not notarized: open it with right-click › Open the first time.</span>
           <span lang-zh>macOS 版未经公证，首次请右键 › 打开。</span>
+          <a id="sums" hidden href="https://github.com/mcxen/notes/releases/latest" target="_blank" rel="noopener"><span lang-zh>· 镜像下载，可对照 SHA256 校验</span></a>
         </p>
       </div>
     </section>
 
     <section class="shot wrap" aria-label="Screenshot">
       <div class="window">
-        <img class="shot-light" src="assets/shot-light.png" alt="Notes, light theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager">
-        <img class="shot-dark" src="assets/shot-dark.png" alt="Notes, dark theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager">
+        <picture class="shot-light"><source type="image/webp" srcset="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-light.webp" data-local="assets/shot-light.webp"><img src="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-light.png" data-local="assets/shot-light.png" alt="Notes, light theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager" decoding="async"></picture>
+        <picture class="shot-dark"><source type="image/webp" srcset="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-dark.webp" data-local="assets/shot-dark.webp"><img src="https://cdn.jsdelivr.net/gh/mcxen/notes@main/site/assets/shot-dark.png" data-local="assets/shot-dark.png" alt="Notes, dark theme: a page with headings, to-dos, a toggle list, a callout and code, and its outline at the right edge" width="1800" height="1097" loading="eager" decoding="async"></picture>
       </div>
     </section>
 
@@ -324,6 +328,7 @@
       });
       function setLang(zh) {
         root.lang = zh ? "zh-Hans" : "en";
+        if (window.notesApply) window.notesApply();
         document.title = zh ? "Notes — 本地 Notion，完全免费，轻快流畅" : "Notes — a local Notion: free, light and fast";
       }
       document.getElementById("lang").addEventListener("click", function () {
@@ -366,9 +371,19 @@
       var NAMES = { mac: ["macOS", "macOS"], win: ["Windows", "Windows"], linux: ["Linux", "Linux"] };
       var arch = "x64"; // the visitor's processor, when the browser says
 
+      // Chinese readers get the tvv.tw mirror, which reaches GitHub's files faster;
+      // the English page links GitHub directly. The mirror is a third party, so
+      // the checksums of the release are linked beside it.
+      var MIRROR = "https://tvv.tw/";
+      function viaMirror() { return root.lang === "zh-Hans"; }
+      function href(url) { return viaMirror() && /^https:\/\/github\.com\//.test(url) ? MIRROR + url : url; }
+
       function apply() {
         var primary = document.getElementById("primary"), detected = document.getElementById("detected");
-        document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = links[a.dataset.dl]; a.classList.remove("suggested"); });
+        document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = href(links[a.dataset.dl]); a.classList.remove("suggested"); });
+        var sums = document.getElementById("sums");
+        sums.hidden = !viaMirror();
+        sums.href = RELEASES + "/download/" + (release_tag || FALLBACK_VERSION) + "/SHA256SUMS";
         document.querySelectorAll(".platform").forEach(function (box) { box.classList.toggle("current", box.dataset.os === os); });
         var key = os === "mac" ? "mac" : os === "win" ? "win-" + arch : os === "linux" ? "deb-" + arch : null;
         if (key) {
@@ -391,20 +406,24 @@
         }).catch(function () {});
       }
 
+      window.notesApply = apply;
+      var release_tag = null;
       links = fallbackLinks(FALLBACK_VERSION); apply();
 
-      fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
-        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(function (release) {
-          var found = fallbackLinks(release.tag_name);
-          (release.assets || []).forEach(function (asset) {
-            Object.keys(PATTERNS).forEach(function (key) { if (PATTERNS[key].test(asset.name)) found[key] = asset.browser_download_url; });
-          });
-          links = found; apply();
-          document.getElementById("version").textContent = release.tag_name;
-          document.getElementById("notes-link").href = release.html_url;
-        })
-        .catch(function () { /* the fixed addresses stand */ });
+      function take(release) {
+        var found = fallbackLinks(release.tag_name);
+        (release.assets || []).forEach(function (asset) {
+          Object.keys(PATTERNS).forEach(function (key) { if (PATTERNS[key].test(asset.name)) found[key] = asset.browser_download_url; });
+        });
+        links = found; release_tag = release.tag_name; apply();
+        document.getElementById("version").textContent = release.tag_name;
+        document.getElementById("notes-link").href = release.html_url;
+      }
+      function fromJson() { return fetch("latest.json", { cache: "no-cache" }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
+      function fromApi() { return fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }); }
+      // GitHub's API is slow or blocked in China: there the site's own file goes first.
+      var order = viaMirror() ? [fromJson, fromApi] : [fromApi, fromJson];
+      order[0]().catch(order[1]).then(take).catch(function () { /* the fixed addresses stand */ });
 
 
       // The button opens the list of every build; its suggested one is marked.
@@ -412,6 +431,15 @@
       button.addEventListener("click", function () {
         var open = list.hidden;
         list.hidden = !open; button.setAttribute("aria-expanded", String(open));
+      });
+
+      // The screenshots come from a CDN; if it cannot be reached, from this site.
+      document.querySelectorAll("img[data-local]").forEach(function (img) {
+        img.addEventListener("error", function () {
+          var picture = img.parentElement;
+          if (picture && picture.tagName === "PICTURE") picture.querySelectorAll("source").forEach(function (source) { source.remove(); });
+          if (img.dataset.local && img.getAttribute("src") !== img.dataset.local) img.src = img.dataset.local;
+        }, { once: true });
       });
     })();
   </script>
