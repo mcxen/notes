@@ -8,6 +8,7 @@ Standalone changes replace the host SDK, identity, database, files, routing,
 fonts and service integration with personal local storage and standard web
 APIs, and add backup/restore, tests and packaging.
 
-No app license was included in the upstream source snapshot. This notice is
-attribution only, is not a license, and does not grant rights in upstream
-code. No LICENSE file has been added. Dependencies keep their own licenses.
+Notes is licensed under the GNU Affero General Public License, version 3;
+see the LICENSE file. No license was included in the upstream source
+snapshot. This notice is attribution for that upstream code.
+Dependencies keep their own licenses.

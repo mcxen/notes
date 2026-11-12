@@ -10,6 +10,10 @@
 </p>
 
 <p align="center">
+  <a href="https://notes.xpai.uk">notes.xpai.uk</a>
+</p>
+
+<p align="center">
   <img src="docs/images/demo.gif" alt="Notes in use: folding a toggle, styling several paragraphs at once, the page outline, and light and dark themes" width="860">
 </p>
 
@@ -175,11 +179,13 @@ The SMB adapter is not yet tested against a live server.
   and real WebDAV services other than the in-process test server, have not
   been checked on those systems. The SMB adapter has no live test yet.
 
-## Provenance and license status
+## License
+
+Notes is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 
 Adapted from Terminus Notes, published by Terminus as `@terminus/notes`, version 0.0.1, retrieved through an existing fork. The original editor and UI code are retained with a new local persistence layer, local file storage, backup and restore, and standalone build scripts. This project is an independent adaptation and is not presented as the original author's work or an official release.
 
-No license was included with the original source, and none has been added here. See `NOTICE` for attribution; third-party dependencies retain their own licenses.
+No license was included with the original source. See `NOTICE` for attribution; third-party dependencies retain their own licenses.
 
 
 
