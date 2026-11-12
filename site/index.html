@@ -113,25 +113,29 @@
     .detected { margin: 0; font-size: 14px; color: var(--muted); }
     .detected b { color: var(--text); font-weight: 650; }
     .detected::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--blue); margin-right: 8px; vertical-align: 1px; }
-    .platforms { width: min(860px, 100%); display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; text-align: left; }
-    .platform { padding: 16px; border: 1px solid transparent; border-radius: var(--radius); background: var(--bg-soft); transition: border-color .2s, box-shadow .2s; display: flex; flex-direction: column; }
-    .platform h3 { margin: 0; font-size: 16px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .platform .req { margin: 4px 0 12px; font-size: 13px; color: var(--muted); }
-    .badge { display: none; font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 99px; background: var(--blue-tint); color: var(--blue); }
-    .platform.current { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-tint); }
-    .platform.current .badge { display: inline-block; }
-    .files { display: flex; flex-direction: column; gap: 6px; }
-    .files a { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); text-decoration: none; font-size: 14px; font-weight: 500; transition: background .15s, border-color .15s; }
+    .platforms { width: min(600px, 100%); margin-top: 4px; text-align: left; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-soft); overflow: hidden; }
+    .platforms[hidden] { display: none; }
+    .platform { display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; padding: 9px 12px; border-top: 1px solid var(--line); transition: background .2s; }
+    .platform:first-child { border-top: 0; }
+    .pl-name { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }
+    .pl-name svg { width: 17px; height: 17px; color: var(--muted); flex: none; }
+    .badge { display: none; font-size: 11px; font-weight: 650; padding: 1px 7px; border-radius: 99px; background: var(--blue-tint); color: var(--blue); }
+    .platform.current { background: var(--blue-tint); }
+    .platform.current .pl-name svg { color: var(--blue); }
+    .platform.current .badge { display: inline-block; background: var(--blue); color: #fff; }
+    .files { display: flex; flex-wrap: wrap; gap: 6px; }
+    .files a { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); text-decoration: none; font-size: 13px; font-weight: 500; transition: background .15s, border-color .15s; }
     .files a:hover { background: var(--bg-soft); border-color: var(--blue); }
-    .files a small { font-weight: 400; color: var(--muted); font-size: 12.5px; }
+    .files a small { font-weight: 400; color: var(--muted); font-size: 12px; }
     .files a.suggested { background: var(--blue); border-color: var(--blue); color: #fff; }
-    .files a.suggested small { color: rgba(255, 255, 255, .8); }
+    .files a.suggested small { color: rgba(255, 255, 255, .85); }
     .files a.suggested:hover { background: var(--blue-hover); }
-    :root[data-theme="dark"] .platform { background: var(--card); border-color: var(--line); }
-    :root[data-theme="dark"] .platform.current { border-color: var(--blue); }
+    :root[data-theme="dark"] .platforms { background: var(--card); }
     :root[data-theme="dark"] .files a { background: var(--bg-soft); }
     :root[data-theme="dark"] .files a.suggested { background: var(--blue); }
     :root[data-theme="dark"] .files a.suggested:hover { background: var(--blue-hover); }
+    .primary .caret { width: 15px; height: 15px; opacity: .85; transition: transform .15s; }
+    .primary[aria-expanded="true"] .caret { transform: rotate(180deg); }
     .meta { margin: 4px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
     .meta a { color: inherit; text-underline-offset: 3px; }
 
@@ -149,20 +153,11 @@
     /* ── Features ─────────────────────────────────────────── */
     .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; margin: clamp(56px, 8vw, 96px) auto 0; }
     .feature { padding: 20px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
-    .feature i { display: block; width: 28px; height: 8px; border-radius: 4px; background: var(--amber); margin-bottom: 14px; }
-    .feature:nth-child(3n+2) i { width: 20px; }
-    .feature:nth-child(3n) i { width: 12px; }
-    .feature h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.01em; }
-    .feature p { margin: 0; font-size: 14.5px; color: var(--muted); }
-
-    /* ── Footer ───────────────────────────────────────────── */
-    footer { margin-top: clamp(64px, 9vw, 112px); border-top: 1px solid var(--line); padding: 32px 0 44px; font-size: 14px; color: var(--muted); }
-    footer .wrap { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
-    footer p { margin: 0; max-width: 46em; }
-    footer a { text-underline-offset: 3px; }
+    .feature i { display: grid; place-items: center; width: 34px; height: 34px; margin-bottom: 14px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); color: var(--text); font-style: normal; }
+    .feature i svg { width: 18px; height: 18px; }
+    :root[data-theme="dark"] .feature i { background: var(--bg-soft); }
     .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-right: 8px; vertical-align: 1px; }
 
-    @media (max-width: 860px) { .platforms { grid-template-columns: 1fr; max-width: 460px; } }
     @media (max-width: 560px) {
       header .wrap { height: 58px; }
       .brand span { font-size: 16px; }
@@ -190,13 +185,6 @@
     .window { border-radius: 12px; }
     .feature { background: var(--bg-soft); border: 0; padding: 22px; }
     :root[data-theme="dark"] .feature { background: var(--card); border: 1px solid var(--line); }
-    .feature i { width: auto; height: auto; background: none; border-radius: 0; margin-bottom: 12px; font-style: normal; font-size: 26px; line-height: 1; }
-    .feature:nth-child(1) i::before { content: "✍️"; }
-    .feature:nth-child(2) i::before { content: "📁"; }
-    .feature:nth-child(3) i::before { content: "🔗"; }
-    .feature:nth-child(4) i::before { content: "🕘"; }
-    .feature:nth-child(5) i::before { content: "🌗"; }
-    .feature:nth-child(6) i::before { content: "⚡"; }
     .dot { background: var(--blue); }
 
     @media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
@@ -238,34 +226,32 @@
       </p>
 
       <div class="get">
-        <a class="primary" id="primary" href="#platforms">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 20h16"/></svg>
+        <button class="primary" id="primary" type="button" aria-expanded="false" aria-controls="platforms">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 12-5-5m5 5 5-5M4 21h16"/></svg>
           <span><span lang-en>Download now</span><span lang-zh>立即下载</span></span>
-        </a>
+          <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
         <p class="detected" id="detected" hidden></p>
 
-        <div class="platforms" id="platforms">
+        <div class="platforms" id="platforms" hidden>
           <div class="platform" data-os="mac">
-            <h3>macOS <span class="badge" lang-en>Your device</span><span class="badge" lang-zh>你的设备</span></h3>
-            <p class="req"><span lang-en>Apple silicon and Intel, one .dmg</span><span lang-zh>Apple 芯片与 Intel 通用，一个 .dmg</span></p>
-            <div class="files"><a data-dl="mac" data-arch="any" href="https://github.com/mcxen/notes/releases/latest"><span>.dmg</span><small>Universal</small></a></div>
+            <div class="pl-name"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>macOS <span class="badge" lang-en>Your device</span><span class="badge" lang-zh>你的设备</span></div>
+            <div class="files"><a data-dl="mac" href="https://github.com/mcxen/notes/releases/latest"><span>.dmg</span><small lang-en>Apple silicon + Intel</small><small lang-zh>Apple 芯片 + Intel</small></a></div>
           </div>
           <div class="platform" data-os="win">
-            <h3>Windows <span class="badge" lang-en>Your device</span><span class="badge" lang-zh>你的设备</span></h3>
-            <p class="req"><span lang-en>Installer for Windows 10 and later</span><span lang-zh>适用于 Windows 10 及更高版本的安装程序</span></p>
+            <div class="pl-name"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M0 0v11.408h11.408V0zm12.594 0v11.408H24V0zM0 12.594V24h11.408V12.594zm12.594 0V24H24V12.594z"/></svg>Windows <span class="badge" lang-en>Your device</span><span class="badge" lang-zh>你的设备</span></div>
             <div class="files">
-              <a data-dl="win-x64" data-arch="x64" href="https://github.com/mcxen/notes/releases/latest"><span>.exe</span><small>x64 · Intel / AMD</small></a>
-              <a data-dl="win-arm64" data-arch="arm64" href="https://github.com/mcxen/notes/releases/latest"><span>.exe</span><small>ARM64 · Snapdragon</small></a>
+              <a data-dl="win-x64" href="https://github.com/mcxen/notes/releases/latest"><span>.exe</span><small>x64</small></a>
+              <a data-dl="win-arm64" href="https://github.com/mcxen/notes/releases/latest"><span>.exe</span><small>ARM64</small></a>
             </div>
           </div>
           <div class="platform" data-os="linux">
-            <h3>Linux <span class="badge" lang-en>Your device</span><span class="badge" lang-zh>你的设备</span></h3>
-            <p class="req"><span lang-en>Debian and Ubuntu, or any distribution</span><span lang-zh>Debian、Ubuntu，或任意发行版</span></p>
+            <div class="pl-name"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 1.6c-2.4 0-3.9 2-3.9 4.7 0 1.5-.5 2.5-1.4 3.9C5.5 12 4.4 14.2 4.4 16.5c0 1.3.4 2.4 1.1 3.1-.7.5-1.8 1.1-1.8 1.9 0 .9 1 1.1 2 1.1h2.2c.5 0 1-.3 1.3-.8.9.3 1.8.5 2.8.5s1.9-.2 2.8-.5c.3.5.8.8 1.3.8h2.2c1 0 2-.2 2-1.1 0-.8-1.1-1.4-1.8-1.9.7-.7 1.1-1.8 1.1-3.1 0-2.3-1.1-4.5-2.3-6.3-.9-1.4-1.4-2.4-1.4-3.9 0-2.7-1.5-4.7-3.9-4.7zM10.3 5.3a.9 1.3 0 1 0 0 2.6.9 1.3 0 0 0 0-2.6zm3.4 0a.9 1.3 0 1 0 0 2.6.9 1.3 0 0 0 0-2.6zM12 8.1c-.9 0-1.7.5-1.7 1s1 1.2 1.7 1.2 1.7-.7 1.7-1.2-.8-1-1.7-1z"/></svg>Linux <span class="badge" lang-en>Your device</span><span class="badge" lang-zh>你的设备</span></div>
             <div class="files">
-              <a data-dl="deb-x64" data-arch="x64" href="https://github.com/mcxen/notes/releases/latest"><span>.deb</span><small>x64</small></a>
-              <a data-dl="deb-arm64" data-arch="arm64" href="https://github.com/mcxen/notes/releases/latest"><span>.deb</span><small>ARM64</small></a>
-              <a data-dl="tar-x64" data-arch="x64" href="https://github.com/mcxen/notes/releases/latest"><span>.tar.gz</span><small>x64</small></a>
-              <a data-dl="tar-arm64" data-arch="arm64" href="https://github.com/mcxen/notes/releases/latest"><span>.tar.gz</span><small>ARM64</small></a>
+              <a data-dl="deb-x64" href="https://github.com/mcxen/notes/releases/latest"><span>.deb</span><small>x64</small></a>
+              <a data-dl="deb-arm64" href="https://github.com/mcxen/notes/releases/latest"><span>.deb</span><small>ARM64</small></a>
+              <a data-dl="tar-x64" href="https://github.com/mcxen/notes/releases/latest"><span>.tar.gz</span><small>x64</small></a>
+              <a data-dl="tar-arm64" href="https://github.com/mcxen/notes/releases/latest"><span>.tar.gz</span><small>ARM64</small></a>
             </div>
           </div>
         </div>
@@ -287,22 +273,22 @@
     </section>
 
     <section class="wrap features">
-      <div class="feature"><i></i>
+      <div class="feature"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/></svg></i>
         <h3><span lang-en>Blocks, everywhere</span><span lang-zh>处处是块</span></h3>
         <p><span lang-en>Type / for headings, to-dos, toggles, callouts, code, tables. Restyle many paragraphs at once.</span><span lang-zh>输入 / 插入标题、待办、折叠列表、提示框、代码和表格；多选段落可一次改样式。</span></p></div>
-      <div class="feature"><i></i>
+      <div class="feature"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></i>
         <h3><span lang-en>Plain files</span><span lang-zh>普通文件</span></h3>
         <p><span lang-en>One JSON file per page in a folder you pick. No account, no lock-in.</span><span lang-zh>每个页面一个 JSON 文件，放在你选的文件夹里。无需账号，不被锁定。</span></p></div>
-      <div class="feature"><i></i>
+      <div class="feature"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></i>
         <h3><span lang-en>Pages in pages</span><span lang-zh>页面套页面</span></h3>
         <p><span lang-en>Nested pages, links, backlinks, a graph, and databases as tables, boards and calendars.</span><span lang-zh>嵌套页面、链接与反向链接、关系图，以及表格、看板、日历视图的数据库。</span></p></div>
-      <div class="feature"><i></i>
+      <div class="feature"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></i>
         <h3><span lang-en>History and sync</span><span lang-zh>历史与同步</span></h3>
         <p><span lang-en>Every page keeps its recent versions. Sync with a WebDAV or SMB folder.</span><span lang-zh>每个页面保留近期版本，可与 WebDAV 或 SMB 文件夹同步。</span></p></div>
-      <div class="feature"><i></i>
+      <div class="feature"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg></i>
         <h3><span lang-en>Light and dark</span><span lang-zh>浅色与深色</span></h3>
         <p><span lang-en>Follows your system, with a translucent sidebar on macOS. English and 简体中文.</span><span lang-zh>跟随系统，macOS 上带半透明侧边栏。支持 English 与简体中文。</span></p></div>
-      <div class="feature"><i></i>
+      <div class="feature"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></i>
         <h3><span lang-en>Small and fast</span><span lang-zh>小而快</span></h3>
         <p><span lang-en>One small binary written in Go, using your system's own web view.</span><span lang-zh>Go 编写的单个小体积程序，使用系统自带的网页视图。</span></p></div>
     </section>
@@ -386,15 +372,12 @@
         document.querySelectorAll(".platform").forEach(function (box) { box.classList.toggle("current", box.dataset.os === os); });
         var key = os === "mac" ? "mac" : os === "win" ? "win-" + arch : os === "linux" ? "deb-" + arch : null;
         if (key) {
-          primary.href = links[key];           // pressing it downloads at once
-          primary.removeAttribute("target");
           document.querySelector('[data-dl="' + key + '"]').classList.add("suggested");
           var n = NAMES[os], a = os === "mac" ? "" : " · " + (arch === "arm64" ? "ARM64" : "x64");
           detected.innerHTML = '<span lang-en>We found your device: <b>' + n[0] + a + '</b>. Pick another build below if this is not right.</span>'
             + '<span lang-zh>检测到你的设备：<b>' + n[1] + a + '</b>。如果不对，请在下方选择其他版本。</span>';
         } else {
-          // A phone or tablet: Notes is a desktop app, so the button shows the list.
-          primary.href = "#platforms";
+          // A phone or tablet: Notes is a desktop app.
           detected.innerHTML = '<span lang-en>Notes is a desktop app: <b>download it on your computer</b>.</span>'
             + '<span lang-zh>Notes 是桌面应用：<b>请在电脑上下载</b>。</span>';
         }
@@ -423,6 +406,13 @@
         })
         .catch(function () { /* the fixed addresses stand */ });
 
+
+      // The button opens the list of every build; its suggested one is marked.
+      var button = document.getElementById("primary"), list = document.getElementById("platforms");
+      button.addEventListener("click", function () {
+        var open = list.hidden;
+        list.hidden = !open; button.setAttribute("aria-expanded", String(open));
+      });
     })();
   </script>
 </body>
