@@ -16,6 +16,7 @@ import type { Rendered } from "./layout";
 import type { MentionItem } from "./mentions";
 import type { BlockTextRange, PendingTextSelection } from "./selection";
 import type { Command } from "./SlashMenu";
+import type { TimeMenuState } from "./TimePicker";
 
 /* What the editor and the pieces it is made of share: where the caret goes
    next, what a menu typed in the words is doing, what a page shown in
@@ -85,6 +86,8 @@ export interface Editor {
   caretX: RefObject<number>;
   slash: SlashState | null;
   setSlash: Dispatch<SetStateAction<SlashState | null>>;
+  /** Opens the time picker on the line where a "/" command was typed. */
+  openTimeMenu(menu: TimeMenuState): void;
   slashIndex: number;
   setSlashIndex: Dispatch<SetStateAction<number>>;
   slashDismissed: RefObject<{ blockId: string; from: number } | null>;

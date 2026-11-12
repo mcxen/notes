@@ -406,6 +406,12 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     const stripped = replaceRange(block.content, slash.from, slash.from + 1 + slash.query.length, "");
     setSlash(null);
 
+    if (command.action === "time") {
+      // The picker takes the words typed after the "/" when it inserts.
+      editor.openTimeMenu({ blockId: block.id, from: slash.from, to: slash.from + 1 + slash.query.length, anchor: slash.anchor });
+      return;
+    }
+
     if (command.action) {
       const ids = { embed: createId("block"), trailing: createId("block") };
       if (command.action === "database-inline") {

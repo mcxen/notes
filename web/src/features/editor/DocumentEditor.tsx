@@ -151,6 +151,7 @@ import {
   type PendingTextSelection,
 } from "./selection";
 import { slashCommands, SlashMenu } from "./SlashMenu";
+import { TimePicker, type TimeMenuState } from "./TimePicker";
 import { InlineDatabase } from "../database/InlineDatabase";
 import { usePages, useWorkspaceStore } from "../../app/workspace-store";
 import { useMedia } from "./useMedia";
@@ -304,6 +305,7 @@ export function DocumentEditor({
   const [slashIndex, setSlashIndex] = useState(0);
   const [mention, setMention] = useState<MentionState | null>(null);
   const [mentionIndex, setMentionIndex] = useState(0);
+  const [timeMenu, setTimeMenu] = useState<TimeMenuState | null>(null);
   const [backlinksOpen, setBacklinksOpen] = useState(false);
   /* Uploads this session is making, by block — for the veil over a picture
      on its way, and a way to try again when one fails. */
@@ -418,6 +420,7 @@ export function DocumentEditor({
     setBlockSelection(null);
     setSlash(null);
     setMention(null);
+    setTimeMenu(null);
     setBacklinksOpen(false);
     setFormat(null);
   }, [page.id]);
@@ -479,9 +482,29 @@ export function DocumentEditor({
     write(change, options);
   }, [write]);
 
+  /* The time picker: what it inserts replaces the words typed after the "/",
+     as plain text. Closed without a choice, the words stay, and the caret
+     goes back to them. */
+  const insertTime = useCallback((menu: TimeMenuState, text: string) => {
+    setTimeMenu(null);
+    const block = tree.by_id[menu.blockId];
+    if (!block) return;
+    const content = replaceRange(block.content, menu.from, menu.to, text);
+    execute(updateBlockContent(tree, block.id, content), { id: block.id, start: menu.from + text.length, force: true });
+  }, [execute, tree]);
+
+  const closeTimeMenu = () => {
+    const menu = timeMenu;
+    setTimeMenu(null);
+    if (!menu) return;
+    const line = editableWithin(blocksRef.current, menu.blockId);
+    if (line) focusRange(line, menu.to);
+  };
+
   const closeMenus = useCallback(() => {
     setSlash(null);
     setMention(null);
+    setTimeMenu(null);
     setBlockMenu(null);
     setFormat(null);
   }, []);
@@ -1005,7 +1028,7 @@ export function DocumentEditor({
      pictures and files — and act through it. */
   const editor: Editor = {
     page, pages, pagesRef, tree, rows, embed, readOnly, platform, workspace, blocksRef, caretX,
-    slash, setSlash, slashIndex, setSlashIndex, slashDismissed, commands,
+    slash, setSlash, slashIndex, setSlashIndex, slashDismissed, commands, openTimeMenu: setTimeMenu,
     mention, setMention, mentionIndex, setMentionIndex, mentionDismissed, mentionOptions,
     setFormat, resume, pendingTextSelection, blockSelection, setBlockSelection, selectedIds, setBlockMenu,
     showInPlace, ownerOf, titleOf, anchorFor, createPage, checkpointHistory, annotateHistory,
@@ -2012,6 +2035,18 @@ export function DocumentEditor({
             activeIndex={mentionIndex}
             onSelect={(item) => chooseMention(row.block, item)}
           />
+        </Popover>
+      ) : timeMenu?.blockId === row.block.id ? (
+        <Popover
+          open
+          anchor={timeMenu.anchor}
+          placement="bottom-start"
+          role="presentation"
+          label={t("Date and time")}
+          onDismiss={closeTimeMenu}
+          closeOnScroll={false}
+        >
+          <TimePicker onInsert={(text) => insertTime(timeMenu, text)} />
         </Popover>
       ) : undefined}
       actions={actions}

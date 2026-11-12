@@ -1,4 +1,4 @@
-import { CalendarDays, Columns3, Database, LayoutGrid, LayoutList } from "lucide-react";
+import { CalendarDays, Clock, Columns3, Database, LayoutGrid, LayoutList } from "lucide-react";
 import type { ComponentType } from "react";
 import type { BlockKind, DatabaseViewKind } from "../../core/types";
 import { BLOCK_DEFINITIONS, DatabaseIcon, PageIcon } from "./block-registry";
@@ -19,8 +19,9 @@ export interface Command {
   kind?: BlockKind;
   /** `page` leaves a child page; `database-inline` draws a new database right
    *  here, opening on `view`; `database-page` makes a full-page database and
-   *  leaves a link to it, which is what `/database` used to do. */
-  action?: "page" | "database-inline" | "database-page";
+   *  leaves a link to it, which is what `/database` used to do; `time` opens
+   *  the time picker, which writes the time as plain text. */
+  action?: "page" | "database-inline" | "database-page" | "time";
   view?: DatabaseViewKind;
 }
 
@@ -34,6 +35,10 @@ const COMMANDS: Command[] = [
     kind: definition.kind,
     ...(definition.shortcuts[0] ? { hint: definition.shortcuts[0] } : {}),
   }] : [])),
+  {
+    id: "time", label: "Date and time",
+    icon: Clock, group: "Basic", aliases: ["time", "date", "now", "timestamp", "clock"], action: "time",
+  },
   {
     id: "sub-page", label: "Page",
     icon: PageIcon, group: "Database", aliases: ["subpage", "child", "doc"], action: "page",

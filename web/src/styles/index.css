@@ -3731,6 +3731,45 @@ pre.block__editable {
   font-size: 14px;
 }
 
+/* The time picker: six parts, each ticked on or off with its value now, and
+   the text that Insert writes. */
+.time-picker {
+  width: 232px;
+}
+
+.time-picker__row .menu__label {
+  flex: 1;
+}
+
+.time-picker__box {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--ink-3);
+  border-radius: 4px;
+  color: var(--paper);
+}
+
+.time-picker__box.is-on {
+  border-color: var(--accent, var(--ink-2));
+  background: var(--accent, var(--ink-2));
+}
+
+.time-picker__value {
+  color: var(--ink-3);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.time-picker__preview {
+  padding: 8px 12px 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Images and files ─────────────────────────────────────────────────── */
 
 .block__media {
