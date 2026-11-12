@@ -11,8 +11,16 @@ import (
 // leaves their retirement to the host, which is this vault. Without it a
 // page's history only grows, every version being a whole copy of the page.
 const (
-	// MaxVersions is how many versions of a page are kept.
-	MaxVersions = 20
+	// MaxVersions is how many versions of a page are kept at most.
+	MaxVersions = 60
+	// DenseAge is how far back every version is kept: what was written in the
+	// last hour can be gone back to step by step.
+	DenseAge = time.Hour
+	// HourlyAge is how far back one version an hour is kept; past it, one a day
+	// until MaxVersionAge. Versions thin out with age, as a page's history does in
+	// Google Docs and Dropbox, so a long evening of edits cannot push out
+	// yesterday's page.
+	HourlyAge = 24 * time.Hour
 	// MaxVersionAge is how old a version may be.
 	MaxVersionAge = 30 * 24 * time.Hour
 	// MaxHistoryBytes is how much a page's versions may take on the disk.
@@ -60,11 +68,25 @@ func versionSize(hf *historyFile) int {
 	return n
 }
 
+// bucketOf says which stretch of time a version of this age belongs to, for
+// thinning: every version in the last DenseAge is its own, then one an hour, then
+// one a day. The newest version of a stretch is the one kept.
+func bucketOf(at time.Time, age time.Duration) (kind int, index int64) {
+	switch {
+	case age <= DenseAge:
+		return 0, 0
+	case age <= HourlyAge:
+		return 1, at.Unix() / 3600
+	default:
+		return 2, at.Unix() / 86400
+	}
+}
+
 // pruneHistoryLocked retires the versions of a page that are past its
-// limits: older than MaxVersionAge, beyond the newest MaxVersions, or beyond
-// the bytes MaxHistoryBytes allows, newest kept first. The newest version is
-// always kept. Their files go at the next flush. It reports how many it
-// retired.
+// limits: older than MaxVersionAge, thinned to an hour's or a day's one, beyond
+// the newest MaxVersions, or beyond the bytes MaxHistoryBytes allows, newest
+// kept first. The newest version is always kept. Their files go at the next
+// flush. It reports how many it retired.
 func (v *Vault) pruneHistoryLocked(pageID string, now time.Time) int {
 	versions := v.history[pageID]
 	if len(versions) == 0 {
@@ -82,11 +104,21 @@ func (v *Vault) pruneHistoryLocked(pageID string, now time.Time) int {
 		return list[i].id > list[j].id
 	})
 	kept, bytes, retired := 0, 0, 0
+	taken := map[[2]int64]bool{}
 	for i, info := range list {
 		tooOld := !info.at.IsZero() && now.Sub(info.at) > MaxVersionAge
 		tooMany := kept >= MaxVersions
 		tooBig := bytes+info.size > MaxHistoryBytes
-		if i > 0 && (tooOld || tooMany || tooBig) {
+		// Thinning: a version of unknown age cannot be placed, and is kept by count.
+		thinned := false
+		if !info.at.IsZero() {
+			if kind, index := bucketOf(info.at, now.Sub(info.at)); kind > 0 {
+				key := [2]int64{int64(kind), index}
+				thinned = taken[key]
+				taken[key] = true
+			}
+		}
+		if i > 0 && (tooOld || thinned || tooMany || tooBig) {
 			v.retireVersionLocked(pageID, info.id)
 			retired++
 			continue

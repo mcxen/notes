@@ -33,14 +33,16 @@ func TestHistoryKeepsTheNewestVersionsOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Now()
-	for i := 0; i < MaxVersions+7; i++ {
-		putVersion(t, v, "page_a", fmt.Sprintf("ver_%03d", i), now.Add(-time.Duration(MaxVersions+7-i)*time.Hour), 10)
+	total := MaxVersions + 7
+	// A minute apart: all within the dense hour, so only the count cap applies.
+	for i := 0; i < total; i++ {
+		putVersion(t, v, "page_a", fmt.Sprintf("ver_%03d", i), now.Add(-time.Duration(total-i)*30*time.Second), 10)
 	}
 	ids := versionIDs(v, "page_a")
 	if len(ids) != MaxVersions {
 		t.Fatalf("kept %d versions, want %d", len(ids), MaxVersions)
 	}
-	if ids[0] != "ver_007" || ids[len(ids)-1] != "ver_026" {
+	if ids[0] != "ver_007" || ids[len(ids)-1] != fmt.Sprintf("ver_%03d", total-1) {
 		t.Fatalf("kept %v: the newest %d must stay", ids, MaxVersions)
 	}
 	if err := v.Flush(); err != nil {
@@ -49,6 +51,42 @@ func TestHistoryKeepsTheNewestVersionsOnly(t *testing.T) {
 	files, _ := os.ReadDir(filepath.Join(root, historyDir, "page_a"))
 	if len(files) != MaxVersions {
 		t.Fatalf("%d history files on disk, want %d", len(files), MaxVersions)
+	}
+}
+
+func TestHistoryThinsWithAge(t *testing.T) {
+	v, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	// Every ten minutes for three days, oldest first.
+	n := 3 * 24 * 6
+	for i := 0; i < n; i++ {
+		putVersion(t, v, "page_a", fmt.Sprintf("ver_%04d", i), now.Add(-time.Duration(n-i)*10*time.Minute), 10)
+	}
+	hour, day, dense := 0, 0, 0
+	for _, id := range versionIDs(v, "page_a") {
+		var i int
+		fmt.Sscanf(id, "ver_%d", &i)
+		age := time.Duration(n-i) * 10 * time.Minute
+		switch {
+		case age <= DenseAge:
+			dense++
+		case age <= HourlyAge:
+			hour++
+		default:
+			day++
+		}
+	}
+	if dense != 6 {
+		t.Errorf("%d versions in the last hour, want all 6", dense)
+	}
+	if hour < 22 || hour > 25 {
+		t.Errorf("%d versions in the day before that, want about one an hour", hour)
+	}
+	if day < 1 || day > 3 {
+		t.Errorf("%d versions older than a day, want about one a day", day)
 	}
 }
 
@@ -98,7 +136,7 @@ func TestOpenRetiresWhatIsPastTheLimits(t *testing.T) {
 	_ = v.Close()
 	now := time.Now()
 	for i := 0; i < MaxVersions+5; i++ {
-		at := now.Add(-time.Duration(MaxVersions+5-i) * time.Hour).UTC().Format(time.RFC3339)
+		at := now.Add(-time.Duration(MaxVersions+5-i) * 30 * time.Second).UTC().Format(time.RFC3339)
 		data := fmt.Sprintf(`{"format":1,"parts":{"0":{"id":"ver_%03d","page_id":"page_a","created_at":%q,"snapshot":{}}}}`, i, at)
 		if err := os.WriteFile(filepath.Join(dir, fmt.Sprintf("ver_%03d.json", i)), []byte(data), 0o644); err != nil {
 			t.Fatal(err)

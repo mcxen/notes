@@ -2,6 +2,7 @@
 
 ## 0.1.3
 
+- Page history thins with age instead of keeping only the newest 20: every version of the last hour, then one an hour for a day, then one a day for 30 days (up to 60 per page, and 10 MB). A long evening of edits can no longer push out yesterday's versions.
 - Page history: a page was only checkpointed when you moved to another page, so editing one page and closing the window left its history empty. It is now checkpointed 20 seconds after an edit, when the window is hidden or closed, and when the history panel opens. Edits within five minutes of the last version replace it instead of adding another.
 - New app icon, the amber concept: three cream lines on amber with one red dot (the macOS icon keeps Apple's template margin).
 - Toggle list, as in Notion: "/toggle" (or Turn into › Toggle list) makes a line with a triangle that folds what is under it. Whether it is open is kept with the line, so it is the same for everyone who reads the page; on a page you can only read, the triangle opens it for you alone. Enter in an open toggle starts a line inside it. Folded, its lines are left out of arrow-key movement, and still written out when the page is exported or copied.

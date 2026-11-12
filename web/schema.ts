@@ -28,7 +28,7 @@ export const SIDEBAR_VIEWS = ["files", "favorites", "shared", "graph"] as const;
 export const SIDEBAR_SORTS = ["name", "name-desc", "modified", "modified-asc", "created", "created-asc"] as const;
 
 /** How much history a page keeps: the host retires what is past them. */
-export const HISTORY_LIMIT = 20;
+export const HISTORY_LIMIT = 60;
 export const HISTORY_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 export const HISTORY_BUDGET_BYTES = 10 * 1024 * 1024;
 
