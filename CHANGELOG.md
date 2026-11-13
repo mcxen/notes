@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- MCP server: pictures and files. notes_fetch now lists a page's attachments; notes_read_attachment opens one (a picture comes back as an image the assistant can see, a text file as text, other files as bytes; a very large picture as its smaller preview); notes_add_attachment puts a picture or file (up to 2.5 MB) on a page. Both follow the allowed vaults and the Read only switch, and an added file is kept in the page's history.
+
 ## 0.1.5
 
 - Date and time: `/date` (also `/time`, `/now`) opens a picker of year, month, day, hour, minute and second. Each shows its value now and can be ticked off; the box below previews what Insert writes, as plain text in place of the typed command. A Chinese page gets 2026年11月12日 16时08分21秒, an English one 2026-11-12 16:08:21. Escape leaves the command as it was.

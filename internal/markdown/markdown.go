@@ -39,9 +39,11 @@ type Block struct {
 	Language string
 	Icon     string
 	Runs     []Run
-	// File is the name of a file or picture paragraph; URL is an embed's link.
-	File string
-	URL  string
+	// File is the name of a file or picture paragraph; FileRef is the file's
+	// whole record, which keeps where it is stored; URL is an embed's link.
+	File    string
+	FileRef map[string]any
+	URL     string
 	// Table is kept as its records, for a table paragraph.
 	Table map[string]any
 }
@@ -56,6 +58,7 @@ func FromRecord(id string, value map[string]any) Block {
 		Runs: runsFromStored(value["content"]), URL: embedURL(value["embed"])}
 	if file, ok := value["file"].(map[string]any); ok {
 		b.File = str(file["name"])
+		b.FileRef = file
 	}
 	if table, ok := value["table"].(map[string]any); ok {
 		b.Table = table
@@ -84,7 +87,52 @@ func (b Block) ToRecord() map[string]any {
 	if b.URL != "" {
 		r["embed"] = map[string]any{"url": b.URL}
 	}
+	if b.FileRef != nil {
+		r["file"] = b.FileRef
+	}
 	return r
+}
+
+// Attachment is a picture or a file on a page, as its record names it.
+type Attachment struct {
+	BlockID string
+	Name    string
+	Path    string
+	Type    string
+	Size    int64
+	// Preview is the path of a smaller picture of it, when one was made.
+	Preview string
+}
+
+func attachmentOf(blockID string, file map[string]any) (Attachment, bool) {
+	path := str(file["path"])
+	if path == "" {
+		return Attachment{}, false
+	}
+	return Attachment{BlockID: blockID, Name: str(file["name"]), Path: path, Type: str(file["type"]),
+		Size: int64(num(file["size"])), Preview: str(file["preview"])}, true
+}
+
+// Attachments lists the pictures and files a paragraph holds: its own file, or
+// the pictures drawn among its words.
+func (b Block) Attachments() []Attachment {
+	var out []Attachment
+	if b.Kind == "file" && b.FileRef != nil {
+		if a, ok := attachmentOf(b.ID, b.FileRef); ok {
+			out = append(out, a)
+		}
+	}
+	for _, run := range b.Runs {
+		if run.Mention == nil || str(run.Mention["kind"]) != "image" {
+			continue
+		}
+		if file, ok := run.Mention["file"].(map[string]any); ok {
+			if a, ok := attachmentOf(b.ID, file); ok {
+				out = append(out, a)
+			}
+		}
+	}
+	return out
 }
 
 // HasMentionsOrFiles says whether a paragraph holds something the Markdown
@@ -229,7 +277,10 @@ func inlineMarkdown(runs []Run, name Namer) string {
 			case "page":
 				b.WriteString("[[" + name(run.Mention) + "]]")
 			case "image":
-				file := str(run.Mention["file"].(map[string]any)["name"])
+				file := ""
+				if ref, ok := run.Mention["file"].(map[string]any); ok {
+					file = str(ref["name"])
+				}
 				b.WriteString("![" + file + "](" + file + ")")
 			default:
 				b.WriteString(name(run.Mention))

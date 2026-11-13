@@ -223,7 +223,9 @@ func mcpPrompt(st settings.Settings) string {
 - notes_list_vaults: list the vaults you may use.
 - notes_search(query, limit?, vault?): find pages by words in their title or text.
 - notes_list_pages(parent_id?, vault?): list the sub-pages of a page, or the top level.
-- notes_fetch(page_id, vault?): read a page as Markdown, with its sub-pages.
+- notes_fetch(page_id, vault?): read a page as Markdown, with its sub-pages and its attachments (pictures and files, each with a path).
+- notes_read_attachment(page_id, path, vault?): open a picture or file of a page: a picture comes back as an image you can see, a text file as text, any other file as bytes.
+- notes_add_attachment(page_id, name, data, type?, vault?): put a picture or file (base64, up to 2.5 MB) on a page, after what it holds.
 - notes_create_page(title, markdown?, parent_id?, vault?): make a page.
 - notes_update_page(page_id, title?, markdown?, mode?, vault?): change a page. mode is "append" (the default, adds to the end) or "replace" (swaps the whole body). The version before your change is kept in the page's history.
 - notes_trash_page(page_id, vault?): move a page to the Trash; it can be restored there.

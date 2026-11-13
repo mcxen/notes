@@ -95,14 +95,17 @@ func newServer(host Host, version string) *mcp.Server {
 	srv := mcp.NewServer(&mcp.Implementation{Name: "notes", Title: "Notes", Version: version}, &mcp.ServerOptions{
 		Instructions: "Read and edit the user's notes. Pages hold paragraphs; read a page with notes_fetch as Markdown, " +
 			"change it with notes_update_page (append by default; replace swaps the body), and move pages to the Trash " +
-			"with notes_trash_page. Pass vault to pick a vault by name; omit it for the default.",
+			"with notes_trash_page. Pictures and files on a page are listed by notes_fetch; open one with notes_read_attachment " +
+			"and add one with notes_add_attachment. Pass vault to pick a vault by name; omit it for the default.",
 	})
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_list_vaults", Description: "List the vaults you may use, the first being the default."}, s.listVaults)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_search", Description: "Find pages by words in their title or text."}, s.search)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_list_pages", Description: "List the pages under a parent page, or at the top when parent_id is omitted."}, s.listPages)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_fetch", Description: "Read a page: its title and body as Markdown, and its sub-pages."}, s.fetch)
+	mcp.AddTool(srv, &mcp.Tool{Name: "notes_fetch", Description: "Read a page: its title and body as Markdown, its sub-pages, and its attachments (pictures and files; open one with notes_read_attachment)."}, s.fetch)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_create_page", Description: "Create a page with a title and an optional Markdown body, under parent_id when given."}, s.create)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_update_page", Description: "Change a page's title, and its body: mode append (default) adds Markdown to the end, replace swaps the whole body. The page's earlier version is kept in its history."}, s.update)
+	mcp.AddTool(srv, &mcp.Tool{Name: "notes_read_attachment", Description: "Open a picture or file on a page, by a path from the attachments of notes_fetch: a picture is shown as an image, a text file as text, any other file as bytes. Very large pictures come as their smaller preview."}, s.readAttachment)
+	mcp.AddTool(srv, &mcp.Tool{Name: "notes_add_attachment", Description: "Put a picture or file on a page, after what it holds: name it, and give its bytes base64-encoded (up to 2.5 MB). The page's earlier version is kept in its history."}, s.addAttachment)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_trash_page", Description: "Move a page to the Trash. It can be restored from the Trash in Notes."}, s.trash)
 	return srv
 }
@@ -153,6 +156,9 @@ type fetchOut struct {
 	Title    string    `json:"title"`
 	Markdown string    `json:"markdown"`
 	SubPages []pageHit `json:"subpages"`
+	// Attachments are the pictures and files on the page; the Markdown names
+	// them, and notes_read_attachment shows them.
+	Attachments []attachmentOut `json:"attachments"`
 }
 
 type createIn struct {
@@ -346,7 +352,7 @@ func (s *server) listPages(_ context.Context, _ *mcp.CallToolRequest, in listPag
 }
 
 func (s *server) fetch(_ context.Context, _ *mcp.CallToolRequest, in fetchIn) (*mcp.CallToolResult, fetchOut, error) {
-	out := fetchOut{SubPages: []pageHit{}}
+	out := fetchOut{SubPages: []pageHit{}, Attachments: []attachmentOut{}}
 	err := s.within(in.Vault, func(v *vault.Vault, _ *Access) error {
 		lib := load(v)
 		if _, ok := lib.pages[in.PageID]; !ok {
@@ -355,6 +361,7 @@ func (s *server) fetch(_ context.Context, _ *mcp.CallToolRequest, in fetchIn) (*
 		out.ID = in.PageID
 		out.Title = lib.title(in.PageID)
 		out.Markdown = markdown.ToMarkdown(lib.blocks[in.PageID], noName)
+		out.Attachments = attachmentsOf(lib.blocks[in.PageID])
 		for _, id := range lib.children(in.PageID) {
 			out.SubPages = append(out.SubPages, lib.hit(id, ""))
 		}
