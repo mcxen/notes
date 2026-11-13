@@ -529,7 +529,9 @@ kbd {
 .menu {
   display: flex;
   min-width: 180px;
-  max-height: min(70vh, 420px);
+  /* `--pop-room`: the room beside its anchor (useAnchoredPosition), so a
+     menu in a short window scrolls instead of covering what it hangs from. */
+  max-height: min(70vh, 420px, var(--pop-room, 100vh));
   flex-direction: column;
   padding: 5px;
   overflow-y: auto;
@@ -2746,8 +2748,11 @@ kbd {
   top: -1px;
 }
 
+/* `--drop-shift`: below a line that holds others, the rule is drawn under
+   the last of them, starting where the line itself does. */
 .block[data-drop="below"]::after {
   bottom: -1px;
+  left: var(--drop-shift, 0px);
 }
 
 .block[data-drop="inside"]::after {
@@ -3714,6 +3719,8 @@ pre.block__editable {
    Only what typing cannot reach is here, so it is short. */
 .slash {
   width: 228px;
+  /* Its whole list, where the window has the room: 420px cut the last entry. */
+  max-height: min(70vh, 440px, var(--pop-room, 100vh));
 }
 
 .slash .menu__label {
@@ -4623,6 +4630,8 @@ pre.block__editable {
   position: relative;
   width: max-content;
   outline: 0;
+  /* Air around a table brought into sight as it is made. */
+  scroll-margin-block: 24px;
 }
 
 .stbl__table {
@@ -4965,11 +4974,16 @@ pre.block__editable {
   background: var(--fill) center / cover no-repeat;
 }
 
+/* The copy itself is never clipped: its count hangs off its corner. The
+   line inside is what is cut to the copy's width. */
 .carry-copy--lines {
-  overflow: hidden;
   padding: 0 8px;
   background: var(--paper);
   white-space: nowrap;
+}
+
+.carry-copy--lines > .block__content {
+  overflow: hidden;
 }
 
 .carry-copy--link {

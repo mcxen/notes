@@ -1,5 +1,5 @@
 import type { ClipboardEvent } from "react";
-import { pointRect } from "../../hooks/useAnchoredPosition";
+import { caretAnchor } from "../../hooks/useAnchoredPosition";
 import { createId } from "../../core/ids";
 import {
   inlineFromText,
@@ -75,7 +75,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
       query,
       anchor: current?.blockId === block.id && current.from === from
         ? current.anchor
-        : pointRect(rect?.left ?? 0, rect?.bottom ?? 0),
+        : caretAnchor(rect),
     }));
     setSlashIndex(0);
   };
@@ -188,7 +188,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
         trigger: found.trigger,
         anchor: current?.blockId === block.id && current.from === found.from
           ? current.anchor
-          : pointRect(rect?.left ?? 0, rect?.bottom ?? 0),
+          : caretAnchor(rect),
       }));
       setMentionIndex(0);
     }

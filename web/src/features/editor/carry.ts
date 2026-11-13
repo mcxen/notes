@@ -41,6 +41,19 @@ export function carry(options: CarryOptions, event: PointerEvent | MouseEvent): 
   const height = options.width * (source.height / Math.max(1, source.width));
   const copy = document.createElement("div");
   copy.className = "carry-copy";
+  // The copy is held outside the page, where the page's reading scale is not
+  // set: it takes the size and the leading of the page's words with it.
+  const probe = document.createElement("span");
+  probe.style.cssText = "position:absolute;visibility:hidden;font-size:var(--read);line-height:var(--lead)";
+  root.append(probe);
+  const words = getComputedStyle(probe);
+  const size = parseFloat(words.fontSize);
+  const lead = parseFloat(words.lineHeight);
+  const indent = getComputedStyle(root).getPropertyValue("--indent");
+  probe.remove();
+  if (size) copy.style.setProperty("--read", `${size}px`);
+  if (size && lead) copy.style.setProperty("--lead", String(lead / size));
+  if (indent) copy.style.setProperty("--indent", indent);
   options.draw(copy);
   // It starts where the thing is, as big as it is, and shrinks into the hand.
   Object.assign(copy.style, { width: `${source.width}px`, transform: `translate(${source.left}px, ${source.top}px)` });

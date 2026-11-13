@@ -67,7 +67,14 @@ export type SlashState = { blockId: string; from: number; query: string; anchor:
 /** "@" or "[[" typed in the words. */
 export type MentionState = SlashState & { trigger: MentionTrigger };
 /** Where something dragged over the page would land. */
-export type DropState = { id: string; edge: "above" | "below" | "inside" };
+export type DropState = {
+  id: string;
+  edge: "above" | "below" | "inside";
+  /** Below a line that holds others is below the last of them: the line the
+   *  mark is drawn under, and how far left of it (px) the mark starts. */
+  under?: string;
+  shift?: number;
+};
 
 /** What the editor's parts — typing, keys, the keys of selected blocks,
  *  pictures and files — read of it and do through it: built once a render

@@ -59,6 +59,9 @@ export interface BlockRowProps {
   open?: boolean;
   dragging: boolean;
   dropEdge: "above" | "below" | "inside" | null;
+  /** How far left of this line (px) the drop line starts: it marks the end
+   *  of what a line further out holds. */
+  dropShift?: number;
   /** An upload this session is making for the block, if any. */
   upload?: UploadState;
   slot?: ReactNode;
@@ -222,7 +225,12 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
       data-color={block.color}
       data-align={block.align}
       data-drop={props.dropEdge ?? undefined}
-      style={{ "--block-depth": depth, "--line-marks": lineMarks, "--frames": frames } as CSSProperties}
+      style={{
+        "--block-depth": depth,
+        "--line-marks": lineMarks,
+        "--frames": frames,
+        ...(props.dropShift === undefined ? {} : { "--drop-shift": `${props.dropShift}px` }),
+      } as CSSProperties}
       onDragOver={(event) => actions.dragOver(block, event)}
       onDrop={actions.drop}
     >

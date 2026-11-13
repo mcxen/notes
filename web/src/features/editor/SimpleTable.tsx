@@ -214,6 +214,9 @@ export const SimpleTable = memo(function SimpleTable({
   useLayoutEffect(() => {
     if (fresh.delete(block.id)) {
       focusCell({ row: 0, column: 0 }, "start");
+      // Made at the foot of the window, it is brought into sight whole: the
+      // caret is placed without scrolling.
+      frameRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
       return;
     }
     const wanted = pending.current;

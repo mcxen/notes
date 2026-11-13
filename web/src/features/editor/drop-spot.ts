@@ -9,7 +9,15 @@ import { caretPointNear, editableWithin, rowNear, rowsWithin } from "./selection
 
 export type Spot =
   | { kind: "words"; blockId: string; offset: number }
-  | { kind: "line"; blockId: string; edge: "before" | "after"; inside?: boolean };
+  | {
+    kind: "line";
+    blockId: string;
+    edge: "before" | "after";
+    inside?: boolean;
+    /** After a line that holds others is after the last of them: the line
+     *  the mark is drawn under. */
+    under?: string;
+  };
 
 /** How near a line's top or bottom the pointer means the edge between lines. */
 const EDGE = 8;
@@ -81,7 +89,8 @@ export function sameSpot(left: Spot | null, right: Spot | null): boolean {
   if (left.kind === "words" || right.kind === "words") {
     return left.kind === "words" && right.kind === "words" && left.blockId === right.blockId && left.offset === right.offset;
   }
-  return left.blockId === right.blockId && left.edge === right.edge && Boolean(left.inside) === Boolean(right.inside);
+  return left.blockId === right.blockId && left.edge === right.edge && Boolean(left.inside) === Boolean(right.inside)
+    && left.under === right.under;
 }
 
 /** Where the caret `offset` characters into `editable` is drawn: before a
@@ -185,7 +194,10 @@ function markOf(root: HTMLElement, spot: Spot): { left: number; top: number; wid
   // step in, past its bullet.
   const indent = spot.inside ? parseFloat(getComputedStyle(row).getPropertyValue("--indent")) || 26 : 0;
   const left = box.left + indent + (spot.inside ? 2 : 0);
-  const top = spot.edge === "before" ? box.top - 2 : box.bottom;
+  // After a line that holds others: under the last of them, from the
+  // line's own start.
+  const end = spot.under ? rowOf(root, spot.under)?.querySelector(":scope > :is(.block__content, .mount, .db-frame)")?.getBoundingClientRect() : undefined;
+  const top = spot.edge === "before" ? box.top - 2 : (end ?? box).bottom;
   return { left, top, width: Math.max(24, box.right - left), height: 2, line: true };
 }
 

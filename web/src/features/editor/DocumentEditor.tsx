@@ -16,8 +16,9 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { flushSync } from "react-dom";
 import { Popover } from "../../components/Popover";
-import { rectOf, type AnchorRect } from "../../hooks/useAnchoredPosition";
+import { rectOf, shiftedRect, type AnchorRect } from "../../hooks/useAnchoredPosition";
 import { useWorkspace } from "../../app/workspace-context";
 import { useUi } from "../../app/ui-context";
 import { createId } from "../../core/ids";
@@ -227,6 +228,15 @@ function dropEdge(target: Block, bounds: DOMRect, x: number, y: number): "above"
   const past = y > bounds.top + bounds.height / 2;
   const nested = past && blockDefinition(target.kind).canHaveChildren && target.kind !== "page" && !(target.kind === "toggle" && target.collapsed) && x > bounds.left + 48;
   return nested ? "inside" : past ? "below" : "above";
+}
+
+/** The last line drawn of what `id` holds, leaving out lines on the move:
+ *  what lands below a line lands after everything it holds, so that is
+ *  where "below it" is on the page. Null when it holds nothing drawn. */
+function lastLineWithin(root: HTMLElement | null, tree: BlockTree, id: string, moving: ReadonlySet<string>): HTMLElement | null {
+  const held = new Set(descendantsOf(tree, id).map((block) => block.id));
+  if (!held.size) return null;
+  return rowsWithin(root).filter((row) => held.has(row.dataset.blockId ?? "") && !moving.has(row.dataset.blockId ?? "")).at(-1) ?? null;
 }
 
 /** A function for each of `names` calling `latest`'s of that name: the same
@@ -500,6 +510,38 @@ export function DocumentEditor({
     const line = editableWithin(blocksRef.current, menu.blockId);
     if (line) focusRange(line, menu.to);
   };
+
+  /* A menu hung from the caret — the slash menu, a mention's, the time
+     picker — rides its line as the page scrolls under it, or the window is
+     resized: the menu is fixed to the window, and its line is not. Moved
+     with the scroll itself, not a frame after it. */
+  const hungFrom = slash?.blockId ?? mention?.blockId ?? timeMenu?.blockId ?? null;
+  useEffect(() => {
+    if (!hungFrom) return;
+    const place = () => editableWithin(blocksRef.current, hungFrom)?.getBoundingClientRect() ?? null;
+    let last = place();
+    const follow = () => {
+      const now = place();
+      const dx = now && last ? now.left - last.left : 0;
+      const dy = now && last ? now.top - last.top : 0;
+      last = now;
+      if (!dx && !dy) return;
+      const ride = <T extends { blockId: string; anchor: AnchorRect }>(current: T | null): T | null => (
+        current?.blockId === hungFrom ? { ...current, anchor: shiftedRect(current.anchor, dx, dy) } : current
+      );
+      flushSync(() => {
+        setSlash(ride);
+        setMention(ride);
+        setTimeMenu(ride);
+      });
+    };
+    window.addEventListener("scroll", follow, true);
+    window.addEventListener("resize", follow);
+    return () => {
+      window.removeEventListener("scroll", follow, true);
+      window.removeEventListener("resize", follow);
+    };
+  }, [hungFrom]);
 
   const closeMenus = useCallback(() => {
     setSlash(null);
@@ -1526,7 +1568,14 @@ export function DocumentEditor({
           const target = row ? moveContext.current.tree.by_id[row.dataset.blockId ?? ""] : undefined;
           if (!row || !target || carried.has(target.id)) return null;
           const edge = dropEdge(target, row.getBoundingClientRect(), x, y);
-          return { kind: "line", blockId: target.id, edge: edge === "above" ? "before" : "after", ...(edge === "inside" ? { inside: true } : {}) };
+          const end = edge === "below" ? lastLineWithin(root, moveContext.current.tree, target.id, carried) : null;
+          return {
+            kind: "line",
+            blockId: target.id,
+            edge: edge === "above" ? "before" : "after",
+            ...(edge === "inside" ? { inside: true } : {}),
+            ...(end?.dataset.blockId ? { under: end.dataset.blockId } : {}),
+          };
         },
         land: (spot) => {
           if (spot.kind !== "line") return;
@@ -1578,8 +1627,17 @@ export function DocumentEditor({
     }
     if (dragging.has(target.id)) return;
     event.preventDefault();
-    setDrop({ id: target.id, edge: dropEdge(target, event.currentTarget.getBoundingClientRect(), event.clientX, event.clientY) });
-  }, [dragIds, dragging, overFiles]);
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const edge = dropEdge(target, bounds, event.clientX, event.clientY);
+    // Below a line that holds others, the mark goes under the last of them.
+    const end = edge === "below" ? lastLineWithin(blocksRef.current, tree, target.id, dragging) : null;
+    const next: DropState = end
+      ? { id: target.id, edge, under: end.dataset.blockId, shift: Math.round(bounds.left - end.getBoundingClientRect().left) }
+      : { id: target.id, edge };
+    setDrop((current) => (
+      current && current.id === next.id && current.edge === next.edge && current.under === next.under && current.shift === next.shift ? current : next
+    ));
+  }, [dragIds, dragging, overFiles, tree]);
 
   /* A drag carries the selected blocks when it starts on one of them, all
      together; otherwise the one block whose handle was taken. */
@@ -1600,7 +1658,7 @@ export function DocumentEditor({
       return;
     }
     if (!target) return;
-    executeOnBlocks(moveBlocks(tree, moving, target));
+    executeOnBlocks(moveBlocks(tree, moving, { id: target.id, edge: target.edge }));
   }, [dragIds, drop, executeOnBlocks, leaveFiles, placeFiles, tree]);
 
   /* ── What rows ask of the editor ───────────────────────────────────── */
@@ -2005,7 +2063,8 @@ export function DocumentEditor({
       references={lineLink(row.block) ? linksOf(lineLink(row.block)!.page_id).length : undefined}
       linkLine={linkLineOf(row.block)}
       dragging={dragging.has(row.block.id)}
-      dropEdge={drop?.id === row.block.id ? drop.edge : null}
+      dropEdge={drop && (drop.under ?? drop.id) === row.block.id ? drop.edge : null}
+      dropShift={drop?.under === row.block.id ? drop.shift : undefined}
       upload={uploads[row.block.id]}
       slot={slash?.blockId === row.block.id ? (
         <Popover

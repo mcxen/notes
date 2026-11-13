@@ -489,8 +489,10 @@ export function moveBlocks(
   let left: number | undefined;
   let right: number | undefined;
   if (target.edge === "inside") {
+    // First of what it holds: just under its own line, where the mark of
+    // where it lands is drawn.
     parentId = anchor.id;
-    left = orderedBlocks(tree, anchor.id).filter((block) => !moving.has(block.id)).at(-1)?.order;
+    right = orderedBlocks(tree, anchor.id).filter((block) => !moving.has(block.id))[0]?.order;
   } else {
     parentId = anchor.parent_id;
     const siblings = orderedBlocks(tree, parentId).filter((block) => !moving.has(block.id));
