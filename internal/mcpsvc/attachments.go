@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -196,27 +197,51 @@ var (
 	pageDir   = regexp.MustCompile(`[^\w-]`)
 )
 
-// safeName keeps a file's name as the attachments folder takes it.
-func safeName(name string) string {
-	name = strings.TrimSpace(path.Base(strings.ReplaceAll(name, `\`, "/")))
-	clean := strings.Trim(unsafe.ReplaceAllString(name, "_"), "._")
-	if len(clean) > 120 {
-		ext := path.Ext(clean)
-		if len(ext) > 12 {
-			ext = ""
+// shownName is a file's own name, as the page shows it: the last part of a
+// path, in whatever script it is written, without control characters.
+func shownName(name string) string {
+	name = path.Base(strings.ReplaceAll(name, `\`, "/"))
+	name = strings.TrimSpace(strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
 		}
-		clean = clean[:120-len(ext)] + ext
+		return r
+	}, name))
+	if chars := []rune(name); len(chars) > 255 {
+		name = string(chars[:255])
 	}
-	if clean == "" {
+	if name == "" || name == "." || name == "/" {
 		return "file"
 	}
-	return clean
+	return name
+}
+
+// safeName is a file's name as the attachments folder takes it: letters,
+// digits, dots, dashes and underscores. A name in another script keeps its
+// extension ("会议纪要.pdf" is stored as file.pdf, and shown by its own name).
+func safeName(name string) string {
+	name = strings.TrimSpace(path.Base(strings.ReplaceAll(name, `\`, "/")))
+	ext := strings.Trim(unsafe.ReplaceAllString(path.Ext(name), "_"), "._")
+	if len(ext) > 12 {
+		ext = ""
+	}
+	stem := strings.Trim(unsafe.ReplaceAllString(strings.TrimSuffix(name, path.Ext(name)), "_"), "._")
+	if stem == "" {
+		stem = "file"
+	}
+	if len(stem) > 100 {
+		stem = stem[:100]
+	}
+	if ext == "" {
+		return stem
+	}
+	return stem + "." + ext
 }
 
 func (s *server) addAttachment(_ context.Context, _ *mcp.CallToolRequest, in addAttachmentIn) (*mcp.CallToolResult, addAttachmentOut, error) {
 	var out addAttachmentOut
 	if s.host.ReadOnly() {
-		return nil, out, errors.New("this server is read-only: changes are turned off in Notes › Settings › Integrations")
+		return nil, out, errors.New(readOnlyError)
 	}
 	encoded := in.Data
 	if i := strings.Index(encoded, ";base64,"); strings.HasPrefix(encoded, "data:") && i > 0 {
@@ -235,12 +260,12 @@ func (s *server) addAttachment(_ context.Context, _ *mcp.CallToolRequest, in add
 	if len(data) > maxAdd {
 		return nil, out, fmt.Errorf("the file is %s, over the %s limit", sizeWords(int64(len(data))), sizeWords(maxAdd))
 	}
-	name := safeName(in.Name)
+	name, stored := shownName(in.Name), safeName(in.Name)
 	kind := strings.ToLower(in.Type)
 	if !mediaType.MatchString(kind) {
 		kind = http.DetectContentType(data)
 		if kind == "application/octet-stream" || strings.HasPrefix(kind, "text/plain") {
-			if byName := mime.TypeByExtension(path.Ext(name)); byName != "" {
+			if byName := mime.TypeByExtension(path.Ext(stored)); byName != "" {
 				kind = strings.ToLower(strings.SplitN(byName, ";", 2)[0])
 			}
 		}
@@ -252,11 +277,11 @@ func (s *server) addAttachment(_ context.Context, _ *mcp.CallToolRequest, in add
 		if !ok {
 			return fmt.Errorf("no page %q in this vault", in.PageID)
 		}
-		if lib.archived(in.PageID) {
-			return errors.New("the page is in the Trash: restore it in Notes first")
+		if lib.trashed(in.PageID) {
+			return errors.New("the page is in the Trash: restore it first (notes_restore_page)")
 		}
 		now := stamp()
-		filePath := "files/" + pageDir.ReplaceAllString(in.PageID, "") + "/" + newID("file") + "/" + name
+		filePath := "files/" + pageDir.ReplaceAllString(in.PageID, "") + "/" + newID("file") + "/" + stored
 		file := map[string]any{"path": filePath, "owner": localOwner, "name": name, "size": len(data), "type": kind}
 		if cfg, _, err := image.DecodeConfig(strings.NewReader(string(data))); err == nil && cfg.Width > 0 && cfg.Height > 0 {
 			file["width"], file["height"] = cfg.Width, cfg.Height
@@ -272,18 +297,12 @@ func (s *server) addAttachment(_ context.Context, _ *mcp.CallToolRequest, in add
 			block.FileRef = file
 		}
 		var writes []vault.Write
-		cp, err := checkpoint(v, in.PageID, page, lib.blocks[in.PageID], now)
+		cp, err := checkpoint(v, in.PageID, page, lib.stored[in.PageID], now)
 		if err != nil {
 			return err
 		}
 		writes = append(writes, cp...)
-		var last float64
-		for _, b := range lib.blocks[in.PageID] {
-			if b.ParentID == "" && b.Order > last {
-				last = b.Order
-			}
-		}
-		writes = append(writes, bodyWrites(in.PageID, []markdown.Block{block}, last)...)
+		writes = append(writes, bodyWrites(in.PageID, []markdown.Block{block}, lastOrder(lib.blocks[in.PageID], ""))...)
 		writes = append(writes, vault.Write{Action: "patch", Collection: vault.Pages, ID: in.PageID,
 			Patch: map[string]any{"updated_at": now, "updated_by": authorName}})
 		// The bytes first, so no paragraph ever names a file that is not there.

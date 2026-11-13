@@ -101,3 +101,60 @@ func TestMentionsAreNamed(t *testing.T) {
 		t.Error("a page link is something Markdown cannot carry back")
 	}
 }
+
+func TestWordsThatOnlyLookLikeAListStayWords(t *testing.T) {
+	src := "**Summary:** the plan\n*note* in italics\n3.14 is pi\n2026.11.13 log\n-5 degrees\n+1 from me"
+	blocks := FromMarkdown(src, ids())
+	for _, b := range blocks {
+		if b.Kind != "text" {
+			t.Errorf("%q was read as %s, want text", plainText(b.Runs), b.Kind)
+		}
+	}
+	if out := ToMarkdown(blocks, noName); out != src {
+		t.Fatalf("round trip:\n%s\n---\n%s", out, src)
+	}
+	// A mark alone on its line is still an empty item, as the editor writes one.
+	kinds := []string{}
+	for _, b := range FromMarkdown("-\n1.\n- item\n2) item", ids()) {
+		kinds = append(kinds, b.Kind)
+	}
+	if want := []string{"bullet", "numbered", "bullet", "numbered"}; fmt.Sprint(kinds) != fmt.Sprint(want) {
+		t.Fatalf("kinds = %v, want %v", kinds, want)
+	}
+}
+
+func TestANameInDoubleBracketsIsALinkToItsPage(t *testing.T) {
+	resolve := func(name string) map[string]any {
+		if name == "Plan *B*" {
+			return map[string]any{"kind": "page", "page_id": "p1"}
+		}
+		return nil
+	}
+	blocks := LinkPages(FromMarkdown("**see [[Plan *B*]] and [[Nothing]]** then `[[Plan *B*]]`\n```\n[[Plan *B*]]\n```", ids()), resolve)
+	first := blocks[0].Runs
+	if len(first) != 5 || first[0].Text != "see " || !first[0].Bold || first[1].Mention["page_id"] != "p1" ||
+		first[2].Text != " and [[Nothing]]" || !first[2].Bold || first[3].Text != " then " || !first[4].Code || first[4].Text != "[[Plan *B*]]" {
+		t.Fatalf("runs: %+v", first)
+	}
+	if blocks[1].Kind != "code" || len(blocks[1].Runs) != 1 || blocks[1].Runs[0].Mention != nil {
+		t.Fatalf("code: %+v", blocks[1])
+	}
+	name := func(map[string]any) string { return "Plan *B*" }
+	if out := ToMarkdown(blocks[:1], name); out != "**see **[[Plan *B*]]** and [[Nothing]]** then `[[Plan *B*]]`" {
+		t.Fatalf("written: %q", out)
+	}
+	if words := Words(blocks[0], name); words != "see Plan *B* and [[Nothing]] then [[Plan *B*]]" {
+		t.Fatalf("words: %q", words)
+	}
+}
+
+func TestTheOutlineIsInReadingOrder(t *testing.T) {
+	blocks := FromMarkdown("# Title\n- a\n  - b\n1. one\n2. two", ids())
+	var got []string
+	for _, entry := range Outline(blocks, noName) {
+		got = append(got, fmt.Sprintf("%d:%s", entry.Depth, entry.Text()))
+	}
+	if want := []string{"0:# Title", "0:- a", "1:- b", "0:1. one", "0:2. two"}; fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("outline = %v, want %v", got, want)
+	}
+}

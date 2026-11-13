@@ -42,7 +42,7 @@ func TestAPictureAndAFileGoOnAPageAndCanBeRead(t *testing.T) {
 
 	pic := smallPNG(t)
 	added := c.tool("notes_add_attachment", map[string]any{"page_id": id, "name": "my diagram (1).png", "data": base64.StdEncoding.EncodeToString(pic)})
-	if added["type"] != "image/png" || added["name"] != "my_diagram_1_.png" {
+	if added["type"] != "image/png" || added["name"] != "my diagram (1).png" || !strings.HasSuffix(added["path"].(string), "/my_diagram_1.png") {
 		t.Fatalf("picture added: %v", added)
 	}
 	note := c.tool("notes_add_attachment", map[string]any{"page_id": id, "name": "todo.txt", "data": base64.StdEncoding.EncodeToString([]byte("buy milk"))})
@@ -62,19 +62,22 @@ func TestAPictureAndAFileGoOnAPageAndCanBeRead(t *testing.T) {
 	}
 	_ = v.Close()
 
-	fetched := c.tool("notes_fetch", map[string]any{"page_id": id})
-	list, _ := fetched["attachments"].([]any)
-	if len(list) != 3 {
-		t.Fatalf("attachments: %v", fetched["attachments"])
+	fetched := c.fetch(map[string]any{"page_id": id})
+	about := fetched["about"].(string)
+	var listed []string
+	if _, list, ok := strings.Cut(about, "Attachments:\n"); ok {
+		listed = strings.Split(list, "\n")
 	}
-	first := list[0].(map[string]any)
-	if first["picture"] != true || first["path"] != added["path"] || first["block_id"] != added["block_id"] {
-		t.Fatalf("the picture: %v", first)
+	if len(listed) != 3 {
+		t.Fatalf("attachments: %q", about)
 	}
-	if list[1].(map[string]any)["picture"] != false {
-		t.Fatalf("the text file is not a picture: %v", list[1])
+	if !strings.HasPrefix(listed[0], "- my diagram (1).png (image/png, a picture, ") || !strings.HasSuffix(listed[0], " path: "+added["path"].(string)) {
+		t.Fatalf("the picture: %q", listed[0])
 	}
-	if !strings.Contains(fetched["markdown"].(string), "![my_diagram_1_.png]") || !strings.Contains(fetched["markdown"].(string), "[todo.txt]") {
+	if listed[1] != "- todo.txt (text/plain, 8 B) path: "+note["path"].(string) {
+		t.Fatalf("the text file: %q", listed[1])
+	}
+	if !strings.Contains(fetched["markdown"].(string), "![my diagram (1).png]") || !strings.Contains(fetched["markdown"].(string), "[todo.txt]") {
 		t.Fatalf("the Markdown names them: %q", fetched["markdown"])
 	}
 
@@ -124,5 +127,25 @@ func TestAttachmentsFollowTheReadOnlySwitchAndTheSizeLimit(t *testing.T) {
 	ro := newClient(t, testHost{folders: []string{dir}, readOnly: true}, "sk-test")
 	if res := ro.tool("notes_add_attachment", map[string]any{"page_id": id, "name": "a.txt", "data": "aGk="}); res["_error"] == nil {
 		t.Fatalf("read-only: %v", res)
+	}
+}
+
+func TestAFileKeepsItsOwnNameInAnyScript(t *testing.T) {
+	dir := t.TempDir()
+	c := newClient(t, testHost{folders: []string{dir}}, "sk-test")
+	id := c.tool("notes_create_page", map[string]any{"title": "Files"})["id"].(string)
+	added := c.tool("notes_add_attachment", map[string]any{"page_id": id, "name": "会议纪要.pdf", "type": "application/pdf",
+		"data": base64.StdEncoding.EncodeToString([]byte("%PDF-1.4"))})
+	if added["name"] != "会议纪要.pdf" || !strings.HasSuffix(added["path"].(string), "/file.pdf") {
+		t.Fatalf("added: %v", added)
+	}
+	fetched := c.fetch(map[string]any{"page_id": id})
+	if about := fetched["about"].(string); !strings.Contains(about, "Attachments:\n- 会议纪要.pdf (application/pdf, 8 B) path: "+added["path"].(string)) {
+		t.Fatalf("attachments: %q", about)
+	}
+	for name, want := range map[string]string{"报告 final.docx": "final.docx", "../../etc/passwd": "passwd", "a b.tar.gz": "a_b.tar.gz", "": "file"} {
+		if got := safeName(name); got != want {
+			t.Errorf("safeName(%q) = %q, want %q", name, got, want)
+		}
 	}
 }

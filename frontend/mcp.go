@@ -221,17 +221,22 @@ func mcpPrompt(st settings.Settings) string {
 	fmt.Fprintf(&b, "Vaults you may use: %s.\nPass the \"vault\" argument to pick another one by name; omit it for the default.\n\n", vaults)
 	b.WriteString(`Tools:
 - notes_list_vaults: list the vaults you may use.
-- notes_search(query, limit?, vault?): find pages by words in their title or text.
+- notes_search(query, limit?, vault?): find pages that have every word of the query, in their title or text; the best matches first.
 - notes_list_pages(parent_id?, vault?): list the sub-pages of a page, or the top level.
-- notes_fetch(page_id, vault?): read a page as Markdown, with its sub-pages and its attachments (pictures and files, each with a path).
+- notes_recent_pages(limit?, vault?): list the pages changed most recently.
+- notes_fetch(page_id, vault?): read a page. The answer is text: a few lines about the page (title, id, parent, sub-pages, the pages it links to and is linked from, attachments with their paths), a line of ---, then the body as Markdown.
 - notes_read_attachment(page_id, path, vault?): open a picture or file of a page: a picture comes back as an image you can see, a text file as text, any other file as bytes.
 - notes_add_attachment(page_id, name, data, type?, vault?): put a picture or file (base64, up to 2.5 MB) on a page, after what it holds.
-- notes_create_page(title, markdown?, parent_id?, vault?): make a page.
-- notes_update_page(page_id, title?, markdown?, mode?, vault?): change a page. mode is "append" (the default, adds to the end) or "replace" (swaps the whole body). The version before your change is kept in the page's history.
-- notes_trash_page(page_id, vault?): move a page to the Trash; it can be restored there.
+- notes_create_page(title, markdown?, parent_id?, if_exists?, vault?): make a page. With if_exists "append", a page that already has this title under the same parent gets the Markdown added to it instead, so the call can be repeated (a daily log, say).
+- notes_edit_page(page_id, old_text, new_text, nth?, vault?): change a part of a page. old_text is text of one paragraph (a line, a code block or a quote) as notes_fetch shows it; it becomes new_text. Several lines in new_text add paragraphs after it; an empty new_text removes the paragraph. Pass nth when old_text is on the page several times. This is the way to change a page that holds pictures, tables or links.
+- notes_update_page(page_id, title?, markdown?, mode?, vault?): change a page's title, or its body as a whole. mode is "append" (the default, adds to the end) or "replace" (swaps the whole body).
+- notes_move_page(page_id, parent_id?, vault?): move a page under another, or to the top level.
+- notes_trash_page(page_id, vault?): move a page to the Trash.
+- notes_restore_page(page_id, vault?): take a page back out of the Trash.
+Every change keeps the version before it in the page's history.
 
-Markdown: "# ", "## " and "### " headings; "- " bullets; "1. " numbered items; "- [ ] " and "- [x] " to-dos; "> " quotes; fenced code blocks with a language after the opening fence; two spaces of indentation for a nested item; **bold**, *italic*, ~~strike~~, ` + "`code`" + ` and [text](url).
-replace refuses a page with pictures, files, tables, embeds or page links: use append for those.
+Markdown: "# ", "## " and "### " headings; "- " bullets; "1. " numbered items; "- [ ] " and "- [x] " to-dos; "> " quotes; fenced code blocks with a language after the opening fence; two spaces of indentation for a nested item; **bold**, *italic*, ~~strike~~, ` + "`code`" + ` and [text](url). [[A page's title]] (or [[its id]]) is a link to that page.
+replace refuses a page with pictures, files, tables, embeds or page links: use notes_edit_page or append for those.
 `)
 	if st.MCP.ReadOnly {
 		b.WriteString("\nThis server is read-only: only the read tools work.\n")

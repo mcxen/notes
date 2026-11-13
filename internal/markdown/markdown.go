@@ -152,6 +152,34 @@ func (b Block) HasMentionsOrFiles() bool {
 // ToMarkdown writes the paragraphs of a page in reading order: each under its
 // parent, indented two spaces per level, numbered as the editor numbers them.
 func ToMarkdown(blocks []Block, name Namer) string {
+	var lines []string
+	for _, entry := range Outline(blocks, name) {
+		indent := strings.Repeat("  ", entry.Depth)
+		for _, line := range entry.Lines {
+			if line == "" {
+				lines = append(lines, "")
+			} else {
+				lines = append(lines, indent+line)
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// Entry is a paragraph where it stands on its page: how deep it is nested,
+// and the lines ToMarkdown writes for it, before their indentation.
+type Entry struct {
+	Block Block
+	Depth int
+	Lines []string
+}
+
+// Text is the entry's own Markdown: its lines, without their indentation.
+func (e Entry) Text() string { return strings.Join(e.Lines, "\n") }
+
+// Outline lists the paragraphs of a page in reading order: each, then what is
+// under it. Only what is reached from the top is listed.
+func Outline(blocks []Block, name Namer) []Entry {
 	byParent := map[string][]Block{}
 	for _, b := range blocks {
 		byParent[b.ParentID] = append(byParent[b.ParentID], b)
@@ -160,29 +188,27 @@ func ToMarkdown(blocks []Block, name Namer) string {
 		list := byParent[parent]
 		sort.SliceStable(list, func(i, j int) bool { return list[i].Order < list[j].Order })
 	}
-	var lines []string
+	var out []Entry
+	seen := map[string]bool{}
 	var visit func(parent string, depth int)
 	visit = func(parent string, depth int) {
 		number := 0
 		for _, b := range byParent[parent] {
+			if seen[b.ID] {
+				continue
+			}
+			seen[b.ID] = true
 			if b.Kind == "numbered" {
 				number++
 			} else {
 				number = 0
 			}
-			indent := strings.Repeat("  ", depth)
-			for _, line := range blockLines(b, number, name) {
-				if line == "" {
-					lines = append(lines, "")
-				} else {
-					lines = append(lines, indent+line)
-				}
-			}
+			out = append(out, Entry{Block: b, Depth: depth, Lines: blockLines(b, number, name)})
 			visit(b.ID, depth+1)
 		}
 	}
 	visit("", 0)
-	return strings.Join(lines, "\n")
+	return out
 }
 
 func blockLines(b Block, number int, name Namer) []string {
@@ -273,18 +299,7 @@ func inlineMarkdown(runs []Run, name Namer) string {
 	var b strings.Builder
 	for _, run := range runs {
 		if run.Mention != nil {
-			switch str(run.Mention["kind"]) {
-			case "page":
-				b.WriteString("[[" + name(run.Mention) + "]]")
-			case "image":
-				file := ""
-				if ref, ok := run.Mention["file"].(map[string]any); ok {
-					file = str(ref["name"])
-				}
-				b.WriteString("![" + file + "](" + file + ")")
-			default:
-				b.WriteString(name(run.Mention))
-			}
+			b.WriteString(MentionText(run.Mention, name))
 			continue
 		}
 		text := run.Text
@@ -307,6 +322,120 @@ func inlineMarkdown(runs []Run, name Namer) string {
 	}
 	return b.String()
 }
+
+// MentionText is what the Markdown writes for a mention: a page as [[its
+// name]], a picture as ![its name](its name), anything else as its name.
+func MentionText(mention map[string]any, name Namer) string {
+	switch str(mention["kind"]) {
+	case "page":
+		return "[[" + name(mention) + "]]"
+	case "image":
+		file := ""
+		if ref, ok := mention["file"].(map[string]any); ok {
+			file = str(ref["name"])
+		}
+		return "![" + file + "](" + file + ")"
+	}
+	return name(mention)
+}
+
+// Words is the plain words of a paragraph, its mentions by their names and
+// without its marks: what a search reads.
+func Words(b Block, name Namer) string {
+	var out strings.Builder
+	for _, run := range b.Runs {
+		if run.Mention != nil {
+			switch str(run.Mention["kind"]) {
+			case "image":
+				if ref, ok := run.Mention["file"].(map[string]any); ok {
+					out.WriteString(str(ref["name"]))
+				}
+			default:
+				out.WriteString(name(run.Mention))
+			}
+			continue
+		}
+		out.WriteString(run.Text)
+	}
+	if b.Kind == "file" {
+		out.WriteString(b.File)
+	}
+	if b.Kind == "embed" {
+		out.WriteString(b.URL)
+	}
+	if b.Table != nil {
+		out.WriteString(strings.Join(tableLines(b.Table, name), "\n"))
+	}
+	return out.String()
+}
+
+// LinkPages turns each [[name]] written in the words of blocks into a link to
+// the page resolve finds for it; a name it finds no page for stays as written.
+// Code is left alone.
+func LinkPages(blocks []Block, resolve func(name string) map[string]any) []Block {
+	for i := range blocks {
+		if blocks[i].Kind == "code" {
+			continue
+		}
+		var runs []Run
+		for _, run := range blocks[i].Runs {
+			if run.Mention != nil || run.Code {
+				runs = append(runs, run)
+				continue
+			}
+			rest := run.Text
+			for {
+				m := reWikiLink.FindStringSubmatchIndex(rest)
+				if m == nil {
+					break
+				}
+				mention := resolve(strings.TrimSpace(rest[m[2]:m[3]]))
+				if mention == nil {
+					// Not a page: these words stay, and the search goes on after them.
+					keep := run
+					keep.Text = rest[:m[1]]
+					runs = appendWords(runs, keep)
+					rest = rest[m[1]:]
+					continue
+				}
+				before := run
+				before.Text = rest[:m[0]]
+				runs = appendWords(runs, before)
+				runs = append(runs, Run{Mention: mention})
+				rest = rest[m[1]:]
+			}
+			after := run
+			after.Text = rest
+			runs = appendWords(runs, after)
+		}
+		blocks[i].Runs = runs
+	}
+	return blocks
+}
+
+// appendWords adds a run of words, joined to the run before when they share
+// their marks, and left out when empty.
+func appendWords(runs []Run, run Run) []Run {
+	if run.Text == "" {
+		return runs
+	}
+	if n := len(runs); n > 0 && runs[n-1].Mention == nil {
+		last := runs[n-1]
+		last.Text = run.Text
+		if sameMarks(last, run) {
+			runs[n-1].Text += run.Text
+			return runs
+		}
+	}
+	return append(runs, run)
+}
+
+func sameMarks(a, b Run) bool {
+	return a.Bold == b.Bold && a.Italic == b.Italic && a.Underline == b.Underline && a.Strike == b.Strike &&
+		a.Code == b.Code && a.Link == b.Link && a.Color == b.Color
+}
+
+var reWikiLink = regexp.MustCompile(`\[\[([^\[\]\n]+)\]\]`)
 
 func plainText(runs []Run) string {
 	var b strings.Builder
@@ -397,10 +526,12 @@ func FromMarkdown(src string, newID func() string) []Block {
 }
 
 var (
-	reHeading  = regexp.MustCompile(`^(#{1,3}) (.*)$`)
-	reTodo     = regexp.MustCompile(`^[-*+] \[( |x|X)\] ?(.*)$`)
-	reBullet   = regexp.MustCompile(`^[-*+] ?(.*)$`)
-	reNumbered = regexp.MustCompile(`^\d+[.)] ?(.*)$`)
+	reHeading = regexp.MustCompile(`^(#{1,3}) (.*)$`)
+	reTodo    = regexp.MustCompile(`^[-*+] \[( |x|X)\] ?(.*)$`)
+	// A list's mark is followed by a space, or stands alone (an empty item):
+	// "**bold** first", "-5 degrees" and "3.14 is pi" are words, not items.
+	reBullet   = regexp.MustCompile(`^[-*+](?: (.*))?$`)
+	reNumbered = regexp.MustCompile(`^\d+[.)](?: (.*))?$`)
 	reDivider  = regexp.MustCompile(`^(---|\*\*\*|___)$`)
 	reQuote    = regexp.MustCompile(`^> ?(.*)$`)
 )
@@ -454,6 +585,13 @@ func inline(s string) []Run {
 					runs = append(runs, r)
 				}
 				i += end + 2
+				continue
+			}
+		case strings.HasPrefix(rest, "[["):
+			// A link to a page by its name: its name is not read for marks.
+			if m := reWikiLink.FindStringIndex(rest); m != nil && m[0] == 0 {
+				plain.WriteString(rest[:m[1]])
+				i += m[1]
 				continue
 			}
 		case strings.HasPrefix(rest, "["):

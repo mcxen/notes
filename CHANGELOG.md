@@ -1,8 +1,15 @@
 # Changelog
 
-## Unreleased
+## 0.1.6
 
+- Menus hung from the caret (the slash menu, a mention, the time picker) sit against the whole line and follow it as the page scrolls. A short window scrolls the menu instead of laying it over the line being typed. A block dropped under a line that holds others lands after all of them, where the drop line is drawn.
 - MCP server: pictures and files. notes_fetch now lists a page's attachments; notes_read_attachment opens one (a picture comes back as an image the assistant can see, a text file as text, other files as bytes; a very large picture as its smaller preview); notes_add_attachment puts a picture or file (up to 2.5 MB) on a page. Both follow the allowed vaults and the Read only switch, and an added file is kept in the page's history.
+- MCP server: an assistant can change a part of a page. notes_edit_page turns old_text into new_text within one paragraph, which stays the paragraph it was (its place, its colour, the pictures, dates and links among its words); more lines add paragraphs after it, an empty one removes it. A page with pictures, tables or links, which a whole new body would lose, can now have a word put right.
+- MCP server: links between pages. A page's links are read as `[[the page's title]]` (they were empty brackets) and notes_fetch lists the pages a page links to and is linked from; `[[a title]]` or `[[a page's id]]` written in Markdown becomes a link.
+- MCP server: search finds pages that have every word of the query, in any order, across bold and other marks; titles first, then the most recently changed. Its snippet is the paragraph found, cut around the words.
+- MCP server: new tools. notes_move_page, notes_restore_page, notes_recent_pages; notes_create_page takes if_exists "append", which adds to the page of that title instead of making another (a daily log can be written again and again).
+- MCP server: notes_fetch answers once, in words (a few lines about the page, a line of ---, its body), instead of the page twice over as JSON.
+- MCP server, fixed: a line starting with bold or italic words, a decimal ("3.14 …") or a date ("2026.11.13 …") was read as a list item and lost its start; the version kept before an assistant's change dropped a paragraph's colour, alignment, fold and a picture's width; a snippet could cut a Chinese character in half; a file with a Chinese name was shown as "pdf"; pages under a page in the Trash were still found and changed. An update with nothing in it is refused.
 
 ## 0.1.5
 
