@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.7
+
+- Connect to a remote folder is a window of the app's own, in both languages and in light and dark, and no longer cuts off its last fields. WebDAV and SMB show only the fields they need; an SMB address can be pasted as smb://server/share/folder. Test Connection reaches the folder and says what is in it (empty, a vault, other files) before anything is copied, and a refused password, a wrong folder, an unknown server or a timeout is said in words, with the error below.
+- Settings › Sync: each remote vault shows when it last synced and what moved, a sync in progress, and why one failed. Sign In Again changes the user name and password without reconnecting; Disconnect asks first.
+- Sync is safer. A page typed on while a sync runs is no longer written over by the sync, and a file another device wrote a moment before an upload is not replaced by it: both are left for the next sync, which merges them. A page a sync replaces or merges is first kept as it was, for 30 days. When many files are gone from one side (a share that is not mounted, an emptied folder), nothing is removed on the other; Settings › Sync offers to copy them back or remove them there too.
+- SMB gives up on a server that takes the connection and never answers, instead of holding every later sync.
+
 ## 0.1.6
 
 - Menus hung from the caret (the slash menu, a mention, the time picker) sit against the whole line and follow it as the page scrolls. A short window scrolls the menu instead of laying it over the line being typed. A block dropped under a line that holds others lands after all of them, where the drop line is drawn.
