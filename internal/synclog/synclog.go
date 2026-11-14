@@ -18,16 +18,27 @@ const MaxEntries = 200
 
 // Entry is one sync.
 type Entry struct {
-	Time       time.Time `json:"time"`
-	Folder     string    `json:"folder"`
-	Status     string    `json:"status"`
-	Message    string    `json:"message,omitempty"`
-	Uploaded   []string  `json:"uploaded,omitempty"`
-	Downloaded []string  `json:"downloaded,omitempty"`
-	Merged     []string  `json:"merged,omitempty"`
-	Conflicts  []string  `json:"conflicts,omitempty"`
-	Trashed    []string  `json:"trashed,omitempty"`
-	Failed     []string  `json:"failed,omitempty"`
+	Time    time.Time `json:"time"`
+	Folder  string    `json:"folder"`
+	Status  string    `json:"status"`
+	Message string    `json:"message,omitempty"`
+	// Problem names why the remote folder could not be reached, when the
+	// error tells (storage.Problem), so that it can be said in words.
+	Problem    string   `json:"problem,omitempty"`
+	Uploaded   []string `json:"uploaded,omitempty"`
+	Downloaded []string `json:"downloaded,omitempty"`
+	Merged     []string `json:"merged,omitempty"`
+	Conflicts  []string `json:"conflicts,omitempty"`
+	Trashed    []string `json:"trashed,omitempty"`
+	Failed     []string `json:"failed,omitempty"`
+	// Deferred are files that changed while the sync ran, left for the next.
+	Deferred []string `json:"deferred,omitempty"`
+	// HeldLocal are files gone from the remote folder that were not moved to
+	// the vault's trash, HeldRemote files gone from the vault that were left
+	// in the remote folder: many at once, which a person decides about. The
+	// status is then "held".
+	HeldLocal  []string `json:"heldLocal,omitempty"`
+	HeldRemote []string `json:"heldRemote,omitempty"`
 }
 
 // Log is the sync log file. Its methods are safe for concurrent use.

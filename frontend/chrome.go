@@ -61,7 +61,7 @@ type palette struct {
 	control, controlHover               ui.Color
 	controlShadow                       bool
 	divider, chip                       ui.Color
-	danger, accent, done                ui.Color
+	danger, accent, done, warn          ui.Color
 }
 
 var lightPalette = palette{
@@ -70,7 +70,7 @@ var lightPalette = palette{
 	card: ui.Hex("#ffffff"), cardShadow: ui.RGBA(0, 0, 0, 0.07), cardShadow2: ui.RGBA(0, 0, 0, 0.035),
 	control: ui.Hex("#ffffff"), controlHover: ui.Hex("#f7f7f9"), controlShadow: true,
 	divider: ui.RGBA(0, 0, 0, 0.06), chip: ui.RGBA(0, 0, 0, 0.035),
-	danger: ui.Hex("#d93a35"), accent: ui.Hex("#3b6cf6"), done: ui.Hex("#2f9e5b"),
+	danger: ui.Hex("#d93a35"), accent: ui.Hex("#3b6cf6"), done: ui.Hex("#2f9e5b"), warn: ui.Hex("#b26a00"),
 }
 
 var darkPalette = palette{
@@ -80,7 +80,7 @@ var darkPalette = palette{
 	card: ui.Hex("#232328"), cardShadow: ui.RGBA(0, 0, 0, 0.35), cardShadow2: ui.RGBA(0, 0, 0, 0.2),
 	control: ui.Hex("#404047"), controlHover: ui.Hex("#4a4a52"),
 	divider: ui.RGBA(255, 255, 255, 0.07), chip: ui.RGBA(255, 255, 255, 0.055),
-	danger: ui.Hex("#ff6961"), accent: ui.Hex("#6b93ff"), done: ui.Hex("#5fd28c"),
+	danger: ui.Hex("#ff6961"), accent: ui.Hex("#6b93ff"), done: ui.Hex("#5fd28c"), warn: ui.Hex("#f0b24a"),
 }
 
 func paletteFor(c *ui.Context) *palette {

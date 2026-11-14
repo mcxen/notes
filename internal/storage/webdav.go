@@ -117,6 +117,22 @@ func (w *WebDAV) listByLevel(ctx context.Context) ([]Entry, error) {
 	return entries, nil
 }
 
+// Stat describes one file.
+func (w *WebDAV) Stat(ctx context.Context, p string) (Entry, error) {
+	info, err := w.client.Stat(ctx, p)
+	// 409 is what some servers answer for a file whose folder is not there.
+	if isStatus(err, http.StatusNotFound) || isStatus(err, http.StatusConflict) {
+		return Entry{}, ErrNotFound
+	}
+	if err != nil {
+		return Entry{}, busy(err)
+	}
+	if info.IsDir {
+		return Entry{}, ErrNotFound
+	}
+	return Entry{Path: p, Size: info.Size, ModTime: info.ModTime, Tag: tagOfInfo(info.ETag, info.ModTime, info.Size)}, nil
+}
+
 // Get reads a file.
 func (w *WebDAV) Get(ctx context.Context, p string) ([]byte, error) {
 	rc, err := w.client.Open(ctx, p)

@@ -18,6 +18,7 @@ import (
 
 	"notes/internal/mcpsvc"
 	"notes/internal/settings"
+	"notes/internal/storage"
 	vsync "notes/internal/sync"
 	"notes/internal/synclog"
 )
@@ -91,7 +92,10 @@ func (a *appActions) openSettings(page string) {
 	a.settingsWin = s.win
 	a.settingsView = s
 	s.win.OnFocus(func() { s.refresh() })
+	// A sync that starts or ends shows on the Sync page as it happens.
+	a.notebooks.watchSync(func() { s.update(s.refresh) })
 	s.win.OnClosed(func() {
+		a.notebooks.watchSync(nil)
 		a.settingsWin = nil
 		s.query = ""
 	})
@@ -258,7 +262,7 @@ var searchEntries = []searchEntry{
 	{"appearance", labelOutline, "outline headings table of contents toc 大纲 目录 标题"},
 	{"vaults", "Recent vaults", "vault folder recent remove show finder explorer"},
 	{"vaults", "Add a vault", "new open folder"},
-	{"sync", "Remote vaults", "sync webdav smb remote cloud disconnect"},
+	{"sync", "Remote vaults", "sync webdav smb remote cloud disconnect password sign in nas 同步 远程 密码 登录 断开"},
 	{"sync", "Recent syncs", "log history conflicts trash restore"},
 	{"integrations", "MCP server", "mcp ai assistant claude cursor key token port frp proxy api integrations"},
 	{"integrations", "Vaults for assistants", "mcp vault allow assistants read only"},
@@ -333,6 +337,11 @@ func (s *settingsWindow) group(c *ui.Context, pal *palette, title, note string, 
 // row is one setting: its label and detail on the left, its controls on the
 // right. Rows after the first in a group have a hairline above them.
 func (s *settingsWindow) row(c *ui.Context, pal *palette, label, detail string, controls func()) {
+	s.rowTone(c, pal, label, detail, pal.textMuted, controls)
+}
+
+// rowTone is a row whose detail is in a color of its own, as a failure's.
+func (s *settingsWindow) rowTone(c *ui.Context, pal *palette, label, detail string, tone ui.Color, controls func()) {
 	if s.rows++; s.rows > 1 {
 		ui.Box(c).Height(1).Shrink(0).Background(pal.divider)
 	}
@@ -344,7 +353,7 @@ func (s *settingsWindow) row(c *ui.Context, pal *palette, label, detail string, 
 		ui.Column(c).Grow(1).MinWidth(0).Gap(3).Children(func() {
 			ui.Text(c, label).FontSize(13.5).TextColor(pal.text).SingleLine().Ellipsis("…")
 			if detail != "" {
-				line := ui.Text(c, detail).FontSize(12).TextColor(pal.textMuted).LineHeight(1.35).MinWidth(0)
+				line := ui.Text(c, detail).FontSize(12).TextColor(tone).LineHeight(1.35).MinWidth(0)
 				if strings.ContainsAny(detail, `/\`) {
 					line.SingleLine().Ellipsis("…").Tooltip(detail)
 				}
@@ -537,28 +546,40 @@ func (s *settingsWindow) syncPage(c *ui.Context, pal *palette) {
 		remotes++
 		folder := folder
 		s.group(c, pal, s.a.recentLabel(folder), "", func() {
-			s.row(c, pal, remoteKind(cfg.Kind)+" · "+remoteWhere(cfg), lastSyncLine(s.log, folder), func() {
-				if button(c, "sync:"+folder, tr("Sync Now"), false, pal) {
-					go func() {
-						s.a.notebooks.syncFolder(folder)
-						if s.win != nil {
-							s.win.Update(func() {
-								s.refresh()
-								s.toast = tr("Synced %s", s.a.recentLabel(folder))
-							})
-						}
-					}()
+			status := s.syncStatus(folder)
+			tone := pal.textMuted
+			if status.failed {
+				tone = pal.danger
+			}
+			s.rowTone(c, pal, remoteKindName(cfg.Kind)+" · "+remoteWhere(cfg), status.line, tone, func() {
+				if status.running {
+					ui.Spinner(c).Label(tr("Syncing…"))
+					return
 				}
-				if button(c, "disconnect:"+folder, tr("Disconnect"), false, pal) {
-					if err := s.a.notebooks.Disconnect(folder); err != nil {
-						s.notes = tr("Disconnect failed: %v", err)
-					}
-					s.refresh()
+				if button(c, "sync:"+folder, tr("Sync Now"), false, pal) {
+					go s.a.notebooks.syncFolder(folder)
+				}
+			})
+			if status.held > 0 {
+				s.heldRow(c, pal, folder, status)
+			}
+			user := cfg.User
+			if user == "" {
+				user = tr("No user name")
+			}
+			s.row(c, pal, tr("Signed in as"), user, func() {
+				if button(c, "sign-in:"+folder, tr("Sign In Again…"), status.auth, pal) {
+					go s.a.signIn(folder)
 				}
 			})
 			s.row(c, pal, tr("Working copy"), shortPath(folder), func() {
 				if button(c, "copy:"+folder, revealLabel(), false, pal) {
 					mygo.Shell.ShowItemInFolder(folder)
+				}
+			})
+			s.row(c, pal, tr("Stop syncing"), tr("The vault stays on this computer, and the remote folder is left as it is."), func() {
+				if button(c, "disconnect:"+folder, tr("Disconnect…"), false, pal) {
+					go s.disconnect(folder)
 				}
 			})
 			for _, item := range s.trash[folder] {
@@ -591,10 +612,138 @@ func (s *settingsWindow) syncPage(c *ui.Context, pal *palette) {
 				if i >= 20 {
 					break
 				}
-				s.row(c, pal, s.a.recentLabel(e.Folder), logLine(e), nil)
+				tone := pal.textMuted
+				if e.Status != "saved" {
+					tone = pal.danger
+				}
+				s.rowTone(c, pal, s.a.recentLabel(e.Folder), logLine(e), tone, nil)
 			}
 		})
 	}
+}
+
+// heldRow offers the two ways out of a sync that held back many deletions:
+// put the files back where they are gone from, or remove them there too.
+func (s *settingsWindow) heldRow(c *ui.Context, pal *palette, folder string, status syncStatus) {
+	detail := tr("The remote folder no longer has them. Is it the right folder, and is it connected?")
+	keep, remove := tr("Copy Them Back to the Remote Folder"), tr("Remove Them Here Too")
+	if !status.goneRemote {
+		detail = tr("This vault no longer has them.")
+		keep, remove = tr("Bring Them Back Here"), tr("Remove Them in the Remote Folder Too")
+	}
+	s.row(c, pal, tr("%d file(s) wait for you", status.held), detail, func() {
+		if button(c, "held-keep:"+folder, keep, true, pal) {
+			go s.a.notebooks.syncFolderWith(folder, vsync.RestoreDeleted)
+		}
+		if button(c, "held-remove:"+folder, remove, false, pal) {
+			go func() {
+				if confirmRemoveHeld(s.win, status.held) {
+					s.a.notebooks.syncFolderWith(folder, vsync.ApplyDeletions)
+				}
+			}()
+		}
+	})
+}
+
+// confirmRemoveHeld asks before many files are removed; tests replace it.
+var confirmRemoveHeld = func(parent *mygo.Window, n int) bool {
+	res, err := mygo.Dialog.Message(mygo.MessageOptions{
+		Parent:             parent,
+		Type:               mygo.MessageWarning,
+		Message:            tr("Remove %d file(s)?", n),
+		Detail:             tr("They are moved to the trash of the side that still has them, where they stay until restored or deleted."),
+		Buttons:            []string{tr("Remove"), tr("Cancel")},
+		DefaultButton:      1,
+		CancelButton:       1,
+		DestructiveButtons: []int{0},
+	})
+	return err == nil && res.Button == 0
+}
+
+// confirmDisconnect asks before a vault stops syncing; tests replace it.
+var confirmDisconnect = func(parent *mygo.Window, name string) bool {
+	res, err := mygo.Dialog.Message(mygo.MessageOptions{
+		Parent:             parent,
+		Type:               mygo.MessageWarning,
+		Message:            tr("Stop syncing “%s”?", name),
+		Detail:             tr("The vault stays on this computer as a local vault, and the remote folder is left as it is. The saved password is removed: to sync again, connect to the folder again."),
+		Buttons:            []string{tr("Disconnect"), tr("Cancel")},
+		DefaultButton:      1,
+		CancelButton:       1,
+		DestructiveButtons: []int{0},
+	})
+	return err == nil && res.Button == 0
+}
+
+// disconnect stops a vault syncing, once the person says so.
+func (s *settingsWindow) disconnect(folder string) {
+	if !confirmDisconnect(s.win, s.a.recentLabel(folder)) {
+		return
+	}
+	err := s.a.notebooks.Disconnect(folder)
+	s.update(func() {
+		if err != nil {
+			s.notes = tr("Disconnect failed: %v", err)
+		}
+		s.refresh()
+		s.a.refreshMenu()
+	})
+}
+
+// update changes what the window shows from outside its own frames.
+func (s *settingsWindow) update(fn func()) {
+	if s.win != nil && !s.win.IsDestroyed() {
+		s.win.Update(fn)
+		return
+	}
+	fn()
+}
+
+// syncStatus is how a remote vault's sync stands, for its row.
+type syncStatus struct {
+	line string
+	// running is true while a sync goes on, failed when the last one did not
+	// finish, and auth when it was the sign-in the server refused.
+	running, failed, auth bool
+	// held is how many files wait for the person's decision: many are gone
+	// from one side, and the other side kept them. goneRemote is true when
+	// it is the remote folder they are gone from.
+	held       int
+	goneRemote bool
+}
+
+// syncStatus reads a working copy's state: what the app saw since it started,
+// else what the log says of its last sync.
+func (s *settingsWindow) syncStatus(folder string) syncStatus {
+	if state, ok := s.a.notebooks.syncStateOf(folder); ok && state.Status == "saving" {
+		return syncStatus{line: tr("Syncing…"), running: true}
+	}
+	for _, e := range s.log {
+		if e.Folder != folder {
+			continue
+		}
+		when := e.Time.Local().Format(shortTimeLayout())
+		switch e.Status {
+		case "saved":
+			return syncStatus{line: tr("Synced %s", when) + " · " + movedLine(e)}
+		case "held":
+			n := len(e.HeldLocal) + len(e.HeldRemote)
+			return syncStatus{
+				line:       tr("%d file(s) are gone from one side, so nothing was removed on the other. Choose what to do.", n),
+				failed:     true,
+				held:       n,
+				goneRemote: len(e.HeldLocal) > 0,
+			}
+		case "offline":
+			return syncStatus{
+				line:   tr("Could not sync %s", when) + " · " + logReason(e),
+				failed: true,
+				auth:   storage.ParseProblem(e.Problem) == storage.ProblemAuth,
+			}
+		}
+		return syncStatus{line: tr("Synced %s, but not everything", when) + " · " + logReason(e), failed: true}
+	}
+	return syncStatus{line: tr("Not synced yet.")}
 }
 
 func (s *settingsWindow) aboutPage(c *ui.Context, pal *palette) {
@@ -682,23 +831,55 @@ func remoteWhere(cfg settings.Remote) string {
 	return cfg.Address
 }
 
-// lastSyncLine says when a folder last synced, and what happened.
-func lastSyncLine(log []synclog.Entry, folder string) string {
-	for _, e := range log {
-		if e.Folder == folder {
-			return tr("Last sync %s", logLine(e))
-		}
+// logLine is one sync of the log: when it ran, how it went and what it moved.
+func logLine(e synclog.Entry) string {
+	when := e.Time.Local().Format(shortTimeLayout())
+	switch e.Status {
+	case "saved":
+		return when + " · " + movedLine(e)
+	case "offline":
+		return when + " · " + tr("could not sync") + " · " + logReason(e)
+	case "held":
+		return when + " · " + tr("%d file(s) held back", len(e.HeldLocal)+len(e.HeldRemote))
 	}
-	return tr("Not synced yet.")
+	return when + " · " + movedLine(e) + " · " + logReason(e)
 }
 
-func logLine(e synclog.Entry) string {
-	line := tr("%s · %s · %d up, %d down, %d merged, %d conflicts",
-		e.Time.Local().Format(shortTimeLayout()), e.Status, len(e.Uploaded), len(e.Downloaded), len(e.Merged), len(e.Conflicts))
-	if e.Message != "" {
-		line += " · " + e.Message
+// movedLine counts what a sync moved, leaving out what it did not.
+func movedLine(e synclog.Entry) string {
+	var parts []string
+	add := func(n int, text string) {
+		if n > 0 {
+			parts = append(parts, text)
+		}
 	}
-	return line
+	add(len(e.Uploaded), tr("%d uploaded", len(e.Uploaded)))
+	add(len(e.Downloaded), tr("%d downloaded", len(e.Downloaded)))
+	add(len(e.Merged), tr("%d merged", len(e.Merged)))
+	add(len(e.Conflicts), tr("%d in conflict", len(e.Conflicts)))
+	add(len(e.Trashed), tr("%d moved to the trash", len(e.Trashed)))
+	add(len(e.Failed), tr("%d failed", len(e.Failed)))
+	add(len(e.Deferred), tr("%d left for the next sync", len(e.Deferred)))
+	if len(parts) == 0 {
+		return tr("nothing to change")
+	}
+	return strings.Join(parts, tr(", "))
+}
+
+// logReason says why a sync of the log failed: in words when the log names
+// the problem, else as the error was written, else by the first file it
+// could not bring across.
+func logReason(e synclog.Entry) string {
+	if text := problemText(storage.ParseProblem(e.Problem)); text != "" {
+		return text
+	}
+	if e.Message != "" {
+		return e.Message
+	}
+	if len(e.Failed) > 0 {
+		return e.Failed[0]
+	}
+	return tr("unknown reason")
 }
 
 // integrationsPage is Settings › Integrations: the MCP server that lets AI

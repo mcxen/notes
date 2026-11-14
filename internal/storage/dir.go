@@ -61,6 +61,26 @@ func (d Dir) List(ctx context.Context) ([]Entry, error) {
 	return entries, err
 }
 
+// Stat describes one file.
+func (d Dir) Stat(ctx context.Context, p string) (Entry, error) {
+	full := d.full(p)
+	info, err := os.Stat(full)
+	if errors.Is(err, fs.ErrNotExist) || (err == nil && info.IsDir()) {
+		return Entry{}, ErrNotFound
+	}
+	if err != nil {
+		return Entry{}, err
+	}
+	data, err := os.ReadFile(full)
+	if errors.Is(err, fs.ErrNotExist) {
+		return Entry{}, ErrNotFound
+	}
+	if err != nil {
+		return Entry{}, err
+	}
+	return Entry{Path: path.Clean(p), Size: info.Size(), ModTime: info.ModTime(), Tag: tagOf(data)}, nil
+}
+
 // Get reads a file.
 func (d Dir) Get(ctx context.Context, p string) ([]byte, error) {
 	data, err := os.ReadFile(d.full(p))

@@ -29,6 +29,9 @@ type Entry struct {
 type Remote interface {
 	// List returns every file under the folder, recursively.
 	List(ctx context.Context) ([]Entry, error)
+	// Stat returns one file as List would, or ErrNotFound. A sync asks it
+	// just before it replaces a file, to see that nobody changed it meanwhile.
+	Stat(ctx context.Context, path string) (Entry, error)
 	// Get returns a file's bytes, or ErrNotFound.
 	Get(ctx context.Context, path string) ([]byte, error)
 	// Put replaces a file's bytes, creating the folders on its way.

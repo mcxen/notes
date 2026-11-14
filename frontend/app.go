@@ -102,6 +102,7 @@ type appActions struct {
 	settingsWin  *mygo.Window
 	settingsView *settingsWindow
 	pickerView   *picker
+	connectView  *connectForm
 	mcp          *mcpRunner
 	// tray is the tray icon, nil when it is off or unavailable; hotkey is the
 	// shortcut that shows or hides the windows, as registered.
@@ -134,7 +135,11 @@ func (a *appActions) retitle() {
 		w.SetTitle(tr("Settings"))
 	}
 	if w := a.connectWin; w != nil && !w.IsDestroyed() {
-		w.SetTitle(tr("Connect to a Remote Folder"))
+		title := tr("Connect to a Remote Folder")
+		if a.connectView != nil && a.connectView.editing != "" {
+			title = tr("Sign In Again")
+		}
+		w.SetTitle(title)
 	}
 }
 
@@ -167,16 +172,6 @@ func (a *appActions) openFromPicker(p *picker, folder string) {
 	if p.win != nil {
 		p.win.Close()
 	}
-}
-
-// connect opens the window that keeps a vault in a remote folder.
-func (a *appActions) connect() {
-	if a.connectWin != nil && !a.connectWin.IsDestroyed() {
-		a.connectWin.Focus()
-		return
-	}
-	a.connectWin = mygo.NewWindow(connectWindowOptions())
-	a.connectWin.OnClosed(func() { a.connectWin = nil })
 }
 
 // syncWindow syncs the vault of the window that asked, when it is kept in a
@@ -258,23 +253,6 @@ func (a *appActions) open(folder string) error {
 	}
 	a.refreshMenu()
 	return nil
-}
-
-// connectWindowOptions is the window of the connect form.
-func connectWindowOptions() mygo.WindowOptions {
-	opts := mygo.WindowOptions{
-		Title:           tr("Connect to a Remote Folder"),
-		URL:             "/?connect=1",
-		Width:           440,
-		Height:          520,
-		MinWidth:        440,
-		MinHeight:       520,
-		TitleBarHeight:  titleRow,
-		DisableMaximize: true,
-		BackgroundColor: "light-dark(#f5f5f7, #1c1c1e)",
-	}
-	platformWindowOptions(&opts)
-	return opts
 }
 
 func isDirectory(path string) bool {

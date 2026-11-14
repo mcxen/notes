@@ -27,19 +27,6 @@ export interface Conflict {
   fields?: string[];
 }
 
-/** ConnectRequest describes the remote folder a new vault is kept in. */
-export interface ConnectRequest {
-  /** Kind is "webdav" or "smb". */
-  kind: string;
-  /** Address is the folder's URL for WebDAV, or the host for SMB. */
-  address: string;
-  share: string;
-  folder: string;
-  user: string;
-  password: string;
-  domain: string;
-}
-
 export interface ImportReport {
   pages: number;
   blocks: number;
@@ -223,14 +210,6 @@ export const Connections = {
    */
   chooseVault(): Promise<void> {
     return call("Connections.ChooseVault");
-  },
-  /**
-   * Connect keeps a vault in a remote folder. The folder is synced into a new
-   * working copy on this machine, which is opened in a window. A remote folder
-   * that already holds a vault brings that vault with it.
-   */
-  connect(req: ConnectRequest): Promise<string> {
-    return call("Connections.Connect", req);
   },
   /** NewVault asks for an empty or new folder and makes it a vault. */
   newVault(): Promise<void> {

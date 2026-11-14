@@ -54,6 +54,11 @@ type Notebooks struct {
 	keepInTray   func() bool
 	onVisibility func()
 	leaving      atomic.Bool
+
+	// syncStates is the latest sync state of each remote vault's working copy,
+	// and onSyncState runs when one changes (the settings window follows it).
+	syncStates  map[string]SyncState
+	onSyncState func()
 }
 
 func newNotebooks() *Notebooks {

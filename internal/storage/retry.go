@@ -71,6 +71,16 @@ func (r *retrying) List(ctx context.Context) ([]Entry, error) {
 	return out, err
 }
 
+func (r *retrying) Stat(ctx context.Context, p string) (Entry, error) {
+	var out Entry
+	err := r.again(ctx, func() error {
+		var err error
+		out, err = r.Remote.Stat(ctx, p)
+		return err
+	})
+	return out, err
+}
+
 func (r *retrying) Get(ctx context.Context, p string) ([]byte, error) {
 	var out []byte
 	err := r.again(ctx, func() error {
