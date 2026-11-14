@@ -11,7 +11,7 @@ import {
 import { inlineFromText, inlinePlainText, inlineSignature, sameInlineContent, type DescribeMention } from "../../core/inline-content";
 import type { Block, InlineContent } from "../../core/types";
 import { editableHtml } from "./block-html";
-import { blockDefinition } from "./block-registry";
+import { blockDefinition, isSourceBlock } from "./block-registry";
 import { highlighterReady, whenHighlighterReady } from "./code-highlight";
 import { inlineFromNodes, keptOffset } from "./rich-text";
 import { focusRange, selectionOffsets } from "./selection";
@@ -55,13 +55,14 @@ export const InlineEditor = memo(function InlineEditor({
 }) {
   const ref = useRef<HTMLElement | null>(null);
   const composing = useRef(false);
-  /** The HTML last written into a focused code block, to tell a redraw that
-   *  is needed from one that is not. */
+  /** The HTML last written into a focused code or equation block, to tell a
+   *  redraw that is needed from one that is not. */
   const drawn = useRef("");
   const sync = useRef<(marks?: boolean) => void>(() => {});
   const definition = blockDefinition(block.kind);
   const Tag = definition.tag ?? "div";
   const code = block.kind === "code";
+  const source = isSourceBlock(block.kind);
   const [coloured, setColoured] = useState(highlighterReady);
 
   useEffect(() => {
@@ -81,7 +82,7 @@ export const InlineEditor = memo(function InlineEditor({
         return;
       }
       if (composing.current) return;
-      const showing = code ? null : inlineFromNodes(element);
+      const showing = source ? null : inlineFromNodes(element);
       const shown = showing ? inlinePlainText(showing) : element.textContent ?? "";
       const wanted = inlinePlainText(block.content);
       // Words and mentions both: a mention swapped for another is a change
@@ -96,7 +97,7 @@ export const InlineEditor = memo(function InlineEditor({
       if (selection) focusRange(element, keptOffset(shown, wanted, selection.start), keptOffset(shown, wanted, selection.end));
     };
     sync.current();
-  }, [block, code, coloured, describe]);
+  }, [block, source, coloured, describe]);
 
   return (
     <Tag
@@ -109,20 +110,20 @@ export const InlineEditor = memo(function InlineEditor({
       aria-multiline="true"
       aria-label={t(definition.label)}
       data-placeholder={definition.placeholder ? t(definition.placeholder) : undefined}
-      spellCheck={!code}
+      spellCheck={!source}
       onInput={(event: FormEvent<HTMLElement>) => {
         const element = event.currentTarget;
         const text = element.textContent ?? "";
-        // Code is its characters and nothing else: whatever markup a browser
-        // leaves behind while typing, the colours are drawn again from these.
-        onChange(code ? inlineFromText(text) : inlineFromNodes(element), text, element, composing.current);
+        // Code and an equation are their characters and nothing else: whatever
+        // markup a browser leaves behind while typing is thrown away.
+        onChange(source ? inlineFromText(text) : inlineFromNodes(element), text, element, composing.current);
       }}
       onKeyDown={onKeyDown}
       onPaste={onPaste}
       onCompositionStart={() => { composing.current = true; }}
       onCompositionEnd={() => {
         composing.current = false;
-        if (code) {
+        if (source) {
           sync.current();
           return;
         }

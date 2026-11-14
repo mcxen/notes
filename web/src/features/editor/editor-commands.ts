@@ -8,7 +8,7 @@ import {
   pageLine,
 } from "../../core/block-tree";
 import {
-  applyMarkToRange, concatInlineContent, inlinePlainText, rangeHasMark, sliceInlineContent, splitInlineContent, type ToggleableMark,
+  applyMarkToRange, concatInlineContent, inlineFromText, inlinePlainText, rangeHasMark, sliceInlineContent, splitInlineContent, type ToggleableMark,
 } from "../../core/inline-content";
 import type { Block, BlockKind, BlockMutation, BlockTree, Embed, InlineContent } from "../../core/types";
 
@@ -29,7 +29,9 @@ export function applyEditorTransaction(tree: BlockTree, transaction: EditorTrans
 export function updateBlockContent(tree: BlockTree, blockId: string, content: InlineContent): EditorTransaction | null {
   const block = tree.by_id[blockId];
   if (!block) return null;
-  return { mutations: [{ action: "put", block: { ...block, content } }] };
+  // An equation stays one plain run, the way it is stored.
+  const stored = block.kind === "math" ? inlineFromText(inlinePlainText(content)) : content;
+  return { mutations: [{ action: "put", block: { ...block, content: stored } }] };
 }
 
 export function updateBlockFields(tree: BlockTree, blockId: string, patch: Partial<Block>): EditorTransaction | null {
@@ -44,6 +46,8 @@ export function convertBlock(tree: BlockTree, blockId: string, kind: BlockKind):
   const converted: Block = {
     ...block,
     kind,
+    // Turn into an equation drops marks: the source is plain TeX.
+    ...(kind === "math" ? { content: inlineFromText(inlinePlainText(block.content)) } : {}),
     ...(kind === "todo" ? { checked: block.checked ?? false } : { checked: undefined }),
   };
   return {
@@ -577,11 +581,11 @@ function wholeLineHas(block: Block, mark: ToggleableMark): boolean {
 }
 
 /** The lines among `blockIds` whose words a mark applies to: the ones with words
- *  that are not code (it has no marks), a file's caption included. */
+ *  that are not code or an equation (neither has marks), a file's caption included. */
 function markable(tree: BlockTree, blockIds: readonly string[]): Block[] {
   return blockIds
     .map((blockId) => tree.by_id[blockId])
-    .filter((block): block is Block => Boolean(block) && block.kind !== "code" && inlinePlainText(block.content).length > 0);
+    .filter((block): block is Block => Boolean(block) && block.kind !== "code" && block.kind !== "math" && inlinePlainText(block.content).length > 0);
 }
 
 /** Whether `mark` is on in all the words of the selected lines — as the format

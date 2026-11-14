@@ -1,11 +1,11 @@
 import { schema, t } from "./src/platform/schema";
 
 /** What a paragraph is: a line of words, a heading, a list item, a code
- *  block, a file. A picture, or a link to a page, is never a paragraph of
- *  its own: it stands among a line's words, and a line that holds nothing
- *  else is it on a line of its own. A page lives in its parent, as a file in
- *  a folder (`parent_id`); its words only link to pages. */
-export const BLOCK_KINDS = ["text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered", "quote", "callout", "divider", "code", "file", "table", "embed", "toggle"] as const;
+ *  block, a display equation, a file. A picture, or a link to a page, is
+ *  never a paragraph of its own: it stands among a line's words, and a line
+ *  that holds nothing else is it on a line of its own. A page lives in its
+ *  parent, as a file in a folder (`parent_id`); its words only link to pages. */
+export const BLOCK_KINDS = ["text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered", "quote", "callout", "divider", "code", "math", "file", "table", "embed", "toggle"] as const;
 
 /** Notion's nine colours, in the order Notion lists them. A block or a run of
  *  text takes one as its text colour, or — with `_background` — as a

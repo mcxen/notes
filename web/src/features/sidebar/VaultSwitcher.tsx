@@ -1,4 +1,4 @@
-import { ChevronsUpDown, Cloud, Folder, FolderOpen, FolderPlus, LayoutGrid, Link2, SquareArrowOutUpRight } from "lucide-react";
+import { ChevronsUpDown, Cloud, FileDown, Folder, FolderOpen, FolderPlus, LayoutGrid, Link2, SquareArrowOutUpRight } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MenuDivider, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
@@ -126,6 +126,7 @@ export function VaultSwitcher({ name, compact = false }: { name: string; compact
           <MenuAction icon={<FolderOpen size={16} />} label={t("Open Folder…")} onSelect={() => act(() => Connections.chooseVault())} />
           <MenuAction icon={<FolderPlus size={16} />} label={t("New Vault…")} onSelect={() => act(() => Connections.newVault())} />
           <MenuAction icon={<Link2 size={16} />} label={t("Connect to a Remote Folder…")} onSelect={() => act(() => Connections.openConnect())} />
+          <MenuAction icon={<FileDown size={16} />} label={t("Import from Notion…")} onSelect={() => act(() => Connections.importNotion())} />
           <MenuAction icon={<LayoutGrid size={16} />} label={t("Vault Picker…")} onSelect={() => act(() => Connections.openPicker())} />
         </MenuList>
       </Popover>

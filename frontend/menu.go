@@ -22,6 +22,7 @@ func appMenu(actions *appActions) *mygo.Menu {
 			{Label: tr("Open Recent"), Submenu: recentItems(actions)},
 			mygo.Separator(),
 			{Label: tr("Show Vault in Folder"), Click: func(_ *mygo.MenuItem, w *mygo.Window) { actions.revealVault(w) }},
+			{Label: tr("Import from Notion…"), Click: func(_ *mygo.MenuItem, w *mygo.Window) { go actions.importNotion(w) }},
 			{Label: tr("Connect to a Remote Folder…"), Click: func(*mygo.MenuItem, *mygo.Window) { go actions.connect() }},
 			{Label: tr("Sync Now"), Accelerator: "CmdOrCtrl+Shift+S", Click: func(_ *mygo.MenuItem, w *mygo.Window) { actions.syncWindow(w) }},
 			mygo.Separator(),

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, type Dispatch, type RefObject, type SetStateAction } from "react";
 import { applyMarkToRange, inlinePlainText, rangeColor, rangeHasMark, rangeLink, type ToggleableMark } from "../../core/inline-content";
 import type { BlockMutation, BlockTree } from "../../core/types";
+import { isSourceBlock } from "./block-registry";
 import { updateBlockContent, type EditorTransaction } from "./editor-commands";
 import type { FormatState } from "./FormatToolbar";
 import { selectedBlockRanges, selectionRect, type BlockTextRange, type PendingTextSelection } from "./selection";
@@ -63,7 +64,7 @@ export function useFormatToolbar({ readOnly, tree, blocksRef, pointerDown, pendi
         const ranges = blocksRef.current ? selectedBlockRanges(blocksRef.current) : [];
         const blocks = ranges.map((range) => tree.by_id[range.blockId]).filter(Boolean);
         const block = blocks[0];
-        if (!rect || !block || blocks.some((item) => item.kind === "code")) {
+        if (!rect || !block || blocks.some((item) => isSourceBlock(item.kind))) {
           setFormat(null);
           return;
         }
@@ -103,7 +104,7 @@ export function useFormatToolbar({ readOnly, tree, blocksRef, pointerDown, pendi
     const forceIds: string[] = [];
     for (const range of ranges) {
       const block = tree.by_id[range.blockId];
-      if (!block || block.kind === "code") continue;
+      if (!block || isSourceBlock(block.kind)) continue;
       const transaction = updateBlockContent(
         tree,
         block.id,

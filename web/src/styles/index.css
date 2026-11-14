@@ -3401,6 +3401,70 @@ pre.block__editable {
   opacity: 1;
 }
 
+/* An equation typesets until the caret is in its source. The source stays in
+   the DOM — clipped, not removed — so a selection and the caret offsets still
+   count its characters. Focusing the drag handle does not count: it is not
+   inside `.block__math`. */
+.block__math {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+}
+
+.block__math:not(:focus-within) .block__editable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.block__math:focus-within .block__math-view {
+  display: none;
+}
+
+.block__math:focus-within pre.block__editable {
+  width: 100%;
+  min-height: 1.5em;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: var(--fill);
+}
+
+.block__math-view {
+  overflow-x: auto;
+  padding: 4px 0;
+  color: currentColor;
+  user-select: none;
+}
+
+.block__math-view .katex,
+.block__math-view .katex-display {
+  color: currentColor;
+}
+
+/* KaTeX paints a bad formula with an inline colour. The page's red wins,
+   in either theme. */
+.block__math-view .katex-error,
+.block__math-error {
+  color: var(--text-red) !important;
+}
+
+.block__math-placeholder {
+  color: var(--ink-4);
+}
+
+.block__math-pending,
+.block__math-error {
+  font-family: var(--notes-font-code);
+  font-size: 13.5px;
+  white-space: pre-wrap;
+}
+
 /* A page's line — a line holding nothing but its link — is marked as a
    block is: its icon at the start of the line, the triangle under the
    pointer, its count on the icon's corner; its name after it, where a shown

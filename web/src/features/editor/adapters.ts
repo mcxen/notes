@@ -89,6 +89,29 @@ function parseMarkdown(value: string, idFactory: () => string): MarkdownDraft[] 
       drafts.push({ kind: "code", content: [{ text: code.join("\n") }], language: fence[1] || undefined, depth: 0 });
       continue;
     }
+    // A display equation: `$$` on its own line around the source, or `$$x$$`
+    // on one line. The source is TeX, not Markdown — marks are not read.
+    // A line that only starts with `$$` (`$$x`) stays text, so an unclosed
+    // opener cannot swallow the rest of the page.
+    const mathTrimmed = line.trim();
+    if ((mathTrimmed.startsWith("$$") && mathTrimmed.endsWith("$$") && mathTrimmed.length >= 4) || mathTrimmed === "$$") {
+      let source = "";
+      if (mathTrimmed === "$$") {
+        const indent = " ".repeat(Math.floor((line.match(/^[ \t]*/)?.[0].length ?? 0) / 2) * 2);
+        const math: string[] = [];
+        index += 1;
+        while (index < lines.length && lines[index].trim() !== "$$") {
+          const row = lines[index];
+          math.push(row.startsWith(indent) ? row.slice(indent.length) : row);
+          index += 1;
+        }
+        source = math.join("\n");
+      } else {
+        source = mathTrimmed.slice(2, -2);
+      }
+      drafts.push({ kind: "math", content: source ? [{ text: source }] : [], depth: 0 });
+      continue;
+    }
     if (!line.trim()) continue;
     // A Markdown table — a header, its rule, its rows — is a simple table.
     if (isMarkdownTableStart(line, lines[index + 1])) {
@@ -186,6 +209,11 @@ function markdownLine(block: Block, number: number, describe: DescribeMention, f
     case "divider": return "---";
     case "table": return tableToMarkdown(tableGrid(block.table), (content) => inlineContentToMarkdown(content, describe));
     case "code": return `\`\`\`${block.language ?? ""}\n${inlinePlainText(block.content)}\n\`\`\``;
+    case "math": {
+      const source = inlinePlainText(block.content);
+      // An empty equation is `$$\n$$`, not a blank line between the fences.
+      return source ? `$$\n${source}\n$$` : "$$\n$$";
+    }
     // The bytes stay in Notes; outside it a file is its name.
     case "file": {
       const where = block.file ? fileRef?.(block.file) ?? block.file.name : "";

@@ -74,6 +74,26 @@ var zh = map[string]string{
 	"%d file(s) held back":      "%d 个文件待确认",
 	"%d left for the next sync": "留待下次同步 %d",
 
+	// Import from Notion
+	"Import from Notion…":                                       "从 Notion 导入…",
+	"Import from Notion":                                        "从 Notion 导入",
+	"Open a vault first: the pages are imported into it.":       "请先打开一个笔记库：页面会导入到其中。",
+	"An import is already running in this vault.":               "这个笔记库正在导入，请等它完成。",
+	"Choose the zip that Notion made: Export › Markdown & CSV.": "请选择 Notion 导出的 zip：导出 › Markdown 与 CSV。",
+	"Notion export (zip)":                                       "Notion 导出文件（zip）",
+	"Notion import %s":                                          "Notion 导入 %s",
+	"Import “%s”?":                                              "导入“%s”？",
+	"Its pages are added to this vault under a new page, “%s”. Nothing that is in the vault now is changed.": "其中的页面会添加到这个笔记库中一个新页面“%s”之下。笔记库里现有的内容不会被改动。",
+	"Import":                  "导入",
+	"Untitled":                "未命名",
+	"Import report":           "导入报告",
+	"Table":                   "表格",
+	"%s — importing %d of %d": "%s — 正在导入 %d / %d",
+	"The import stopped.":     "导入已中止。",
+	"Imported from Notion.":   "已从 Notion 导入。",
+	"%d page(s), %d database(s), %d file(s), %d link(s) between pages.":        "%d 个页面、%d 个数据库、%d 个文件、%d 个页面间链接。",
+	"%d thing(s) could not be carried over: they are listed on the page “%s”.": "有 %d 处没能带过来，已列在页面“%s”中。",
+
 	// Menus
 	"Settings…":                   "设置…",
 	"File":                        "文件",

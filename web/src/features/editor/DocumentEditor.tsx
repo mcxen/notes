@@ -66,7 +66,7 @@ import { imeComposing } from "../../core/keyboard";
 import { CardOffer, LinkHoverCard, useLinkHover, type CardOfferState, type HoveredLink } from "./LinkHoverCard";
 import { readBlocks, textToBlocks, writeBlocks, type CopiedBlocks } from "./block-clipboard";
 import { editableHtml } from "./block-html";
-import { blockDefinition, DatabaseIcon, PageIcon, pageGlyph } from "./block-registry";
+import { blockDefinition, DatabaseIcon, isSourceBlock, PageIcon, pageGlyph } from "./block-registry";
 import { downloadFile, isImageType, notShown, refuseFiles, showFile, stageFile, type StagedFile } from "./file-store";
 import { CoverImage, settleCover, useHomedCovers } from "./CoverImage";
 import { ImageViewer } from "./MediaBlocks";
@@ -1196,7 +1196,7 @@ export function DocumentEditor({
     },
     /* Out of its place and into where it lands, in one step of undo: among
        a line's words, or on a line of its own beside one. A line that keeps
-       words as its own characters — code — or a file's caption takes none,
+       words as its own characters — code, an equation — or a file's caption takes none,
        and a line it leaves with nothing in it goes, unless lines are under
        it. */
     move: (token, picture, to) => {
@@ -1210,7 +1210,7 @@ export function DocumentEditor({
         ? deleteBlocks(tree, [from.block.id], createId("block"))
         : updateBlockContent(tree, from.block.id, without));
       if (to.kind === "words") {
-        if (target.kind === "code" || target.kind === "file") return;
+        if (isSourceBlock(target.kind) || target.kind === "file") return;
         if (from.block.id === target.id) {
           if (to.offset >= from.offset && to.offset <= from.offset + span) return;
           const at = to.offset > from.offset ? to.offset - span : to.offset;

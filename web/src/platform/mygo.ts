@@ -59,6 +59,9 @@ export interface Report {
   conflicts: Conflict[];
   trashed: string[];
   failed: string[];
+  deferred: string[];
+  heldLocal: string[];
+  heldRemote: string[];
 }
 
 export interface Row {
@@ -86,6 +89,11 @@ export interface SyncState {
   conflicts: number;
   uploaded: number;
   downloaded: number;
+  /**
+   * Held is how many files are gone from one side and were not removed on
+   * the other, because there are many: the person decides in the settings.
+   */
+  held: number;
 }
 
 /** VaultEntry is one vault in the sidebar's switcher. */
@@ -210,6 +218,13 @@ export const Connections = {
    */
   chooseVault(): Promise<void> {
     return call("Connections.ChooseVault");
+  },
+  /**
+   * ImportNotion starts an import into this window's vault, from the page's
+   * vault menu.
+   */
+  importNotion(): Promise<void> {
+    return call("Connections.ImportNotion");
   },
   /** NewVault asks for an empty or new folder and makes it a vault. */
   newVault(): Promise<void> {

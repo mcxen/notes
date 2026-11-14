@@ -1,6 +1,7 @@
 import { isContentColor } from "./colors";
 import { normalizeImageWidth, normalizeStoredFile } from "./files";
 import {
+  inlineFromText,
   inlinePlainText,
   inlineReadableText,
   MENTION_CHAR,
@@ -22,12 +23,14 @@ export function createBlock(
   kind: BlockKind = "text",
   options: Partial<Omit<Block, "id" | "kind">> = {},
 ): Block {
+  const content = normalizeInlineContent(options.content ?? []);
   return {
     id,
     kind,
     parent_id: options.parent_id ?? null,
     order: Number.isFinite(options.order) ? Number(options.order) : BLOCK_ORDER_STEP,
-    content: normalizeInlineContent(options.content ?? []),
+    // An equation is its TeX source: one plain run, whatever marks it arrived with.
+    content: kind === "math" ? inlineFromText(inlinePlainText(content)) : content,
     ...(options.checked === undefined ? {} : { checked: options.checked }),
     ...(kind === "toggle" && options.collapsed === true ? { collapsed: true } : {}),
     ...(options.language === undefined ? {} : { language: options.language }),

@@ -12,6 +12,7 @@ import {
 import type { Block, BlockMutation, InlineContent, Mention } from "../../core/types";
 import type { HistoryFocus } from "../../core/workspace-history";
 import { markdownShortcut } from "./adapters";
+import { isSourceBlock } from "./block-registry";
 import { readBlocks } from "./block-clipboard";
 import { lastCodeLanguage, rememberCodeLanguage } from "./code-highlight";
 import {
@@ -110,7 +111,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
 
     // "->" and "<-" become arrows as they are typed, as in Notion — and ⌘Z
     // gives the two characters back.
-    const arrow = block.kind === "code" ? null : typedArrow(content, caret);
+    const arrow = isSourceBlock(block.kind) ? null : typedArrow(content, caret);
     if (arrow) {
       execute(updateBlockContent(tree, block.id, content));
       checkpointHistory(caretAt(page.id, block.id, caret));
@@ -119,7 +120,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
       return;
     }
 
-    const collapsedMarkdown = block.kind === "code" ? null : collapseInlineMarkdown(content, caret);
+    const collapsedMarkdown = isSourceBlock(block.kind) ? null : collapseInlineMarkdown(content, caret);
     if (collapsedMarkdown) {
       // The characters as typed are a step of their own, so ⌘Z turns the
       // formatting back into them — the way Notion's undo does.
@@ -138,7 +139,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     // A web address becomes a link as the space after it is typed, as in
     // Notion — and ⌘Z gives it back as the words it was typed as. Not while
     // an input method is still composing: that space may be one of its own.
-    const linkedAddress = block.kind === "code" || composing ? null : linkTypedAddress(content, caret);
+    const linkedAddress = isSourceBlock(block.kind) || composing ? null : linkTypedAddress(content, caret);
     if (linkedAddress) {
       execute(updateBlockContent(tree, block.id, content));
       checkpointHistory(caretAt(page.id, block.id, caret));
@@ -148,7 +149,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     }
 
     execute(updateBlockContent(tree, block.id, content), redraw);
-    const query = block.kind === "code" || block.kind === "file" ? null : slashQueryAt(text, caret);
+    const query = isSourceBlock(block.kind) || block.kind === "file" ? null : slashQueryAt(text, caret);
     const dismissed = slashDismissed.current;
     let slashOpen = false;
     if (!query) {
@@ -168,7 +169,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
        passing — "meet @ 5", "@everyone " with no such page — lets go at the
        next space; `[[` is only ever typed to link, so it stays for a name
        with spaces in it until Escape. */
-    const found = slashOpen || block.kind === "code" ? null : mentionQueryAt(text, caret);
+    const found = slashOpen || isSourceBlock(block.kind) ? null : mentionQueryAt(text, caret);
     const waved = mentionDismissed.current;
     if (!found) {
       mentionDismissed.current = null;
@@ -260,9 +261,10 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
      everything as its own text. One line of text is left to the browser, which
      pastes it among the words like anything typed. */
   const onBlockPaste = (block: Block, event: ClipboardEvent<HTMLElement>) => {
-    // Code takes what is pasted as its own characters, lines and indentation
-    // intact — never as blocks, and never as the markup a browser would paste.
-    if (block.kind === "code") {
+    // Code and an equation take what is pasted as their own characters, lines
+    // and indentation intact — never as blocks, and never as the markup a
+    // browser would paste.
+    if (isSourceBlock(block.kind)) {
       event.preventDefault();
       const text = event.clipboardData.getData("text/plain").replace(/\r\n?/g, "\n");
       const caret = caretOffset(event.currentTarget);
@@ -474,7 +476,8 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     // A to-do or a callout: the line becomes one, words and all.
     execute(updateBlockFields(tree, block.id, {
       kind: target,
-      content: stripped,
+      // An equation keeps the line's words as plain TeX, marks dropped.
+      content: target === "math" ? inlineFromText(inlinePlainText(stripped)) : stripped,
       checked: target === "todo" ? false : undefined,
     }), { id: block.id, start: slash.from, force: true });
   };

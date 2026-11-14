@@ -55,6 +55,9 @@ function blockHtml(tree: BlockTree, block: Block, fileRef: FileRef | undefined):
     case "quote": return `<blockquote>${inner}</blockquote>${children}`;
     case "callout": return `<div class="callout"><span class="callout-icon">${escapeHtml(block.icon || "💡")}</span><div>${inner}${children}</div></div>`;
     case "code": return `<pre><code>${escapeHtml(inlinePlainText(block.content))}</code></pre>`;
+    // The TeX source, fenced. The export does not load KaTeX: a saved page
+    // stays one file, and the equation is still readable.
+    case "math": return `<pre class="math">$$${escapeHtml(inlinePlainText(block.content))}$$</pre>`;
     case "divider": return "<hr>";
     case "table": {
       const grid = tableGrid(block.table);

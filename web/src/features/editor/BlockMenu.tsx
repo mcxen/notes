@@ -11,7 +11,7 @@ import { t, tp } from "../../i18n";
 
 const TURN_INTO: BlockKind[] = [
   "text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered", "toggle",
-  "quote", "callout", "code", "divider",
+  "quote", "callout", "code", "math", "divider",
 ];
 
 /** The menu for selected paragraphs (⌘/): what Notion offers for blocks,

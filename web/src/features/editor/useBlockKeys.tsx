@@ -11,7 +11,7 @@ import {
   splitInlineContent,
 } from "../../core/inline-content";
 import type { Block } from "../../core/types";
-import { blockDefinition } from "./block-registry";
+import { blockDefinition, isSourceBlock } from "./block-registry";
 import { codeIndent, codeNewline } from "./code-editing";
 import {
   applyEditorTransaction,
@@ -127,10 +127,10 @@ export function blockKeys(editor: Editor & BlockTyping) {
       }
     }
 
-    /* A code block keeps Enter and Tab for itself, as an editor does: a new
-       line at the same indent, and indenting the lines selected. ⌘Enter leaves
-       it for a new line below. Marks mean nothing in code. */
-    if (block.kind === "code" && !event.altKey) {
+    /* A code block or an equation keeps Enter and Tab for itself, as an editor
+       does: a new line at the same indent, and indenting the lines selected.
+       ⌘Enter leaves it for a new line below. Marks mean nothing in either. */
+    if (isSourceBlock(block.kind) && !event.altKey) {
       const caret = caretOffset(element);
       const range = selectionOffsets(element) ?? { start: caret, end: caret };
       const code = inlinePlainText(block.content);
@@ -214,7 +214,10 @@ export function blockKeys(editor: Editor & BlockTyping) {
       // box, the caret in it. With nothing selected it is Quick Find's.
       if (shortcut === "k" && !event.shiftKey) {
         const selected = blocksRef.current ? selectedBlockRanges(blocksRef.current) : [];
-        if (selected.some((range) => range.start !== range.end) && selected.every((range) => tree.by_id[range.blockId]?.kind !== "code")) {
+        if (selected.some((range) => range.start !== range.end) && selected.every((range) => {
+          const kind = tree.by_id[range.blockId]?.kind;
+          return !kind || !isSourceBlock(kind);
+        })) {
           event.preventDefault();
           openLink();
           return;
@@ -316,9 +319,10 @@ export function blockKeys(editor: Editor & BlockTyping) {
 
     if (event.key === "Enter") {
       event.preventDefault();
-      // A fence (```, ```python) closed by Enter is a code block, as in any
-      // Markdown editor — not a line holding the fence.
-      if (!event.shiftKey && /^```[^\s`]*$/.test(element.textContent ?? "") && applyBlockShortcut(block, element)) return;
+      // A fence (```, ```python, $$) closed by Enter is a code or equation
+      // block, as in any Markdown editor — not a line holding the fence.
+      const line = element.textContent ?? "";
+      if (!event.shiftKey && (line === "$$" || /^```[^\s`]*$/.test(line)) && applyBlockShortcut(block, element)) return;
       if (event.shiftKey) {
         const caret = caretOffset(element);
         execute(updateBlockContent(tree, block.id, replaceRange(block.content, caret, caret, "\n")), {
@@ -389,9 +393,9 @@ export function blockKeys(editor: Editor & BlockTyping) {
       const range = selectionOffsets(element);
       if (range && range.start !== range.end) return;
       event.preventDefault();
-      // Code with anything in it stays code: its lines would make a strange
-      // paragraph. An empty one turns back into text, like any block.
-      if (block.kind === "code" && inlinePlainText(block.content)) return;
+      // Code or an equation with anything in it stays what it is: its lines
+      // would make a strange paragraph. An empty one turns back into text.
+      if (isSourceBlock(block.kind) && inlinePlainText(block.content)) return;
       if (block.kind !== "text") {
         execute(convertBlock(tree, block.id, "text"));
         return;

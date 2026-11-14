@@ -10,6 +10,7 @@ import {
   ListOrdered,
   Minus,
   Quote,
+  Sigma,
   SquareCheck,
   Table,
   Table2,
@@ -40,7 +41,8 @@ export interface BlockDefinition {
    *  well, so "check" finds the to-do the way Notion's aliases do. What
    *  Markdown already writes — a heading's `#`, a list's `-`, a quote's `>`,
    *  a fence's ```, a rule's `---` — is typed, not picked; the menu keeps
-   *  what typing cannot reach. */
+   *  what typing cannot reach. An equation is both: `$$` types it, and the
+   *  menu offers it by name. */
   slash?: { aliases: string[] };
 }
 
@@ -108,6 +110,14 @@ export const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
     placeholder: "Code",
   },
   {
+    // A display equation. Its words are the TeX source, one plain run; the
+    // line typesets them until the caret is in it (MathBlock).
+    kind: "math", label: "Equation",
+    icon: Sigma, tag: "pre", editable: true, continueAs: "text", shortcuts: ["$$"], canHaveChildren: false,
+    placeholder: "Add a TeX equation",
+    slash: { aliases: ["math", "latex", "tex", "formula", "katex"] },
+  },
+  {
     kind: "file", label: "File",
     icon: Paperclip, tag: "div", editable: true, continueAs: "text", shortcuts: [],
     canHaveChildren: false, placeholder: "Write a caption…",
@@ -157,6 +167,12 @@ export function blockShortcut(value: string): { kind: BlockKind; checked?: boole
   if (!kind) return null;
   if (kind !== "todo") return { kind };
   return { kind, checked: /x/i.test(value) };
+}
+
+/** Code and an equation hold their own characters: no marks, no slash, no
+ *  mentions. Enter and Tab stay inside the source. */
+export function isSourceBlock(kind: BlockKind): boolean {
+  return kind === "code" || kind === "math";
 }
 
 export { Table2 as DatabaseIcon, FileText as PageIcon };

@@ -87,7 +87,7 @@ export function LinkForm({
 
 const TURN_INTO: BlockKind[] = [
   "text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered", "toggle",
-  "quote", "callout", "code",
+  "quote", "callout", "code", "math",
 ];
 
 /** The bar that meets a text selection. It never touches the DOM directly:

@@ -7,6 +7,7 @@ import { inlinePlainText } from "../../core/inline-content";
 import type { DescribeMention } from "../../core/inline-content";
 import type { Block, InlineContent } from "../../core/types";
 import { blockDefinition } from "./block-registry";
+import { MathBlock } from "./MathBlock";
 import { CODE_LANGUAGES, codeLanguage } from "./code-highlight";
 import { InlineEditor } from "./InlineEditor";
 import { EmbedBlock, type EmbedActions } from "./EmbedBlock";
@@ -358,6 +359,8 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
             <FileBlock block={block} readOnly={readOnly} upload={props.upload} actions={actions} />
             {block.file ? editable : null}
           </div>
+        ) : block.kind === "math" ? (
+          <MathBlock source={inlinePlainText(block.content)} readOnly={readOnly}>{editable}</MathBlock>
         ) : block.kind === "code" ? (
           <div className="block__code">
             <div className="block__code-bar" contentEditable={false}>

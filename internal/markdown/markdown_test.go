@@ -148,6 +148,58 @@ func TestANameInDoubleBracketsIsALinkToItsPage(t *testing.T) {
 	}
 }
 
+func TestADisplayEquation(t *testing.T) {
+	blocks := FromMarkdown("$$\nE = mc^2\n$$\n$$a_b$$\n$$*c*$$\n```\n$$\n```\n$$x\n", ids())
+	kinds := []string{}
+	for _, b := range blocks {
+		kinds = append(kinds, b.Kind)
+	}
+	if want := []string{"math", "math", "math", "code", "text"}; fmt.Sprint(kinds) != fmt.Sprint(want) {
+		t.Fatalf("kinds = %v, want %v", kinds, want)
+	}
+	if blocks[0].Runs[0].Text != "E = mc^2" || blocks[0].Runs[0].Italic || blocks[0].Runs[0].Code {
+		t.Fatalf("fenced: %+v", blocks[0].Runs)
+	}
+	if blocks[1].Runs[0].Text != "a_b" || blocks[1].Runs[0].Italic {
+		t.Fatalf("single line: %+v", blocks[1].Runs)
+	}
+	if blocks[2].Runs[0].Text != "*c*" || blocks[2].Runs[0].Italic {
+		t.Fatalf("source is not marked: %+v", blocks[2].Runs)
+	}
+	if blocks[3].Runs[0].Text != "$$" {
+		t.Fatalf("$$ inside code: %+v", blocks[3])
+	}
+	if plainText(blocks[4].Runs) != "$$x" {
+		t.Fatalf("unclosed: %+v", blocks[4])
+	}
+	if out := ToMarkdown(blocks[:1], noName); out != "$$\nE = mc^2\n$$" {
+		t.Fatalf("written: %q", out)
+	}
+	if out := ToMarkdown(blocks[1:2], noName); out != "$$\na_b\n$$" {
+		t.Fatalf("single line written back: %q", out)
+	}
+	if words := Words(blocks[0], noName); words != "E = mc^2" {
+		t.Fatalf("words: %q", words)
+	}
+	empty := FromMarkdown("$$\n$$", ids())
+	if len(empty) != 1 || empty[0].Kind != "math" || plainText(empty[0].Runs) != "" {
+		t.Fatalf("empty: %+v", empty)
+	}
+	if out := ToMarkdown(empty, noName); out != "$$\n$$" {
+		t.Fatalf("empty written: %q", out)
+	}
+	nested := FromMarkdown("- item\n  $$\n  x^2\n  $$", ids())
+	if len(nested) != 2 || nested[1].Kind != "math" || nested[1].ParentID != nested[0].ID || plainText(nested[1].Runs) != "x^2" {
+		t.Fatalf("nested: %+v", nested)
+	}
+	linked := LinkPages(FromMarkdown("$$[[Plan]]$$", ids()), func(string) map[string]any {
+		return map[string]any{"kind": "page", "page_id": "p1"}
+	})
+	if linked[0].Kind != "math" || linked[0].Runs[0].Mention != nil || linked[0].Runs[0].Text != "[[Plan]]" {
+		t.Fatalf("a name in an equation stays source: %+v", linked[0].Runs)
+	}
+}
+
 func TestTheOutlineIsInReadingOrder(t *testing.T) {
 	blocks := FromMarkdown("# Title\n- a\n  - b\n1. one\n2. two", ids())
 	var got []string

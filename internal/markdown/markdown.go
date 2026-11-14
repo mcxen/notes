@@ -242,6 +242,14 @@ func blockLines(b Block, number int, name Namer) []string {
 		out := []string{"```" + b.Language}
 		out = append(out, strings.Split(plainText(b.Runs), "\n")...)
 		return append(out, "```")
+	case "math":
+		// A display equation. An empty one is `$$\n$$`, not a blank line
+		// between the fences (splitting "" would write one).
+		text := plainText(b.Runs)
+		if text == "" {
+			return []string{"$$", "$$"}
+		}
+		return append(append([]string{"$$"}, strings.Split(text, "\n")...), "$$")
 	case "file":
 		return []string{"[" + b.File + "](" + b.File + ")"}
 	case "embed":
@@ -371,10 +379,10 @@ func Words(b Block, name Namer) string {
 
 // LinkPages turns each [[name]] written in the words of blocks into a link to
 // the page resolve finds for it; a name it finds no page for stays as written.
-// Code is left alone.
+// Code and equations are left alone: a name in the source is source.
 func LinkPages(blocks []Block, resolve func(name string) map[string]any) []Block {
 	for i := range blocks {
-		if blocks[i].Kind == "code" {
+		if blocks[i].Kind == "code" || blocks[i].Kind == "math" {
 			continue
 		}
 		var runs []Run
@@ -489,6 +497,27 @@ func FromMarkdown(src string, newID func() string) []Block {
 				i++ // the closing fence
 			}
 			add(depth, Block{Kind: "code", Language: language, Runs: []Run{{Text: strings.Join(code, "\n")}}})
+			continue
+		}
+		// A display equation: `$$` alone opens it, and `$$x$$` is one line.
+		// The source is TeX, not Markdown. A line that only starts with `$$`
+		// (`$$x`) stays text, so an unclosed opener cannot swallow the page.
+		if body == "$$" || (strings.HasPrefix(body, "$$") && strings.HasSuffix(body, "$$") && len(body) >= 4) {
+			var source string
+			if body == "$$" {
+				var math []string
+				for i+1 < len(lines) && strings.TrimSpace(lines[i+1]) != "$$" {
+					i++
+					math = append(math, strings.TrimPrefix(lines[i], strings.Repeat("  ", depth)))
+				}
+				if i+1 < len(lines) {
+					i++
+				}
+				source = strings.Join(math, "\n")
+			} else {
+				source = body[2 : len(body)-2]
+			}
+			add(depth, Block{Kind: "math", Runs: []Run{{Text: source}}})
 			continue
 		}
 		if reDivider.MatchString(body) {
@@ -748,3 +777,10 @@ func WebRuns(value any) []any {
 	}
 	return out
 }
+
+// Inline reads the marks of one line of words: `code`, **bold**, *italic*,
+// ~~strike~~ and [text](link).
+func Inline(s string) []Run { return inline(s) }
+
+// RunsToStored writes runs as the vault keeps them.
+func RunsToStored(runs []Run) []any { return runsToStored(runs) }

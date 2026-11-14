@@ -249,8 +249,8 @@ func protect(changed string, mentions []kept) string {
 	return out.String()
 }
 
-// unprotect puts the mentions back where their characters stand. In code,
-// which holds only letters, a mention is the words written for it.
+// unprotect puts the mentions back where their characters stand. In code or
+// an equation, which hold only letters, a mention is the words written for it.
 func unprotect(blocks []markdown.Block, mentions []kept) {
 	of := func(r rune) (kept, bool) {
 		if i := int(r - markBase); isMark(r) && i < len(mentions) {
@@ -279,7 +279,7 @@ func unprotect(blocks []markdown.Block, mentions []kept) {
 				switch {
 				case !ok:
 					words.WriteRune(r)
-				case run.Code || blocks[i].Kind == "code":
+				case run.Code || blocks[i].Kind == "code" || blocks[i].Kind == "math":
 					words.WriteString(mention.text)
 				default:
 					flush()
@@ -297,7 +297,7 @@ func unprotect(blocks []markdown.Block, mentions []kept) {
 // as Markdown, each of its lines is a paragraph.
 func rejoin(b markdown.Block, before, fresh string, parsed []markdown.Block) []markdown.Block {
 	lines := strings.Count(before, "\n")
-	if lines == 0 || b.Kind == "code" || b.Kind == "quote" || b.Kind == "callout" || strings.Contains(fresh, "\n") || len(parsed) != lines+1 {
+	if lines == 0 || b.Kind == "code" || b.Kind == "math" || b.Kind == "quote" || b.Kind == "callout" || strings.Contains(fresh, "\n") || len(parsed) != lines+1 {
 		return parsed
 	}
 	for _, line := range parsed[1:] {

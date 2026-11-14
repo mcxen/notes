@@ -14,7 +14,7 @@ import { MARKS } from "./marks";
 /** What a line can be turned into, in the order of the block menu's. */
 const TURN_INTO: BlockKind[] = [
   "text", "heading1", "heading2", "heading3", "todo", "bullet", "numbered", "toggle",
-  "quote", "callout", "code", "divider",
+  "quote", "callout", "code", "math", "divider",
 ];
 
 /** What can be done with paragraphs selected as blocks — several of them,

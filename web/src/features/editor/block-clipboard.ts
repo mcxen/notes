@@ -62,6 +62,8 @@ function blocksHtml(tree: BlockTree, parentId: string | null): string {
       case "numbered": html += `<li>${inner}${children}</li>`; break;
       case "quote": html += `<blockquote>${inner}</blockquote>${children}`; break;
       case "code": html += `<pre><code>${escapeHtml(inlinePlainText(block.content))}</code></pre>`; break;
+      // The source, fenced, without KaTeX: a paste elsewhere still shows the equation.
+      case "math": html += `<pre class="math">$$${escapeHtml(inlinePlainText(block.content))}$$</pre>`; break;
       case "divider": html += "<hr>"; break;
       case "table": {
         const grid = tableGrid(block.table);
