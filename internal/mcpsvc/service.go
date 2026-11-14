@@ -105,8 +105,8 @@ func newServer(host Host, version string) *mcp.Server {
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_list_pages", Description: "List the pages under a parent page, or at the top when parent_id is omitted."}, s.listPages)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_recent_pages", Description: "List the pages changed most recently, newest first."}, s.recent)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_fetch", Description: "Read a page. The answer is text: a few lines about the page (its title, id, parent, sub-pages, the pages it links to and is linked from, its attachments with the path notes_read_attachment takes), then a line of ---, then its body as Markdown."}, s.fetch)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_create_page", Description: "Create a page with a title and an optional Markdown body, under parent_id when given. With if_exists append, a page that already has this title (under the same parent) gets the Markdown added to it instead: safe to call again and again."}, s.create)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_update_page", Description: "Change a page's title, and its body: mode append (default) adds Markdown to the end, replace swaps the whole body. To change a part of a page, use notes_edit_page. The page's earlier version is kept in its history."}, s.update)
+	mcp.AddTool(srv, &mcp.Tool{Name: "notes_create_page", Description: "Create a page with a title and an optional Markdown body, under parent_id when given. Under a database it is a row: properties sets its values by the property's name (notes_fetch on the database lists them and the options). With if_exists append, a page that already has this title (under the same parent) gets the Markdown added to it instead: safe to call again and again."}, s.create)
+	mcp.AddTool(srv, &mcp.Tool{Name: "notes_update_page", Description: "Change a page's title, its body, and the values of a database row: mode append (default) adds Markdown to the end, replace swaps the whole body; properties sets values by the property's name (an empty string clears one). To change a part of a page, use notes_edit_page. The page's earlier version is kept in its history."}, s.update)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_edit_page", Description: "Change a part of a page: old_text, as notes_fetch shows it, becomes new_text. old_text has to be within one paragraph (one line, one code block or one quote) and be there once; make it longer, or pass nth, when it is there several times. new_text may be several lines: the first takes the paragraph's place, the rest follow it. An empty new_text that leaves the paragraph empty removes it. Pictures, links to pages and everything else on the page stay as they are. The page's earlier version is kept in its history."}, s.edit)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_move_page", Description: "Move a page under another page, or to the top level when parent_id is omitted. Its sub-pages go with it."}, s.move)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_read_attachment", Description: "Open a picture or file on a page, by a path from the attachments of notes_fetch: a picture is shown as an image, a text file as text, any other file as bytes. Very large pictures come as their smaller preview."}, s.readAttachment)
@@ -152,6 +152,8 @@ type pageHit struct {
 	ParentID  string `json:"parent_id,omitempty"`
 	UpdatedAt string `json:"updated_at,omitempty"`
 	Snippet   string `json:"snippet,omitempty"`
+	// Properties are a database row's values by the column's name.
+	Properties map[string]string `json:"properties,omitempty"`
 }
 
 type pagesOut struct {
@@ -164,11 +166,12 @@ type fetchIn struct {
 }
 
 type createIn struct {
-	Vault    string `json:"vault,omitempty" jsonschema:"the vault's name or folder; omit for the default"`
-	Title    string `json:"title" jsonschema:"the page's title"`
-	Markdown string `json:"markdown,omitempty" jsonschema:"the body, as Markdown"`
-	ParentID string `json:"parent_id,omitempty" jsonschema:"the page to make it a sub-page of; omit for the top level"`
-	IfExists string `json:"if_exists,omitempty" jsonschema:"append: when a page with this title is already there under the same parent, add the Markdown to it instead of making another; omit to always make a page"`
+	Vault      string            `json:"vault,omitempty" jsonschema:"the vault's name or folder; omit for the default"`
+	Title      string            `json:"title" jsonschema:"the page's title"`
+	Markdown   string            `json:"markdown,omitempty" jsonschema:"the body, as Markdown"`
+	ParentID   string            `json:"parent_id,omitempty" jsonschema:"the page to make it a sub-page of; omit for the top level"`
+	IfExists   string            `json:"if_exists,omitempty" jsonschema:"append: when a page with this title is already there under the same parent, add the Markdown to it instead of making another; omit to always make a page"`
+	Properties map[string]string `json:"properties,omitempty" jsonschema:"for a row of a database (parent_id is the database): its values by the property's name; a status or select takes an option's name, a date YYYY-MM-DD"`
 }
 
 type pageOut struct {
@@ -178,11 +181,12 @@ type pageOut struct {
 }
 
 type updateIn struct {
-	Vault    string `json:"vault,omitempty" jsonschema:"the vault's name or folder; omit for the default"`
-	PageID   string `json:"page_id" jsonschema:"the page's id"`
-	Title    string `json:"title,omitempty" jsonschema:"a new title"`
-	Markdown string `json:"markdown,omitempty" jsonschema:"the new body, as Markdown"`
-	Mode     string `json:"mode,omitempty" jsonschema:"append (default) adds to the end; replace swaps the whole body"`
+	Vault      string            `json:"vault,omitempty" jsonschema:"the vault's name or folder; omit for the default"`
+	PageID     string            `json:"page_id" jsonschema:"the page's id"`
+	Title      string            `json:"title,omitempty" jsonschema:"a new title"`
+	Markdown   string            `json:"markdown,omitempty" jsonschema:"the new body, as Markdown"`
+	Mode       string            `json:"mode,omitempty" jsonschema:"append (default) adds to the end; replace swaps the whole body"`
+	Properties map[string]string `json:"properties,omitempty" jsonschema:"for a row of a database: values to set by the property's name; a status or select takes an option's name, a date YYYY-MM-DD, an empty string clears the value; the others stay"`
 }
 
 type moveIn struct {
@@ -407,7 +411,7 @@ func (lib library) children(parent string) []string {
 
 func (lib library) hit(id, snippet string) pageHit {
 	return pageHit{ID: id, Title: lib.title(id), ParentID: str(lib.pages[id]["parent_id"]),
-		UpdatedAt: str(lib.pages[id]["updated_at"]), Snippet: snippet}
+		UpdatedAt: str(lib.pages[id]["updated_at"]), Snippet: snippet, Properties: lib.rowMap(id)}
 }
 
 // ---- reads ------------------------------------------------------------------
@@ -603,7 +607,9 @@ func (lib library) pageText(id string) string {
 	}
 	if str(page["kind"]) == "database" {
 		b.WriteString("Kind: database (its rows are its sub-pages)\n")
+		b.WriteString(lib.databaseLines(id))
 	}
+	b.WriteString(lib.rowLines(id))
 	if updated := str(page["updated_at"]); updated != "" {
 		fmt.Fprintf(&b, "Updated: %s\n", updated)
 	}
@@ -658,6 +664,21 @@ func (s *server) create(_ context.Context, _ *mcp.CallToolRequest, in createIn) 
 		if in.ParentID != "" && (lib.pages[in.ParentID] == nil || lib.trashed(in.ParentID)) {
 			return fmt.Errorf("no page %q to put it under in this vault", in.ParentID)
 		}
+		var props map[string]any
+		if len(in.Properties) > 0 {
+			db := ""
+			if lib.isDatabase(in.ParentID) {
+				db = in.ParentID
+			}
+			var err error
+			if props, err = lib.propertyChanges(db, in.Properties); err != nil {
+				return err
+			}
+			props = setValues(props)
+			if in.IfExists == "append" {
+				return errors.New("properties are not set when if_exists is append: update the row it finds with notes_update_page")
+			}
+		}
 		if in.IfExists == "append" {
 			// The page of this title in the same place, the oldest when there are several.
 			var same []string
@@ -678,7 +699,7 @@ func (s *server) create(_ context.Context, _ *mcp.CallToolRequest, in createIn) 
 					return nil
 				}
 				out.Note = "added to the page that was already there"
-				return s.change(v, access, lib, same[0], "", in.Markdown, "append")
+				return s.change(v, access, lib, same[0], "", in.Markdown, "append", nil)
 			}
 		}
 		now := stamp()
@@ -687,6 +708,13 @@ func (s *server) create(_ context.Context, _ *mcp.CallToolRequest, in createIn) 
 			"created_at": now, "updated_at": now, "created_by": authorName, "updated_by": authorName}
 		if in.ParentID != "" {
 			page["parent_id"] = in.ParentID
+		}
+		if lib.isDatabase(in.ParentID) {
+			// A row stands after the rows there, as one made in Notes does.
+			page["row_order"] = float64(time.Now().UnixMilli())
+			if props != nil {
+				page["properties"] = props
+			}
 		}
 		writes := []vault.Write{{Action: "put", Collection: vault.Pages, ID: id, Value: page}}
 		writes = append(writes, bodyWrites(id, lib.read(in.Markdown), 0)...)
@@ -713,15 +741,23 @@ func (s *server) update(_ context.Context, _ *mcp.CallToolRequest, in updateIn) 
 	if mode != "append" && mode != "replace" {
 		return nil, out, fmt.Errorf("mode %q is not append or replace", mode)
 	}
-	if strings.TrimSpace(in.Title) == "" && in.Markdown == "" {
-		return nil, out, errors.New("nothing to change: give a title, Markdown, or both")
+	if strings.TrimSpace(in.Title) == "" && in.Markdown == "" && len(in.Properties) == 0 {
+		return nil, out, errors.New("nothing to change: give a title, Markdown, properties, or more than one")
 	}
 	err := s.within(in.Vault, func(v *vault.Vault, access *Access) error {
 		lib := load(v)
 		if _, ok := lib.pages[in.PageID]; !ok {
 			return fmt.Errorf("no page %q in this vault", in.PageID)
 		}
-		if err := s.change(v, access, lib, in.PageID, in.Title, in.Markdown, mode); err != nil {
+		var props map[string]any
+		if len(in.Properties) > 0 {
+			db, _ := lib.databaseOf(in.PageID)
+			var err error
+			if props, err = lib.propertyChanges(db, in.Properties); err != nil {
+				return err
+			}
+		}
+		if err := s.change(v, access, lib, in.PageID, in.Title, in.Markdown, mode, props); err != nil {
 			return err
 		}
 		out = pageOut{ID: in.PageID, Title: lib.title(in.PageID)}
@@ -735,7 +771,7 @@ func (s *server) update(_ context.Context, _ *mcp.CallToolRequest, in updateIn) 
 
 // change gives a page that is there a title, Markdown at its end (append) or
 // in place of its body (replace), or both, keeping the version before.
-func (s *server) change(v *vault.Vault, access *Access, lib library, pageID, title, body, mode string) error {
+func (s *server) change(v *vault.Vault, access *Access, lib library, pageID, title, body, mode string, props map[string]any) error {
 	page := lib.pages[pageID]
 	if lib.trashed(pageID) {
 		return errors.New("the page is in the Trash: restore it first (notes_restore_page)")
@@ -767,6 +803,9 @@ func (s *server) change(v *vault.Vault, access *Access, lib library, pageID, tit
 	patch := map[string]any{"updated_at": now, "updated_by": authorName}
 	if t := strings.TrimSpace(title); t != "" {
 		patch["title_content"] = markdown.StoredRuns(t)
+	}
+	if props != nil {
+		patch["properties"] = props
 	}
 	writes = append(writes, vault.Write{Action: "patch", Collection: vault.Pages, ID: pageID, Patch: patch})
 	changes, err := apply(v, writes)

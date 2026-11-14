@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- MCP server: database rows. notes_fetch on a row says its database and its values ("Properties: Status: Doing; Area: Sync"), and on a database lists its properties with their options; the lists of pages carry a row's values. notes_create_page and notes_update_page take `properties`, by the property's name: a status or select takes an option's name, a date YYYY-MM-DD, an empty string clears. A wrong name, option or date refuses the whole call and writes nothing. The properties and options themselves are still edited in Notes.
+
 ## 0.1.7
 
 - Connect to a remote folder is a window of the app's own, in both languages and in light and dark, and no longer cuts off its last fields. WebDAV and SMB show only the fields they need; an SMB address can be pasted as smb://server/share/folder. Test Connection reaches the folder and says what is in it (empty, a vault, other files) before anything is copied, and a refused password, a wrong folder, an unknown server or a timeout is said in words, with the error below.
