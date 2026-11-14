@@ -1,4 +1,5 @@
 import type { ClipboardEvent } from "react";
+import { t } from "../../i18n";
 import { caretAnchor } from "../../hooks/useAnchoredPosition";
 import { createId } from "../../core/ids";
 import {
@@ -38,6 +39,8 @@ import { newSimpleTable } from "../../core/simple-table";
 import { markFreshTable, tableEntryCell } from "./SimpleTable";
 import { markFresh } from "../database/fresh";
 import type { Editor, PendingFocus } from "./editor-state";
+import type { ImageSlot } from "./html-paste";
+import { settleImages } from "./paste-images";
 import type { useMedia } from "./useMedia";
 
 /* The content with an arrow in place of the "->" or "<-" just typed before
@@ -58,13 +61,31 @@ function caretAt(pageId: string, blockId: string, offset: number): HistoryFocus 
  *  that writes a heading or a list, "/" and "@" and "[[" opening their
  *  menus, an arrow for "->" — what is pasted into it, the slash commands,
  *  and the caret going on past a line into the next. */
-export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "placeFiles">) {
+export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "placeFiles" | "latestTree">) {
   const {
     page, tree, rows, embed, blocksRef, pagesRef, caretX, slash, setSlash, setSlashIndex, slashDismissed, mention,
     setMention, setMentionIndex, mentionDismissed, setFormat, resume, pendingTextSelection, ownerOf, createPage,
     checkpointHistory, annotateHistory, execute, runReplace, replaceSelection, applyMarkToBlocks, placeFiles,
-    pastedBlocks, adoptCutPages, offerCard,
+    pastedBlocks, adoptCutPages, offerCard, latestTree, toast,
   } = editor;
+
+  /** The pictures a pasted web page named, fetched behind the paste: each
+   *  replaces the line that stands for it — its words as a link — unless that
+   *  line was changed meanwhile. Those that cannot be had stay links, and the
+   *  person is told how many. */
+  const settlePastedImages = (images: readonly ImageSlot[]) => {
+    if (!images.length) return;
+    void settleImages(
+      images,
+      (image) => {
+        const block = latestTree().by_id[image.blockId];
+        return Boolean(block) && inlinePlainText(block.content) === image.label;
+      },
+      (file, image) => placeFiles([file], { kind: "line", blockId: image.blockId, edge: "fill" }),
+    ).then((missed) => {
+      if (missed) toast(t("{n} picture(s) could not be downloaded and stay as links.", { n: missed }));
+    });
+  };
 
   /* ── Block editing ──────────────────────────────────────────────────── */
 
@@ -367,6 +388,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     // caret ends in: both are redrawn before the caret is placed.
     if (focus) pendingTextSelection.current = { ranges: [{ blockId: focus.id, start: focus.offset, end: focus.offset }], forceIds: [target, focus.id] };
     execute({ mutations: [...cleared, ...transaction.mutations] });
+    settlePastedImages(pasted.images);
   };
 
   /** The next line on from `blockId` that takes the caret — its own words, or

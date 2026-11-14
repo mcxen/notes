@@ -65,6 +65,7 @@ import type { Block, BlockKind, BlockMutation, BlockTree, Embed, InlineContent, 
 import { imeComposing } from "../../core/keyboard";
 import { CardOffer, LinkHoverCard, useLinkHover, type CardOfferState, type HoveredLink } from "./LinkHoverCard";
 import { readBlocks, textToBlocks, writeBlocks, type CopiedBlocks } from "./block-clipboard";
+import { htmlToFragment, type ImageSlot } from "./html-paste";
 import { editableHtml } from "./block-html";
 import { blockDefinition, DatabaseIcon, isSourceBlock, PageIcon, pageGlyph } from "./block-registry";
 import { downloadFile, isImageType, notShown, refuseFiles, showFile, stageFile, type StagedFile } from "./file-store";
@@ -1045,7 +1046,7 @@ export function DocumentEditor({
   /** What a paste brings, as blocks: blocks copied from Notes, or text of
    *  more than one line. Null for one line of text, which is typed in. A
    *  block that was cut keeps its id, so the paste moves that very page. */
-  const pastedBlocks = useCallback((data: DataTransfer): { incoming: CopiedBlocks | null; fragment: BlockTree } | null => {
+  const pastedBlocks = useCallback((data: DataTransfer): { incoming: CopiedBlocks | null; fragment: BlockTree; images: ImageSlot[] } | null => {
     const incoming = readBlocks(data);
     // A grid — a spreadsheet's cells, a web page's table, a Markdown table —
     // comes in as a simple table.
@@ -1054,10 +1055,21 @@ export function DocumentEditor({
     const table = grid ? { by_id: { [tableId]: createBlock(tableId, "table", {
       table: tableFromCells(grid.rows, (kind) => createId(kind === "column" ? "col" : "row"), { headerRow: grid.header }),
     }) } } : null;
-    const blocks = incoming?.tree ?? table ?? textToBlocks(data.getData("text/plain"), () => createId("block"));
+    // A web page's HTML — its headings, links, lists and pictures — when the
+    // clipboard holds nothing of Notes' own and no table alone.
+    const html = incoming || table ? null : htmlToFragment(data.getData("text/html"), () => createId("block"));
+    const blocks = incoming?.tree ?? table ?? html?.tree ?? textToBlocks(data.getData("text/plain"), () => createId("block"));
     const pages = store.getState().pages;
     const keep = (block: Block) => Boolean(incoming?.cut && block.kind === "page" && pages[block.id] && !composite.sources.has(block.id));
-    return blocks ? { incoming, fragment: reidentify(blocks, () => createId("block"), keep) } : null;
+    if (!blocks) return null;
+    const ids = new Map<string, string>();
+    const fragment = reidentify(blocks, () => createId("block"), keep, ids);
+    // The pictures a page named, on the lines that stand for them now.
+    const images = (html?.images ?? []).flatMap((image) => {
+      const blockId = ids.get(image.blockId);
+      return blockId ? [{ ...image, blockId }] : [];
+    });
+    return { incoming, fragment, images };
   }, [composite, store]);
 
   /** A command on selected blocks keeps them selected: none of these puts a
@@ -1077,8 +1089,8 @@ export function DocumentEditor({
     write, execute, executeOnBlocks, runReplace, replaceSelection, selectBlocks, deleteSelected, duplicateSelected,
     openMoveTo, closeMenus, applyMarkToBlocks, openLink, pastedBlocks, adoptCutPages, offerCard, toast,
   };
-  const { uploads, pictureUploads, retries, viewing, setViewing, fileInput, pickTarget, placeFiles, pickFile } = useMedia(editor);
-  const typing = blockTyping({ ...editor, placeFiles });
+  const { uploads, pictureUploads, retries, viewing, setViewing, fileInput, pickTarget, placeFiles, pickFile, latestTree } = useMedia(editor);
+  const typing = blockTyping({ ...editor, placeFiles, latestTree });
   const { onBlockChange, chooseMention, onBlockPaste, nextEditable, runCommand } = typing;
   const onBlockKeyDown = blockKeys({ ...editor, ...typing });
   useSelectedBlockKeys(editor);

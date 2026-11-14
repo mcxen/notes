@@ -681,8 +681,15 @@ export function selectionFragment(
 /** The same fragment under fresh ids, so it can be pasted any number of times
  *  — but for the blocks `keep` holds on to: a cut block, pasted, is that same
  *  block (a page) moving. */
-export function reidentify(fragment: BlockTree, idFactory: () => string, keep: (block: Block) => boolean = () => false): BlockTree {
+export function reidentify(
+  fragment: BlockTree,
+  idFactory: () => string,
+  keep: (block: Block) => boolean = () => false,
+  /** Told which new id each old one became, for what keeps a block's id of its own. */
+  idsOut?: Map<string, string>,
+): BlockTree {
   const ids = new Map(Object.values(fragment.by_id).map((block) => [block.id, keep(block) ? block.id : idFactory()]));
+  if (idsOut) for (const [from, to] of ids) idsOut.set(from, to);
   const byId: Record<string, Block> = {};
   for (const block of Object.values(fragment.by_id)) {
     const id = ids.get(block.id) as string;

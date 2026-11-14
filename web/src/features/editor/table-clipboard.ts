@@ -36,6 +36,11 @@ export function gridFromHtml(html: string): ReadGrid | null {
   if (!table) return null;
   const outside = (document.body.textContent ?? "").replace(table.textContent ?? "", "").trim();
   if (outside) return null;
+  return gridFromTable(table);
+}
+
+/** A table element's rows of cells: the rows of this table, not of one nested in a cell. */
+export function gridFromTable(table: Element): ReadGrid | null {
   const lines = [...table.querySelectorAll("tr")].filter((row) => row.closest("table") === table);
   const cellsOf = (row: Element) => [...row.children].filter((cell) => cell.tagName === "TD" || cell.tagName === "TH");
   const rows = lines

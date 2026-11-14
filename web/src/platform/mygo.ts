@@ -27,6 +27,16 @@ export interface Conflict {
   fields?: string[];
 }
 
+/** FetchedImage is a picture downloaded for a page that was pasted from the web. */
+export interface FetchedImage {
+  /** Data is the picture's bytes, base64-encoded. */
+  data: string;
+  /** Type is its media type, found from the bytes. */
+  type: string;
+  /** Name is a file name for it. */
+  name: string;
+}
+
 export interface ImportReport {
   pages: number;
   blocks: number;
@@ -142,6 +152,15 @@ export const Notebooks = {
    */
   disconnect(folder: string): Promise<void> {
     return call("Notebooks.Disconnect", folder);
+  },
+  /**
+   * FetchImage downloads a picture a pasted web page named, so that it is kept
+   * with the note. It refuses addresses that are not on the open internet and
+   * anything that is not a picture; the page keeps a link in that case. The
+   * download can be turned off in Settings › General.
+   */
+  fetchImage(address: string): Promise<FetchedImage> {
+    return call("Notebooks.FetchImage", address);
   },
   /** Flush writes this window's pending changes to the disk now. */
   flush(): Promise<void> {

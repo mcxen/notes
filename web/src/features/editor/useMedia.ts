@@ -248,5 +248,5 @@ export function useMedia(editor: Editor) {
     };
   }, []);
 
-  return { uploads, pictureUploads, retries, viewing, setViewing, fileInput, pickTarget, placeFiles, pickFile };
+  return { uploads, pictureUploads, retries, viewing, setViewing, fileInput, pickTarget, placeFiles, pickFile, latestTree };
 }

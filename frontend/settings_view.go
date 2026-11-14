@@ -255,6 +255,7 @@ type searchEntry struct{ page, label, words string }
 var searchEntries = []searchEntry{
 	{"general", labelPickerAtLaunch, "startup launch open picker last vault 启动 选择器 笔记库"},
 	{"general", "Show the tray icon", "tray menu bar notification area icon 托盘 菜单栏 图标"},
+	{"general", labelPasteImages, "paste web page pictures images download clipboard 粘贴 网页 图片 下载"},
 	{"general", "Close a window to the tray", "close window tray quit hide 关闭 窗口 托盘 退出"},
 	{"general", "Hide the Dock icon", "dock hide macos 程序坞 隐藏 图标"},
 	{"general", "Shortcut to show or hide", "shortcut hotkey keyboard show hide 快捷键 显示 隐藏"},
@@ -370,6 +371,7 @@ const (
 	labelTranslucent    = "Translucent sidebar"
 	labelAutoUpdates    = "Check for updates automatically"
 	labelOutline        = "Show the page outline"
+	labelPasteImages    = "Download pictures when pasting from a web page"
 )
 
 func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
@@ -445,6 +447,16 @@ func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
 				s.save()
 			}
 		})
+	})
+	s.group(c, pal, tr("Pasting"), "", func() {
+		fetch := !s.st.NoPasteImages
+		s.row(c, pal, tr(labelPasteImages), tr("Content copied from a web page comes in with its pictures, kept with the note. Off, a picture stays a link to where it is on the web."), func() {
+			toggle(c, "paste-images", &fetch, tr(labelPasteImages), pal)
+		})
+		if fetch == s.st.NoPasteImages {
+			s.st.NoPasteImages = !fetch
+			s.save()
+		}
 	})
 	s.group(c, pal, tr("Shortcuts"), "", func() {
 		mod := "⌘"

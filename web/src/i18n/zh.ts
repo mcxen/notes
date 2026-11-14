@@ -45,6 +45,7 @@ export const zh: Record<string, string> = {
   "Vault Picker…": "笔记库选择器…",
   "Connect to a Remote Folder…": "连接远程文件夹…",
   "Import from Notion…": "从 Notion 导入…",
+  "{n} picture(s) could not be downloaded and stay as links.": "有 {n} 张图片没能下载，已保留为链接。",
   "Switch vault": "切换笔记库",
   "Find a vault": "查找笔记库",
   "Find a vault…": "查找笔记库…",

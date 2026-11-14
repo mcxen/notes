@@ -94,6 +94,11 @@ var zh = map[string]string{
 	"%d page(s), %d database(s), %d file(s), %d link(s) between pages.":        "%d 个页面、%d 个数据库、%d 个文件、%d 个页面间链接。",
 	"%d thing(s) could not be carried over: they are listed on the page “%s”.": "有 %d 处没能带过来，已列在页面“%s”中。",
 
+	// Pasting
+	"Pasting": "粘贴",
+	"Download pictures when pasting from a web page": "从网页粘贴时下载图片",
+	"Content copied from a web page comes in with its pictures, kept with the note. Off, a picture stays a link to where it is on the web.": "从网页复制的内容会连同图片一起粘贴进来，图片随笔记保存。关闭后，图片只保留为指向网页原址的链接。",
+
 	// Menus
 	"Settings…":                   "设置…",
 	"File":                        "文件",

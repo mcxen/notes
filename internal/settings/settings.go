@@ -62,6 +62,9 @@ type Settings struct {
 	// HideDock takes the Dock icon away on macOS while no window is open, so
 	// the app lives in the menu bar. Only with the tray icon shown.
 	HideDock bool `json:"hideDock,omitempty"`
+	// NoPasteImages stops a page pasted from the web from downloading the
+	// pictures it names. They are downloaded unless this is set.
+	NoPasteImages bool `json:"noPasteImages,omitempty"`
 	// Hotkey shows or hides the windows from anywhere, as "CmdOrCtrl+Shift+N".
 	// Empty means no shortcut.
 	Hotkey string `json:"hotkey,omitempty"`

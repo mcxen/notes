@@ -1,3 +1,4 @@
+import type { ImageSlot } from "./html-paste";
 import type { Dispatch, DragEvent, RefObject, SetStateAction } from "react";
 import type { CreatePageOptions } from "../../app/workspace-context";
 import type { ToastTone } from "../../components/Toast";
@@ -132,7 +133,7 @@ export interface Editor {
   closeMenus(): void;
   applyMarkToBlocks(ranges: BlockTextRange[], mark: ToggleableMark | "link" | "color", value: boolean | string | undefined): void;
   openLink(): void;
-  pastedBlocks(data: DataTransfer): { incoming: CopiedBlocks | null; fragment: BlockTree } | null;
+  pastedBlocks(data: DataTransfer): { incoming: CopiedBlocks | null; fragment: BlockTree; images: ImageSlot[] } | null;
   adoptCutPages(incoming: CopiedBlocks | null, fragment: BlockTree, at: string | null): void;
   /** A YouTube or X link pasted onto a line of its own: offer its card, as
    *  Notion's paste menu offers an embed. */

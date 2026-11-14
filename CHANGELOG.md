@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Paste from a web page keeps what the page had. Copied headings, links, bold and italic, lists (with their nesting and to-dos), quotes, code (with its language), rules and tables come in as the blocks they are, and the pictures are downloaded and kept with the note: the text is pasted at once and each picture takes its place as it arrives. A picture that cannot be downloaded (a host that refuses, a login, a page that is gone) stays as a link to where it is, and you are told how many. Only pictures on the open internet are asked for: not this computer, not a home or office network, and not SVG. Settings › General › Download pictures when pasting from a web page turns it off.
 - MCP server: database rows. notes_fetch on a row says its database and its values ("Properties: Status: Doing; Area: Sync"), and on a database lists its properties with their options; the lists of pages carry a row's values. notes_create_page and notes_update_page take `properties`, by the property's name: a status or select takes an option's name, a date YYYY-MM-DD, an empty string clears. A wrong name, option or date refuses the whole call and writes nothing. The properties and options themselves are still edited in Notes.
 
 ## 0.1.7
