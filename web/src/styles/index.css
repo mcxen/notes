@@ -9752,7 +9752,20 @@ button.export__row:hover {
   opacity: 0.35;
 }
 
-.chart__slice:focus-visible,
+/* A press gives them the keyboard focus, and the system draws its own ring
+   (a box round the slice's whole extent, in the accent colour) for that: not
+   drawn. Reached by the keyboard, a slice is outlined in its own shape. */
+.chart__slice:focus,
+.chart__key:focus,
+.chart__bar-row:focus {
+  outline: none;
+}
+
+.chart__slice:focus-visible {
+  stroke: var(--blue);
+  stroke-width: 3;
+}
+
 .chart__key:focus-visible,
 .chart__bar-row:focus-visible {
   outline: 2px solid var(--blue);
