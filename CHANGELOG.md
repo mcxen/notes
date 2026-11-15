@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+
+- Columns side by side, as Notion's. `/2 columns`, `/3 columns` or `/4 columns` puts empty columns where the caret is, each with a line to write in; the divider between two columns is dragged to give one more room and the other less, and the ··· at the frame's corner puts the lines back in one column or deletes them. The lines in them read one column after another everywhere that has no side by side: Markdown, a search, an assistant over MCP, and a window narrower than about 520 px draws the columns one above another. A column left with no line goes, and so does a frame left with one column, in the same step of undo as the change that left them. Dragging a line to the side of another to make columns is not in yet, and columns do not nest.
 ## 0.1.8
 
 - Paste from a web page keeps what the page had. Copied headings, links, bold and italic, lists (with their nesting and to-dos), quotes, code (with its language), rules and tables come in as the blocks they are, and the pictures are downloaded and kept with the note: the text is pasted at once and each picture takes its place as it arrives. A picture that cannot be downloaded (a host that refuses, a login, a page that is gone) stays as a link to where it is, and you are told how many. Only pictures on the open internet are asked for: not this computer, not a home or office network, and not SVG. Settings › General › Download pictures when pasting from a web page turns it off.

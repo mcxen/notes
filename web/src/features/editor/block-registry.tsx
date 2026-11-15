@@ -1,6 +1,7 @@
 import {
   Group,
   Code2,
+  Columns2,
   FileText,
   Heading1,
   Heading2,
@@ -116,6 +117,17 @@ export const BLOCK_DEFINITIONS: readonly BlockDefinition[] = [
     icon: Sigma, tag: "pre", editable: true, continueAs: "text", shortcuts: ["$$"], canHaveChildren: false,
     placeholder: "Add a TeX equation",
     slash: { aliases: ["math", "latex", "tex", "formula", "katex"] },
+  },
+  {
+    // Lines side by side: a frame (`columns`) of cells (`column`), neither a
+    // line of its own (`layout` draws them). Made by the slash menu's "2
+    // columns", "3 columns" and "4 columns", never typed or picked by kind.
+    kind: "columns", label: "Columns",
+    icon: Columns2, editable: false, shortcuts: [], canHaveChildren: true,
+  },
+  {
+    kind: "column", label: "Column",
+    icon: Columns2, editable: false, shortcuts: [], canHaveChildren: true,
   },
   {
     kind: "file", label: "File",

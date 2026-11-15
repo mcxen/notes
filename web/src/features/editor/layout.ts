@@ -19,6 +19,13 @@ export type Item =
     page: Block;
     depth: number;
     items: Item[];
+  }
+  | {
+    /** Columns side by side: the frame, and each column with what is in it. */
+    kind: "columns";
+    frame: Block;
+    depth: number;
+    columns: Array<{ column: Block; items: Item[] }>;
   };
 
 /** A toggle is open unless it says it is folded. */
@@ -45,6 +52,22 @@ export function layout(tree: BlockTree, open: (block: Block) => boolean = defaul
     for (const block of orderedBlocks(tree, parentId)) {
       if (block.kind === "page") {
         items.push({ kind: "page", page: block, depth, items: visit(block.id, depth, run) });
+        continue;
+      }
+      if (block.kind === "column") {
+        // A column in no frame (a merge of two people's edits took its frame):
+        // its lines are drawn where it stands, as lines, until a change mends it.
+        items.push(...visit(block.id, depth, run));
+        continue;
+      }
+      if (block.kind === "columns") {
+        // The lines of the columns read in order, a column after a column, at
+        // the depth the frame stands: none is a line of the frame's.
+        const columns = orderedBlocks(tree, block.id)
+          .filter((child) => child.kind === "column")
+          .map((column) => ({ column, items: visit(column.id, depth, { value: 0 }) }));
+        run.value = 0;
+        items.push({ kind: "columns", frame: block, depth, columns });
         continue;
       }
       run.value = block.kind === "numbered" ? run.value + 1 : 0;

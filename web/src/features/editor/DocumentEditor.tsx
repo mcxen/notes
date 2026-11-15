@@ -106,6 +106,10 @@ import {
   updateBlockContent,
   updateBlockFields,
   withoutEmptyPages,
+  withTidyColumns,
+  columnShares,
+  resizeColumns,
+  unwrapColumns,
   type EditorTransaction,
 } from "./editor-commands";
 import { embedFromUrl, normalizeEmbed } from "../../core/embeds";
@@ -114,6 +118,7 @@ import { FormatToolbar, type FormatState } from "./FormatToolbar";
 import { TitleField } from "./TitleField";
 import { layout, type Item, type Rendered } from "./layout";
 import { PageFrame } from "./PageFrame";
+import { ColumnsFrame } from "./ColumnsFrame";
 import { PageMenu, PageNameEditor } from "./PageMenu";
 import { HISTORY_REPLAY_EVENT, SELECT_BLOCK_EVENT } from "./history-cursor";
 import { MoveToMenu } from "./MoveToMenu";
@@ -476,7 +481,7 @@ export function DocumentEditor({
     if (!platform) return null;
     const live = workspace?.state.pages ?? pages;
     const current = composeTree(live, live[page.id] ?? page, showInPlace);
-    const transaction = withoutEmptyPages(current.tree, change, () => createId("block"));
+    const transaction = withTidyColumns(current.tree, withoutEmptyPages(current.tree, change, () => createId("block")));
     commitWrites([...(options.extra ?? []), ...routeTransaction(current, live, transaction, {
       author: platform.bootstrap.user.displayName,
       now: new Date().toISOString(),
@@ -2131,6 +2136,7 @@ export function DocumentEditor({
   const headKindOf = (list: Item[]): string => {
     const first = list[0];
     if (!first) return "text";
+    if (first.kind === "columns") return headKindOf(first.columns[0]?.items ?? []);
     if (first.kind === "page") return first.page.name ? "title" : headKindOf(first.items);
     const { block } = first.row;
     // A line that is nothing but a link: a row's height.
@@ -2147,6 +2153,27 @@ export function DocumentEditor({
   const renderItems = (list: Item[], opening = 0, base = 0, level = 0): ReactNode[] => list.map((item, index) => {
     const marks = index === 0 ? opening : 0;
     if (item.kind === "row") return renderRow(item.row, marks, level);
+    if (item.kind === "columns") {
+      const shares = new Map(columnShares(tree, item.frame.id).map((entry) => [entry.id, entry.share]));
+      return (
+        <ColumnsFrame
+          key={item.frame.id}
+          frameId={item.frame.id}
+          depth={item.depth}
+          level={level}
+          readOnly={readOnly}
+          cells={item.columns.map(({ column, items }, at) => ({
+            id: column.id,
+            share: shares.get(column.id) ?? 1 / item.columns.length,
+            // The first line of the first column opens on the frame's own marks.
+            children: renderItems(items, at === 0 ? marks : 0, item.depth, level),
+          }))}
+          onResize={(leftId, share) => execute(resizeColumns(tree, leftId, share))}
+          onUnwrap={() => execute(unwrapColumns(tree, item.frame.id))}
+          onDelete={() => execute(deleteBlocks(tree, [item.frame.id], createId("block")))}
+        />
+      );
+    }
     return (
       <PageFrame
         key={item.page.id}

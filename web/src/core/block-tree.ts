@@ -39,12 +39,25 @@ export function createBlock(
     ...(normalizeStoredFile(options.file) ? { file: normalizeStoredFile(options.file) } : {}),
     ...(normalizeImageWidth(options.width) ? { width: normalizeImageWidth(options.width) } : {}),
     ...(options.align === "center" || options.align === "right" ? { align: options.align } : {}),
+    ...(kind === "column" && normalizeSpan(options.span) ? { span: normalizeSpan(options.span) } : {}),
     ...(kind === "page" && normalizeBlockName(options.name) ? { name: normalizeBlockName(options.name) } : {}),
     // A table's grid, read through its checks whatever wrote it.
     ...(kind === "table" ? { table: normalizeSimpleTable(options.table) } : {}),
     // A card is what its address says it is (core/embeds.ts).
     ...(kind === "embed" ? embedField(options.embed) : {}),
   };
+}
+
+/** The least and most a column may have against its neighbours', so a write
+ *  from anywhere cannot make one vanish or swallow the rest. */
+export const SPAN_RANGE = { min: 0.15, max: 8 } as const;
+
+/** A column's span as it is kept: a finite number within the range, and 1 —
+ *  equal shares — kept as no span at all. */
+export function normalizeSpan(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  const span = Math.min(SPAN_RANGE.max, Math.max(SPAN_RANGE.min, value));
+  return span === 1 ? undefined : Math.round(span * 1000) / 1000;
 }
 
 function embedField(value: unknown): Pick<Block, "embed"> {
@@ -267,6 +280,7 @@ function normalizeStoredBlock(value: unknown): Block | null {
     ...(candidate.file === undefined ? {} : { file: candidate.file as Block["file"] }),
     ...(candidate.width === undefined ? {} : { width: candidate.width as number }),
     ...(candidate.align === "center" || candidate.align === "right" ? { align: candidate.align } : {}),
+    ...(typeof candidate.span === "number" ? { span: candidate.span } : {}),
     ...(typeof candidate.name === "string" ? { name: candidate.name } : {}),
     ...(candidate.table === undefined ? {} : { table: candidate.table as Block["table"] }),
     ...(candidate.embed === undefined ? {} : { embed: candidate.embed as Block["embed"] }),

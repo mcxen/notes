@@ -9589,3 +9589,75 @@ button.export__row:hover {
 .export__foot .btn {
   gap: 6px;
 }
+
+/* ── Columns side by side ─────────────────────────────────────────────────
+   Cells and, between two of them, a divider that is dragged. The track list is
+   set by the frame (a share of the width for each cell, `COLUMN_GAP` px for
+   each divider); the room between cells is where the "+" and the handle of the
+   later cells' lines stand. Narrow, the cells are stacked and the dividers go. */
+.columns {
+  position: relative;
+  display: grid;
+  align-items: start;
+}
+
+.columns.is-stacked {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 4px;
+}
+
+.columns__cell {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+/* The grip is the 9px at the edge of the room between cells, level with the
+   column it resizes: the "+" and the handle of the later cell's lines stand in
+   the rest of that room, and would cover a grip in its middle. */
+.columns__divider {
+  position: relative;
+  width: 9px;
+  align-self: stretch;
+  justify-self: start;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.columns__divider::after {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 50%;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: transparent;
+  content: "";
+  transition: background var(--t-fast) var(--e-out);
+}
+
+.columns__divider:hover::after,
+.columns.is-resizing > .columns__divider::after {
+  background: var(--fill-hover);
+}
+
+.columns.is-resizing,
+.columns.is-resizing * {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.columns__menu {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--e-out);
+}
+
+.columns:hover > .columns__menu,
+.columns__menu:focus-visible {
+  opacity: 1;
+}

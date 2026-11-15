@@ -65,6 +65,9 @@ function blockHtml(tree: BlockTree, block: Block, fileRef: FileRef | undefined):
     }
     // A block is its paragraphs; outside Notes it has no mark of its own.
     case "page": return children;
+    // Columns side by side; each column's share is its span.
+    case "columns": return `<div class="columns" style="display:flex;gap:2em">${children}</div>`;
+    case "column": return `<div class="column" style="flex:${block.span ?? 1} 1 0;min-width:0">${children}</div>`;
     case "file": {
       const file = block.file;
       if (!file) return "";

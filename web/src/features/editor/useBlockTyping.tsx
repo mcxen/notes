@@ -21,6 +21,7 @@ import {
   embedPage,
   insertBlockAfter,
   lineIsOnlyLink,
+  newColumns,
   pageFromBlocks,
   pasteFragment,
   updateBlockContent,
@@ -436,6 +437,18 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
       return;
     }
 
+    if (command.action === "columns") {
+      // The line becomes the columns when the command was all it held, else
+      // they go in after it; the caret goes to the first column's line.
+      const line = { mutations: [{ action: "put" as const, block: { ...block, content: stripped } }] };
+      const made = newColumns(applyEditorTransaction(tree, line), block.id, command.count ?? 2, () => createId("block"));
+      if (!made) {
+        toast(t("Columns cannot be put inside columns."));
+        return;
+      }
+      execute({ mutations: [...line.mutations, ...made.transaction.mutations] }, { id: made.focusId, start: 0, force: true });
+      return;
+    }
     if (command.action) {
       const ids = { embed: createId("block"), trailing: createId("block") };
       if (command.action === "database-inline") {

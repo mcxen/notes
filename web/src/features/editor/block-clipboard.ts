@@ -72,6 +72,9 @@ function blocksHtml(tree: BlockTree, parentId: string | null): string {
       }
       // A block is its paragraphs; outside Notes it has no mark of its own.
       case "page": html += children; break;
+      // Pasted elsewhere, columns are their lines one after another.
+      case "columns":
+      case "column": html += children; break;
       case "file": html += `<p>${escapeHtml(block.file?.name ?? "")}${inner ? ` — ${inner}` : ""}</p>`; break;
       case "embed": {
         const address = normalizeEmbed(block.embed)?.url;

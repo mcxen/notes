@@ -380,7 +380,7 @@ export function deleteAcrossBlocks(
    together. Every group command acts on the TOP-LEVEL selection — a selected
    block whose parent is also selected travels inside its parent. */
 
-const UNWRITABLE: ReadonlySet<BlockKind> = new Set(["divider", "file", "table", "embed", "page"]);
+const UNWRITABLE: ReadonlySet<BlockKind> = new Set(["divider", "file", "table", "embed", "page", "columns", "column"]);
 
 /** The selected blocks a group command acts on, in reading order. */
 export function topLevelBlocks(tree: BlockTree, blockIds: readonly string[]): Block[] {
@@ -961,3 +961,156 @@ export function withoutEmptyPages(tree: BlockTree, transaction: EditorTransactio
   if (!orderedBlocks(after).length) extra.push({ action: "put", block: createBlock(newId()) });
   return { ...transaction, mutations: [...transaction.mutations, ...extra] };
 }
+
+
+/* ── Columns ───────────────────────────────────────────────────────────────
+   Lines side by side: a `columns` block holds `column` blocks, each holding
+   lines. Neither is a line of its own (`layout` draws them as a frame and its
+   cells, and the lines inside read in order, a column after a column). Two
+   rules keep them sound, whatever wrote the page: a `columns` holds at least
+   two columns, and a column at least one line. What breaks either — the last
+   line of a column deleted, a column emptied by a move, a merge of two
+   people's edits — is mended in the same step of undo as the change that
+   broke it (`withTidyColumns`), by taking what is left out of the frame. */
+
+/** The most columns one frame holds. */
+export const MAX_COLUMNS = 4;
+
+/** `count` empty columns, where the line `blockId` stands: in its place when it
+ *  is empty, else after it. Not inside a column: columns do not nest. */
+export function newColumns(
+  tree: BlockTree,
+  blockId: string,
+  count: number,
+  newId: () => string,
+): { transaction: EditorTransaction; focusId: string } | null {
+  const block = tree.by_id[blockId];
+  if (!block || count < 2 || count > MAX_COLUMNS) return null;
+  const parent = block.parent_id ? tree.by_id[block.parent_id] : undefined;
+  if (parent?.kind === "column") return null;
+  const siblings = orderedBlocks(tree, block.parent_id);
+  const index = siblings.findIndex((item) => item.id === block.id);
+  const replace = block.kind === "text" && !inlinePlainText(block.content) && !orderedBlocks(tree, block.id).length;
+  const order = replace ? block.order : ordersBetween(block.order, siblings[index + 1]?.order, 1)[0];
+  const framed = createBlock(newId(), "columns", { parent_id: block.parent_id, order });
+  const mutations: BlockMutation[] = [];
+  if (replace) mutations.push({ action: "delete", blockId: block.id });
+  mutations.push({ action: "put", block: framed });
+  let focusId = "";
+  for (let i = 0; i < count; i += 1) {
+    const column = createBlock(newId(), "column", { parent_id: framed.id, order: (i + 1) * BLOCK_ORDER_STEP });
+    const line = createBlock(newId(), "text", { parent_id: column.id });
+    if (!focusId) focusId = line.id;
+    mutations.push({ action: "put", block: column }, { action: "put", block: line });
+  }
+  return { transaction: { mutations, focus: { id: focusId, offset: 0 } }, focusId };
+}
+
+/** The lines of a frame of columns, in reading order, taken out of it where it
+ *  stood. */
+export function unwrapColumns(tree: BlockTree, columnsId: string): EditorTransaction | null {
+  const frame = tree.by_id[columnsId];
+  if (frame?.kind !== "columns") return null;
+  const lines = orderedBlocks(tree, columnsId).flatMap((column) => (
+    column.kind === "column" ? orderedBlocks(tree, column.id) : [column]
+  ));
+  const siblings = orderedBlocks(tree, frame.parent_id);
+  const index = siblings.findIndex((block) => block.id === columnsId);
+  const orders = ordersBetween(siblings[index - 1]?.order, siblings[index + 1]?.order, Math.max(lines.length, 1));
+  const columns = orderedBlocks(tree, columnsId);
+  return {
+    mutations: [
+      ...lines.map((line, at) => ({ action: "put" as const, block: { ...line, parent_id: frame.parent_id, order: orders[at] } })),
+      ...columns.filter((column) => column.kind === "column").map((column) => ({ action: "delete" as const, blockId: column.id })),
+      { action: "delete", blockId: columnsId },
+    ],
+  };
+}
+
+/** Mends what a change left of the columns: a column with no line goes, a
+ *  frame with fewer than two columns is taken apart, and a column that is in
+ *  no frame (a merge took its frame) lets go of its lines. The mending goes in
+ *  the change's own step. */
+export function withTidyColumns(tree: BlockTree, transaction: EditorTransaction): EditorTransaction {
+  // A page with no columns, and a change that makes none, is left as it is
+  // without reading the change.
+  const makes = transaction.mutations.some((mutation) => mutation.action === "put" && (mutation.block.kind === "column" || mutation.block.kind === "columns"));
+  if (!makes && !hasColumns(tree)) return transaction;
+  const moves = transaction.mutations.some((mutation) => (
+    mutation.action === "delete" || makes || tree.by_id[mutation.block.id]?.parent_id !== mutation.block.parent_id
+  ));
+  if (!moves) return transaction;
+  let after = applyEditorTransaction(tree, transaction);
+  const extra: BlockMutation[] = [];
+  const apply = (mutations: BlockMutation[]) => {
+    extra.push(...mutations);
+    after = applyEditorTransaction(after, { mutations });
+  };
+  for (let pass = 0; pass < 32; pass += 1) {
+    const blocks = Object.values(after.by_id);
+    // A column with no line is nothing.
+    const empty = blocks.find((block) => block.kind === "column" && !orderedBlocks(after, block.id).length);
+    if (empty) {
+      apply([{ action: "delete", blockId: empty.id }]);
+      continue;
+    }
+    // A frame holding fewer than two columns is one column of lines, or none.
+    const thin = blocks.find((block) => block.kind === "columns" && orderedBlocks(after, block.id).filter((child) => child.kind === "column").length < 2);
+    if (thin) {
+      apply(unwrapColumns(after, thin.id)?.mutations ?? [{ action: "delete", blockId: thin.id }]);
+      continue;
+    }
+    // A column outside any frame: its lines go where it stood.
+    const loose = blocks.find((block) => block.kind === "column" && after.by_id[block.parent_id ?? ""]?.kind !== "columns");
+    if (loose) {
+      const siblings = orderedBlocks(after, loose.parent_id);
+      const at = siblings.findIndex((block) => block.id === loose.id);
+      const lines = orderedBlocks(after, loose.id);
+      const orders = ordersBetween(siblings[at - 1]?.order, siblings[at + 1]?.order, Math.max(lines.length, 1));
+      apply([
+        ...lines.map((line, i) => ({ action: "put" as const, block: { ...line, parent_id: loose.parent_id, order: orders[i] } })),
+        { action: "delete" as const, blockId: loose.id },
+      ]);
+      continue;
+    }
+    break;
+  }
+  return extra.length ? { ...transaction, mutations: [...transaction.mutations, ...extra] } : transaction;
+}
+
+const withColumns = new WeakMap<BlockTree, boolean>();
+
+function hasColumns(tree: BlockTree): boolean {
+  let found = withColumns.get(tree);
+  if (found === undefined) {
+    found = Object.values(tree.by_id).some((block) => block.kind === "columns" || block.kind === "column");
+    withColumns.set(tree, found);
+  }
+  return found;
+}
+
+/** The share of the width each column of a frame has, as fractions that add up
+ *  to one, in order. */
+export function columnShares(tree: BlockTree, columnsId: string): Array<{ id: string; share: number }> {
+  const columns = orderedBlocks(tree, columnsId).filter((block) => block.kind === "column");
+  const total = columns.reduce((sum, column) => sum + (column.span ?? 1), 0) || 1;
+  return columns.map((column) => ({ id: column.id, share: (column.span ?? 1) / total }));
+}
+
+/** Gives the column `leftId` and the one after it new shares of what the two
+ *  have between them: `leftShare` of the pair's width, within the range a column
+ *  may have. */
+export function resizeColumns(tree: BlockTree, leftId: string, leftShare: number): EditorTransaction | null {
+  const left = tree.by_id[leftId];
+  if (left?.kind !== "column" || !left.parent_id) return null;
+  const siblings = orderedBlocks(tree, left.parent_id).filter((block) => block.kind === "column");
+  const right = siblings[siblings.findIndex((block) => block.id === leftId) + 1];
+  if (!right) return null;
+  const pair = (left.span ?? 1) + (right.span ?? 1);
+  const share = Math.min(1 - SPAN_MIN_SHARE, Math.max(SPAN_MIN_SHARE, leftShare));
+  const put = (block: Block, span: number) => ({ action: "put" as const, block: createBlock(block.id, "column", { ...block, span }) });
+  return { mutations: [put(left, pair * share), put(right, pair * (1 - share))] };
+}
+
+/** The least share of a pair a column may be left with. */
+const SPAN_MIN_SHARE = 0.12;

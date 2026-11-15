@@ -210,3 +210,34 @@ func TestTheOutlineIsInReadingOrder(t *testing.T) {
 		t.Fatalf("outline = %v, want %v", got, want)
 	}
 }
+
+// Columns are a layout: the lines in them are read one after another where the
+// frame stands, not one level in, and neither frame nor column writes a line.
+func TestColumnsAreReadAsTheirLinesInOrder(t *testing.T) {
+	text := func(id, parent string, order float64, words string) Block {
+		return Block{ID: id, Kind: "text", ParentID: parent, Order: order, Runs: []Run{{Text: words}}}
+	}
+	blocks := []Block{
+		text("before", "", 1, "before"),
+		{ID: "frame", Kind: "columns", Order: 2},
+		{ID: "right", Kind: "column", ParentID: "frame", Order: 2},
+		{ID: "left", Kind: "column", ParentID: "frame", Order: 1},
+		text("c", "right", 1, "right one"),
+		{ID: "a", Kind: "bullet", ParentID: "left", Order: 1, Runs: []Run{{Text: "left item"}}},
+		text("a2", "a", 1, "under the item"),
+		text("after", "", 3, "after"),
+	}
+	want := "before\n- left item\n  under the item\nright one\nafter"
+	if got := ToMarkdown(blocks, noName); got != want {
+		t.Fatalf("markdown = %q, want %q", got, want)
+	}
+	var depths []string
+	for _, entry := range Outline(blocks, noName) {
+		if entry.Block.Kind != "columns" && entry.Block.Kind != "column" {
+			depths = append(depths, fmt.Sprintf("%s@%d", entry.Block.ID, entry.Depth))
+		}
+	}
+	if fmt.Sprint(depths) != "[before@0 a@0 a2@1 c@0 after@0]" {
+		t.Fatalf("depths = %v", depths)
+	}
+}

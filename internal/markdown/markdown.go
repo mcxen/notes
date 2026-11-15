@@ -204,6 +204,12 @@ func Outline(blocks []Block, name Namer) []Entry {
 				number = 0
 			}
 			out = append(out, Entry{Block: b, Depth: depth, Lines: blockLines(b, number, name)})
+			// Columns are a layout, not a level: the lines in them read one after
+			// another where the frame stands, a column after a column.
+			if b.Kind == "columns" || b.Kind == "column" {
+				visit(b.ID, depth)
+				continue
+			}
 			visit(b.ID, depth+1)
 		}
 	}
@@ -256,7 +262,7 @@ func blockLines(b Block, number int, name Namer) []string {
 		return []string{b.URL}
 	case "table":
 		return tableLines(b.Table, name)
-	case "page":
+	case "page", "columns", "column":
 		return nil
 	default:
 		if text == "" {

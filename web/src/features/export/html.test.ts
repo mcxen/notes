@@ -24,3 +24,16 @@ describe("HTML export of an equation", () => {
     expect(html).toContain("<pre class=\"math\">$$a\nb$$</pre>");
   });
 });
+
+describe("HTML export of columns", () => {
+  it("writes the columns side by side, each with its share", () => {
+    const html = page([
+      createBlock("f", "columns", { order: 1024 }),
+      createBlock("l", "column", { parent_id: "f", order: 1024, span: 1.5 }),
+      createBlock("r", "column", { parent_id: "f", order: 2048 }),
+      createBlock("a", "text", { parent_id: "l", content: [{ text: "left" }] }),
+      createBlock("b", "text", { parent_id: "r", content: [{ text: "right" }] }),
+    ]);
+    expect(html).toMatch(/<div class="columns"[^>]*display:flex[^>]*><div class="column" style="flex:1.5 1 0;min-width:0"><p>left<\/p><\/div><div class="column" style="flex:1 1 0;min-width:0"><p>right<\/p><\/div><\/div>/);
+  });
+});
