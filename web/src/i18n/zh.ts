@@ -51,6 +51,7 @@ export const zh: Record<string, string> = {
   "Columns": "分栏",
   "Columns options": "分栏选项",
   "Resize columns": "调整栏宽",
+  "Add a line below": "在下方添加一行",
   "Turn into one column": "合并为一栏",
   "Delete columns": "删除分栏",
   "Columns cannot be put inside columns.": "分栏里不能再放分栏。",

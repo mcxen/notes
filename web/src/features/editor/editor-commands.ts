@@ -974,7 +974,21 @@ export function withoutEmptyPages(tree: BlockTree, transaction: EditorTransactio
    broke it (`withTidyColumns`), by taking what is left out of the frame. */
 
 /** The most columns one frame holds. */
-export const MAX_COLUMNS = 4;
+export const MAX_COLUMNS = 6;
+
+/** A new column after the last of a frame, with a line in it to write in. */
+export function addColumn(tree: BlockTree, frameId: string, newId: () => string): { transaction: EditorTransaction; focusId: string } | null {
+  const frame = tree.by_id[frameId];
+  if (frame?.kind !== "columns") return null;
+  const columns = orderedBlocks(tree, frameId).filter((block) => block.kind === "column");
+  if (columns.length >= MAX_COLUMNS) return null;
+  const column = createBlock(newId(), "column", { parent_id: frameId, order: (columns.at(-1)?.order ?? 0) + BLOCK_ORDER_STEP });
+  const line = createBlock(newId(), "text", { parent_id: column.id });
+  return {
+    transaction: { mutations: [{ action: "put", block: column }, { action: "put", block: line }], focus: { id: line.id, offset: 0 } },
+    focusId: line.id,
+  };
+}
 
 /** `count` empty columns, where the line `blockId` stands: in its place when it
  *  is empty, else after it. Not inside a column: columns do not nest. */
@@ -1031,7 +1045,7 @@ export function unwrapColumns(tree: BlockTree, columnsId: string): EditorTransac
  *  frame with fewer than two columns is taken apart, and a column that is in
  *  no frame (a merge took its frame) lets go of its lines. The mending goes in
  *  the change's own step. */
-export function withTidyColumns(tree: BlockTree, transaction: EditorTransaction): EditorTransaction {
+export function withTidyColumns(tree: BlockTree, transaction: EditorTransaction, newId: () => string): EditorTransaction {
   // A page with no columns, and a change that makes none, is left as it is
   // without reading the change.
   const makes = transaction.mutations.some((mutation) => mutation.action === "put" && (mutation.block.kind === "column" || mutation.block.kind === "columns"));
@@ -1059,6 +1073,16 @@ export function withTidyColumns(tree: BlockTree, transaction: EditorTransaction)
     if (thin) {
       apply(unwrapColumns(after, thin.id)?.mutations ?? [{ action: "delete", blockId: thin.id }]);
       continue;
+    }
+    // A frame that ends the lines it stands among has a line after it to click
+    // into and write on: there is no other way to get below it.
+    const unfollowed = blocks.find((block) => block.kind === "columns" && orderedBlocks(after, block.parent_id).at(-1)?.id === block.id);
+    if (unfollowed) {
+      const trailing = insertBlockAfter(after, unfollowed.id, newId());
+      if (trailing) {
+        apply(trailing.mutations);
+        continue;
+      }
     }
     // A column outside any frame: its lines go where it stood.
     const loose = blocks.find((block) => block.kind === "column" && after.by_id[block.parent_id ?? ""]?.kind !== "columns");

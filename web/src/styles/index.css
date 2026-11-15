@@ -9612,19 +9612,38 @@ button.export__row:hover {
   flex-direction: column;
 }
 
-/* The grip is the 9px at the edge of the room between cells, level with the
-   column it resizes: the "+" and the handle of the later cell's lines stand in
-   the rest of that room, and would cover a grip in its middle. */
+/* The room between two cells draws a dotted line down its middle, always, so it
+   shows where one column ends and the next begins; the grip at its edge — the
+   9px that are dragged — is level with the column it resizes: the "+" and the
+   handle of the later cell's lines stand in the rest of the room, and would
+   cover a grip in its middle. */
 .columns__divider {
   position: relative;
-  width: 9px;
   align-self: stretch;
-  justify-self: start;
+  pointer-events: none;
+}
+
+.columns__divider::before {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 50%;
+  border-left: 1px dotted var(--ink-4);
+  content: "";
+}
+
+.columns__grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 9px;
   cursor: col-resize;
+  pointer-events: auto;
   touch-action: none;
 }
 
-.columns__divider::after {
+.columns__grip::after {
   position: absolute;
   top: 2px;
   bottom: 2px;
@@ -9637,9 +9656,9 @@ button.export__row:hover {
   transition: background var(--t-fast) var(--e-out);
 }
 
-.columns__divider:hover::after,
-.columns.is-resizing > .columns__divider::after {
-  background: var(--fill-hover);
+.columns__grip:hover::after,
+.columns.is-resizing .columns__grip::after {
+  background: var(--blue-tint);
 }
 
 .columns.is-resizing,
@@ -9648,16 +9667,40 @@ button.export__row:hover {
   user-select: none;
 }
 
-.columns__menu {
+/* The cells, outlined with a faint dashed line always, and plainly while the
+   pointer is over the frame or the caret is in it: which lines are in columns,
+   and which are not. */
+.columns > .columns__cell {
+  outline: 1px dashed var(--hairline-strong);
+  outline-offset: 6px;
+  border-radius: 3px;
+}
+
+.columns:hover > .columns__cell,
+.columns:focus-within > .columns__cell {
+  outline-color: var(--ink-4);
+}
+
+.columns__tools {
   position: absolute;
   z-index: 3;
-  top: 0;
+  top: -26px;
   right: 0;
+  display: flex;
+  gap: 2px;
   opacity: 0;
   transition: opacity var(--t-fast) var(--e-out);
 }
 
-.columns:hover > .columns__menu,
-.columns__menu:focus-visible {
+.columns:hover > .columns__tools,
+.columns:focus-within > .columns__tools,
+.columns__tools:focus-within {
   opacity: 1;
+}
+
+/* Under a frame that ends the page: the strip to click, to write below it. */
+.columns__after {
+  grid-column: 1 / -1;
+  height: 28px;
+  cursor: text;
 }

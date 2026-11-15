@@ -4,6 +4,7 @@ import { inlinePlainText } from "../../core/inline-content";
 import type { Block, BlockTree } from "../../core/types";
 import {
   applyEditorTransaction,
+  addColumn,
   columnShares,
   deleteBlocks,
   MAX_COLUMNS,
@@ -76,6 +77,30 @@ describe("columns", () => {
     expect(newColumns(page, "one", MAX_COLUMNS + 1, id)).toBeNull();
   });
 
+  it("are followed by a line when they end the page, to write below them", () => {
+    const page = tree(text("one", "words", null, 1024));
+    const made = newColumns(page, "one", 2, id)!;
+    const mended = applyEditorTransaction(page, withTidyColumns(page, made.transaction, id));
+    expect(reading(mended)).toBe("words · | · ·");
+    // Deleting that line brings another back; one with a line after it is left alone.
+    const last = orderedBlocks(mended).at(-1)!;
+    const again = applyEditorTransaction(mended, withTidyColumns(mended, { mutations: [{ action: "delete", blockId: last.id }] }, id));
+    expect(orderedBlocks(again).at(-1)?.kind).toBe("text");
+    const framedPage = framed();
+    expect(withTidyColumns(framedPage, { mutations: [{ action: "delete", blockId: "a" }] }, id).mutations).toHaveLength(1);
+  });
+
+  it("take another column after the last, up to the most", () => {
+    let page = framed();
+    const first = addColumn(page, "frame", id)!;
+    page = applyEditorTransaction(page, first.transaction);
+    expect(reading(page)).toBe("before a b | c | · after");
+    expect(page.by_id[first.focusId].parent_id).toBe(orderedBlocks(page, "frame").at(-1)!.id);
+    while (addColumn(page, "frame", id)) page = applyEditorTransaction(page, addColumn(page, "frame", id)!.transaction);
+    expect(orderedBlocks(page, "frame")).toHaveLength(MAX_COLUMNS);
+    expect(addColumn(page, "before", id)).toBeNull();
+  });
+
   it("do not nest", () => {
     const inside = applyEditorTransaction(framed(), { mutations: [] });
     expect(newColumns(inside, "a", 2, id)).toBeNull();
@@ -92,18 +117,18 @@ describe("columns", () => {
     const page = framed();
     // The only line of the right column goes: the column goes, and the frame with it.
     const removed: EditorTransaction = { mutations: [{ action: "delete", blockId: "c" }] };
-    const mended = applyEditorTransaction(page, withTidyColumns(page, removed));
+    const mended = applyEditorTransaction(page, withTidyColumns(page, removed, id));
     expect(reading(mended)).toBe("before a b after");
     expect(Object.values(mended.by_id).some((block) => block.kind === "column" || block.kind === "columns")).toBe(false);
     // Deleting a line that leaves every column something changes nothing else.
     const one: EditorTransaction = { mutations: [{ action: "delete", blockId: "a" }] };
-    expect(reading(applyEditorTransaction(page, withTidyColumns(page, one)))).toBe("before b | c after");
+    expect(reading(applyEditorTransaction(page, withTidyColumns(page, one, id)))).toBe("before b | c after");
   });
 
   it("are mended in the step of the change that broke them", () => {
     const page = framed();
     const wiped = deleteBlocks(page, ["a", "b"], id())!;
-    const mended = withTidyColumns(page, wiped);
+    const mended = withTidyColumns(page, wiped, id);
     expect(mended.mutations.length).toBeGreaterThan(wiped.mutations.length);
     expect(reading(applyEditorTransaction(page, mended))).toBe("before c after");
   });
@@ -118,7 +143,7 @@ describe("columns", () => {
     expect(reading(loose)).toBe("x y");
     // A change that moves a line mends it.
     const moved: EditorTransaction = { mutations: [{ action: "put", block: { ...loose.by_id.y, parent_id: null, order: 3072 } }, { action: "delete", blockId: "zz" }] };
-    const mended = applyEditorTransaction(loose, withTidyColumns(loose, moved));
+    const mended = applyEditorTransaction(loose, withTidyColumns(loose, moved, id));
     expect(reading(mended)).toBe("x y");
     expect(mended.by_id.col).toBeUndefined();
   });
@@ -126,7 +151,7 @@ describe("columns", () => {
   it("leave a page with none exactly as it was, and cost it nothing to check", () => {
     const page = tree(text("a", "a", null, 1024), text("b", "b", null, 2048));
     const change: EditorTransaction = { mutations: [{ action: "delete", blockId: "a" }] };
-    expect(withTidyColumns(page, change)).toBe(change);
+    expect(withTidyColumns(page, change, id)).toBe(change);
   });
 
   it("are resized by the pair, within the least a column may have", () => {

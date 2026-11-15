@@ -107,6 +107,7 @@ import {
   updateBlockFields,
   withoutEmptyPages,
   withTidyColumns,
+  addColumn,
   columnShares,
   resizeColumns,
   unwrapColumns,
@@ -481,7 +482,7 @@ export function DocumentEditor({
     if (!platform) return null;
     const live = workspace?.state.pages ?? pages;
     const current = composeTree(live, live[page.id] ?? page, showInPlace);
-    const transaction = withTidyColumns(current.tree, withoutEmptyPages(current.tree, change, () => createId("block")));
+    const transaction = withTidyColumns(current.tree, withoutEmptyPages(current.tree, change, () => createId("block")), () => createId("block"));
     commitWrites([...(options.extra ?? []), ...routeTransaction(current, live, transaction, {
       author: platform.bootstrap.user.displayName,
       now: new Date().toISOString(),
@@ -2169,6 +2170,11 @@ export function DocumentEditor({
             children: renderItems(items, at === 0 ? marks : 0, item.depth, level),
           }))}
           onResize={(leftId, share) => execute(resizeColumns(tree, leftId, share))}
+          onAddColumn={() => {
+            const made = addColumn(tree, item.frame.id, () => createId("block"));
+            if (made) execute(made.transaction);
+          }}
+          onAddAfter={level === 0 && index === list.length - 1 ? () => execute(insertBlockAfter(tree, item.frame.id, createId("block"))) : undefined}
           onUnwrap={() => execute(unwrapColumns(tree, item.frame.id))}
           onDelete={() => execute(deleteBlocks(tree, [item.frame.id], createId("block")))}
         />

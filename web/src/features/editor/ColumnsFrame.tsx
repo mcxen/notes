@@ -1,9 +1,10 @@
-import { Columns2, MoreHorizontal, Rows3, Trash2 } from "lucide-react";
+import { Columns2, MoreHorizontal, Plus, Rows3, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, type ReactNode } from "react";
 import { MenuItem, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
 import { rectOf, type AnchorRect } from "../../hooks/useAnchoredPosition";
 import { t } from "../../i18n";
+import { MAX_COLUMNS } from "./editor-commands";
 
 /** Columns side by side, as Notion draws them: cells with room between them
  *  for each line's "+" and handle, and between two cells a divider that is
@@ -32,6 +33,8 @@ export function ColumnsFrame({
   cells,
   readOnly,
   onResize,
+  onAddColumn,
+  onAddAfter,
   onUnwrap,
   onDelete,
 }: {
@@ -43,6 +46,10 @@ export function ColumnsFrame({
   /** The divider after cell `leftId` let go: that cell has `share` of what it
    *  and the cell after it have between them. */
   onResize(leftId: string, share: number): void;
+  /** The "+" pressed: another column after the last. */
+  onAddColumn(): void;
+  /** A frame that ends its page offers the strip under it, to write below it. */
+  onAddAfter?: () => void;
   onUnwrap(): void;
   onDelete(): void;
 }) {
@@ -111,29 +118,40 @@ export function ColumnsFrame({
       {cells.flatMap((cell, index) => [
         <div key={cell.id} className="columns__cell" data-column-cell={cell.id}>{cell.children}</div>,
         index < cells.length - 1 && !stacked ? (
-          <div
-            key={`${cell.id}-divider`}
-            className="columns__divider"
-            role="separator"
-            aria-orientation="vertical"
-            aria-label={t("Resize columns")}
-            contentEditable={false}
-            onPointerDown={(event) => start(event, index)}
-          />
+          // The room between two cells draws a dotted line down its middle, so
+          // it shows where one column ends; the grip at its edge is what is dragged.
+          <div key={`${cell.id}-divider`} className="columns__divider" contentEditable={false}>
+            <div
+              className="columns__grip"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label={t("Resize columns")}
+              onPointerDown={(event) => start(event, index)}
+            />
+          </div>
         ) : null,
       ])}
       {readOnly ? null : (
-        <button
-          type="button"
-          className="columns__menu icon-btn"
-          contentEditable={false}
-          aria-label={t("Columns options")}
-          aria-haspopup="menu"
-          onClick={(event) => setMenu(rectOf(event.currentTarget))}
-        >
-          <MoreHorizontal size={14} />
-        </button>
+        <div className="columns__tools" contentEditable={false}>
+          {cells.length < MAX_COLUMNS ? (
+            <button type="button" className="columns__tool icon-btn" aria-label={t("Add a column")} title={t("Add a column")} onClick={onAddColumn}>
+              <Plus size={14} />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className="columns__tool icon-btn"
+            aria-label={t("Columns options")}
+            aria-haspopup="menu"
+            onClick={(event) => setMenu(rectOf(event.currentTarget))}
+          >
+            <MoreHorizontal size={14} />
+          </button>
+        </div>
       )}
+      {onAddAfter && !readOnly ? (
+        <div className="columns__after" contentEditable={false} aria-label={t("Add a line below")} onMouseDown={(event) => { event.preventDefault(); onAddAfter(); }} />
+      ) : null}
       <Popover open={menu !== null} anchor={menu} placement="bottom-end" label={t("Columns")} onDismiss={() => setMenu(null)}>
         <MenuList label={t("Columns")} autoFocus>
           <MenuItem icon={<Rows3 size={16} />} label={t("Turn into one column")} onSelect={() => { setMenu(null); onUnwrap(); }} />
