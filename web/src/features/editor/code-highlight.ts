@@ -32,6 +32,8 @@ export const CODE_LANGUAGES: readonly CodeLanguage[] = [
   { id: "json", label: "JSON", grammar: "json" },
   { id: "kotlin", label: "Kotlin", grammar: "kotlin" },
   { id: "markdown", label: "Markdown", grammar: "markdown" },
+  // Drawn as a diagram under its source (MermaidBlock), not coloured.
+  { id: "mermaid", label: "Mermaid" },
   { id: "php", label: "PHP", grammar: "php" },
   { id: "python", label: "Python", grammar: "python" },
   { id: "ruby", label: "Ruby", grammar: "ruby" },
@@ -53,7 +55,7 @@ const ALIASES: Record<string, string> = {
   sh: "bash", shell: "bash", zsh: "bash", console: "bash",
   rs: "rust", golang: "go", rb: "ruby", kt: "kotlin", cs: "csharp", "c#": "csharp",
   "c++": "cpp", cc: "cpp", hpp: "cpp", h: "c",
-  yml: "yaml", md: "markdown", htm: "html", svg: "xml", patch: "diff",
+  yml: "yaml", mmd: "mermaid", md: "markdown", htm: "html", svg: "xml", patch: "diff",
   text: PLAIN_TEXT, txt: PLAIN_TEXT, plain: PLAIN_TEXT, plaintext: PLAIN_TEXT,
 };
 
@@ -77,6 +79,8 @@ export function lastCodeLanguage(): string {
 }
 
 export function rememberCodeLanguage(id: string): void {
+  // A diagram is chosen for the block that is one: the next block of code is not.
+  if (codeLanguage(id).id === "mermaid") return;
   try {
     window.localStorage.setItem(LAST_LANGUAGE_KEY, codeLanguage(id).id);
   } catch {

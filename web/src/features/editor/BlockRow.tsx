@@ -8,6 +8,7 @@ import type { DescribeMention } from "../../core/inline-content";
 import type { Block, InlineContent } from "../../core/types";
 import { blockDefinition } from "./block-registry";
 import { MathBlock } from "./MathBlock";
+import { MermaidBlock } from "./MermaidBlock";
 import { CODE_LANGUAGES, codeLanguage } from "./code-highlight";
 import { InlineEditor } from "./InlineEditor";
 import { EmbedBlock, type EmbedActions } from "./EmbedBlock";
@@ -361,8 +362,8 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
           </div>
         ) : block.kind === "math" ? (
           <MathBlock source={inlinePlainText(block.content)} readOnly={readOnly}>{editable}</MathBlock>
-        ) : block.kind === "code" ? (
-          <div className="block__code">
+        ) : block.kind === "code" ? (() => {
+          const bar = (
             <div className="block__code-bar" contentEditable={false}>
               <select
                 className="block__code-lang"
@@ -377,9 +378,18 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
                 <Copy size={14} />
               </button>
             </div>
-            {editable}
-          </div>
-        ) : definition.editable ? editable : null}
+          );
+          // Mermaid is drawn as a diagram under its source.
+          if (codeLanguage(block.language).id === "mermaid") {
+            return <MermaidBlock source={inlinePlainText(block.content)} readOnly={readOnly} header={bar}>{editable}</MermaidBlock>;
+          }
+          return (
+            <div className="block__code">
+              {bar}
+              {editable}
+            </div>
+          );
+        })() : definition.editable ? editable : null}
 
         {props.slot}
       </div>}

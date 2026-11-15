@@ -241,3 +241,14 @@ func TestColumnsAreReadAsTheirLinesInOrder(t *testing.T) {
 		t.Fatalf("depths = %v", depths)
 	}
 }
+
+func TestAMermaidDiagramIsACodeBlockThatKeepsItsLanguageBothWays(t *testing.T) {
+	src := "```mermaid\nflowchart LR\n  A --> B\n```"
+	blocks := FromMarkdown(src, ids())
+	if len(blocks) != 1 || blocks[0].Kind != "code" || blocks[0].Language != "mermaid" {
+		t.Fatalf("blocks = %+v, want one code block of language mermaid", blocks)
+	}
+	if got := ToMarkdown(blocks, noName); got != src {
+		t.Fatalf("markdown = %q, want %q", got, src)
+	}
+}

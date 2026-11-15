@@ -41,6 +41,9 @@ import { markFreshTable, tableEntryCell } from "./SimpleTable";
 import { markFresh } from "../database/fresh";
 import type { Editor, PendingFocus } from "./editor-state";
 import type { ImageSlot } from "./html-paste";
+
+/** What a new Mermaid diagram starts as: a flowchart, to change. */
+const MERMAID_SAMPLE = "flowchart LR\n  A[Idea] --> B{Worth doing?}\n  B -- Yes --> C[Build it]\n  B -- No --> D[Write it down]";
 import { settleImages } from "./paste-images";
 import type { useMedia } from "./useMedia";
 
@@ -437,6 +440,24 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
       return;
     }
 
+    if (command.action === "mermaid") {
+      // A code block of Mermaid with a flowchart to change: in place of the line
+      // when the command was all it held, else after it.
+      const sample = inlineFromText(MERMAID_SAMPLE);
+      const empty = !inlinePlainText(stripped);
+      const target = empty ? block.id : createId("block");
+      const mutations: BlockMutation[] = [];
+      if (empty) {
+        mutations.push({ action: "put", block: { ...block, kind: "code", content: sample, language: "mermaid", checked: undefined } });
+      } else {
+        const inserted = insertBlockAfter(tree, block.id, target, "code");
+        if (!inserted) return;
+        const made = (inserted.mutations[0] as Extract<BlockMutation, { action: "put" }>).block;
+        mutations.push({ action: "put", block: { ...block, content: stripped } }, { action: "put", block: { ...made, content: sample, language: "mermaid" } });
+      }
+      execute({ mutations }, { id: target, start: MERMAID_SAMPLE.length, force: true });
+      return;
+    }
     if (command.action === "columns") {
       // The line becomes the columns when the command was all it held, else
       // they go in after it; the caret goes to the first column's line.

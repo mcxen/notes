@@ -3465,6 +3465,57 @@ pre.block__editable {
   white-space: pre-wrap;
 }
 
+/* A Mermaid block draws its diagram under the source. While the diagram is
+   drawn and the caret is elsewhere the source is clipped, not removed, as an
+   equation's is; with the caret in it, or when the source cannot be read, the
+   source and the diagram (or what is wrong) are both on view. */
+.block__diagram[data-state="ready"]:not(:focus-within) {
+  padding-top: 14px;
+}
+
+.block__diagram[data-state="ready"]:not(:focus-within) .block__editable {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.block__diagram-view {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 2px 0;
+  cursor: text;
+  user-select: none;
+}
+
+.block__diagram:focus-within .block__diagram-view,
+.block__diagram[data-state="error"] .block__diagram-view {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+}
+
+.block__diagram-view svg {
+  max-width: 100%;
+  max-height: 480px;
+  height: auto;
+}
+
+.block__diagram-error {
+  margin-top: 10px;
+  color: var(--text-red);
+  font-family: var(--notes-font-code);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
 /* A page's line — a line holding nothing but its link — is marked as a
    block is: its icon at the start of the line, the triangle under the
    pointer, its count on the icon's corner; its name after it, where a shown

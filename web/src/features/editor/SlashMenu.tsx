@@ -1,4 +1,4 @@
-import { CalendarDays, Clock, Columns2, Columns3, Database, LayoutGrid, LayoutList } from "lucide-react";
+import { CalendarDays, Clock, Columns2, Columns3, Database, LayoutGrid, LayoutList, Workflow } from "lucide-react";
 import type { ComponentType } from "react";
 import type { BlockKind, DatabaseViewKind } from "../../core/types";
 import { BLOCK_DEFINITIONS, DatabaseIcon, PageIcon } from "./block-registry";
@@ -21,7 +21,7 @@ export interface Command {
    *  here, opening on `view`; `database-page` makes a full-page database and
    *  leaves a link to it, which is what `/database` used to do; `time` opens
    *  the time picker, which writes the time as plain text. */
-  action?: "page" | "database-inline" | "database-page" | "time" | "columns";
+  action?: "page" | "database-inline" | "database-page" | "time" | "columns" | "mermaid";
   view?: DatabaseViewKind;
   /** `columns`: how many. */
   count?: number;
@@ -47,6 +47,11 @@ const COMMANDS: Command[] = [
     aliases: ["columns", "column", "col", "split", "side by side", "layout", "分栏", "多栏", "两栏", "三栏", "四栏"],
     action: "columns" as const, count,
   })),
+  {
+    id: "mermaid", label: "Mermaid diagram",
+    icon: Workflow, group: "Basic", aliases: ["diagram", "flowchart", "uml", "sequence", "class", "state", "graph", "chart", "er", "流程图", "时序图", "类图", "图"],
+    action: "mermaid",
+  },
   {
     id: "sub-page", label: "Page",
     icon: PageIcon, group: "Database", aliases: ["subpage", "child", "doc"], action: "page",
