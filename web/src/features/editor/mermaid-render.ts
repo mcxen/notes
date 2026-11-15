@@ -106,7 +106,10 @@ export function diagramConfig(look: PageLook): MermaidConfig {
       cScaleLabel0: ink, cScaleLabel1: ink, cScaleLabel2: ink, cScaleLabel3: ink, cScaleLabel4: ink, cScaleLabel5: ink,
     },
     themeCSS: DIAGRAM_CSS,
-    flowchart: { curve: "basis", padding: 12, htmlLabels: true },
+    // Labels are SVG text, not HTML in a foreignObject: a diagram saved as a
+    // picture (diagram-export.ts) is then drawn the same by any web view.
+    htmlLabels: false,
+    flowchart: { curve: "basis", padding: 12, htmlLabels: false },
     sequence: { mirrorActors: false, useMaxWidth: true },
     // A chart is drawn to the width it needs: a Gantt shrunk to the block would have unreadable type.
     gantt: { useMaxWidth: false, barHeight: 22, fontSize: 12, leftPadding: 70, axisFormat: "%m-%d" },

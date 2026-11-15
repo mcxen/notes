@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Download, Maximize, Paperclip, Replace, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { formatFileSize, normalizeStoredFile } from "../../core/files";
 import type { Block, StoredFile } from "../../core/types";
 import { Modal } from "../../components/Modal";
@@ -174,6 +174,32 @@ export function ImageViewer({
   onClose(): void;
 }) {
   const { url, failed } = useFileUrl(file, "original", actions);
+  return <ZoomViewer name={file.name} url={url} failed={failed} identity={file.path} browse={browse} onDownload={onDownload} onClose={onClose} />;
+}
+
+/** A picture at an address, zoomed and moved about over the page. Pictures
+ *  kept with a note come through ImageViewer; a diagram drawn on the page is
+ *  shown through this directly. `identity` changes when it is another picture,
+ *  which starts fitted again; `tools` are buttons beside Download. */
+export function ZoomViewer({
+  name,
+  url,
+  failed = false,
+  identity = url,
+  browse,
+  tools,
+  onDownload,
+  onClose,
+}: {
+  name: string;
+  url: string | null;
+  failed?: boolean;
+  identity?: string | null;
+  browse?: ViewerBrowse;
+  tools?: ReactNode;
+  onDownload?(): void;
+  onClose(): void;
+}) {
   const stage = useRef<HTMLDivElement | null>(null);
   const image = useRef<HTMLImageElement | null>(null);
   const [zoom, setZoom] = useState<Zoom>(FIT);
@@ -187,7 +213,7 @@ export function ImageViewer({
     setSize({ fit: element.offsetWidth, natural: element.naturalWidth });
   }, []);
   // Another picture (← →) starts fitted.
-  useEffect(() => { setZoom(FIT); }, [file.path]);
+  useEffect(() => { setZoom(FIT); }, [identity]);
   useEffect(() => {
     window.addEventListener("resize", measure);
     return () => window.removeEventListener("resize", measure);
@@ -257,11 +283,12 @@ export function ImageViewer({
     return () => window.removeEventListener("keydown", onKeyDown, true);
   });
   return (
-    <Modal open label={file.name} className="viewer" onClose={onClose}>
+    <Modal open label={name} className="viewer" onClose={onClose}>
       <div className="viewer__bar">
-        <span className="viewer__name">{file.name}</span>
+        <span className="viewer__name">{name}</span>
         {browse && browse.count > 1 ? <span className="viewer__count">{browse.index + 1} of {browse.count}</span> : null}
-        <button type="button" className="icon-btn" aria-label={t("Download")} onClick={onDownload}><Download size={16} /></button>
+        {tools}
+        {onDownload ? <button type="button" className="icon-btn" aria-label={t("Download")} onClick={onDownload}><Download size={16} /></button> : null}
         <button type="button" className="icon-btn" aria-label={t("Close")} onClick={onClose}><X size={16} /></button>
       </div>
       <div className="viewer__stage" ref={stage} onClick={() => { if (!dragged.current) onClose(); dragged.current = false; }}>
@@ -269,7 +296,7 @@ export function ImageViewer({
           <img
             ref={image}
             src={url}
-            alt={file.name}
+            alt={name}
             draggable={false}
             className={zoom.scale > 1 ? "is-zoomed" : undefined}
             style={{ transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})` }}

@@ -3484,17 +3484,27 @@ pre.block__editable {
   clip-path: inset(50%);
 }
 
+.block__diagram-stage {
+  position: relative;
+}
+
 .block__diagram-view {
   display: flex;
   justify-content: center;
   overflow-x: auto;
   padding: 2px 0;
-  cursor: text;
+  cursor: zoom-in;
   user-select: none;
+  border-radius: var(--r-sm);
 }
 
-.block__diagram:focus-within .block__diagram-view,
-.block__diagram[data-state="error"] .block__diagram-view {
+.block__diagram-view:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.block__diagram:focus-within .block__diagram-stage,
+.block__diagram[data-state="error"] .block__diagram-stage {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--hairline);
@@ -3504,6 +3514,28 @@ pre.block__editable {
   max-width: 100%;
   max-height: 480px;
   height: auto;
+}
+
+/* What can be done with the diagram, in its corner on hover — as a code
+   block's copy button is. */
+.block__diagram-tools {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--hairline);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.block__diagram-stage:hover .block__diagram-tools,
+.block__diagram-tools:focus-within,
+.block__diagram-view:focus-visible + .block__diagram-tools {
+  opacity: 1;
 }
 
 .block__diagram-error {
