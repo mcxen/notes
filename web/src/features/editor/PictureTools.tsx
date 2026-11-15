@@ -1,6 +1,8 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { AlignCenter, AlignLeft, AlignRight, Download, Maximize2 } from "lucide-react";
 import type { Block } from "../../core/types";
 import { t } from "../../i18n";
+import { toolsPlace } from "./pictures";
 
 const ALIGNMENTS = [
   { value: undefined, label: "Align left", Icon: AlignLeft },
@@ -8,9 +10,11 @@ const ALIGNMENTS = [
   { value: "right", label: "Align right", Icon: AlignRight },
 ] as const;
 
-/** A picture's tools, at its top right corner while the pointer is on it:
- *  where its line stands across the page — the picture with its words — and
- *  its bytes, saved or looked at whole. */
+/** A picture's tools, at its top right corner while the pointer is on it —
+ *  or just outside a picture too small to hold them (`toolsPlace`), so they
+ *  never lie over the bars that size it: where its line stands across the
+ *  page — the picture with its words — and its bytes, saved or looked at
+ *  whole. */
 export function PictureTools({
   rect,
   align,
@@ -30,10 +34,23 @@ export function PictureTools({
   onEnter(): void;
   onLeave(): void;
 }) {
+  // Placed once their own size is known: out of sight for the one frame before.
+  const bar = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const element = bar.current;
+    if (!element) return;
+    const next = { width: element.offsetWidth, height: element.offsetHeight };
+    setSize((current) => (current && current.width === next.width && current.height === next.height ? current : next));
+  }, [readOnly]);
+  const place = size
+    ? toolsPlace(rect, size, align, { width: window.innerWidth, height: window.innerHeight })
+    : { left: 0, top: 0 };
   return (
     <div
+      ref={bar}
       className="picture-tools"
-      style={{ top: rect.top + 6, right: window.innerWidth - rect.right + 6 }}
+      style={{ ...place, visibility: size ? undefined : "hidden" }}
       onPointerEnter={onEnter}
       onPointerLeave={onLeave}
       // The caret stays where it was.

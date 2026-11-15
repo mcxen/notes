@@ -31,14 +31,49 @@ function pictureOf(token: HTMLElement): Picture | null {
 }
 
 /** The side of a picture a point is on — where its bars stand, the handles
- *  that size it, as Notion's and a card's do — or null. A picture too narrow
- *  to keep a middle to carry it by between its two has none. */
-function edgeAt(token: HTMLElement, x: number): "left" | "right" | null {
-  const box = token.getBoundingClientRect();
-  if (box.width < EDGE * 4) return null;
-  if (x < box.left + EDGE) return "left";
-  if (x > box.right - EDGE) return "right";
+ *  that size it, as Notion's and a card's do — or null. However small the
+ *  picture, it can be made larger: a narrow one gives each side a third of
+ *  itself and keeps the middle to be carried by, and one narrower than two
+ *  bars (a small picture pasted at its own size) is all sides, half and
+ *  half — it moves with its line. */
+export function edgeOf(box: { left: number; right: number; width: number }, x: number): "left" | "right" | null {
+  const edge = box.width < EDGE * 2 ? box.width / 2 : Math.min(EDGE, box.width / 3);
+  if (x < box.left + edge) return "left";
+  if (x > box.right - edge) return "right";
   return null;
+}
+
+/** The room a side bar is drawn in above and below the picture's middle. */
+const BAR = 22;
+const MARGIN = 8;
+
+/** Where a picture's tools stand (PictureTools), by their top left corner:
+ *  in the picture's top right corner when it holds them clear of its side
+ *  bars — which stand at its middle, inside each edge — and otherwise just
+ *  outside it, above (below, at the top of the window), on the side the
+ *  line sets the picture to. Over a small picture they would lie on the
+ *  bars, and on the picture itself. */
+export function toolsPlace(
+  box: { left: number; right: number; top: number; bottom: number; width: number; height: number },
+  tools: { width: number; height: number },
+  align: "center" | "right" | undefined,
+  window: { width: number; height: number },
+): { left: number; top: number } {
+  const inset = 6;
+  const within = box.width >= tools.width + inset * 2 + EDGE * 2
+    && box.height / 2 - BAR >= tools.height + inset;
+  if (within) return { left: box.right - inset - tools.width, top: box.top + inset };
+  const gap = 4;
+  const above = box.top - gap - tools.height;
+  const top = above >= MARGIN ? above : Math.min(box.bottom + gap, window.height - MARGIN - tools.height);
+  const left = align === "right" ? box.right - tools.width
+    : align === "center" ? box.left + (box.width - tools.width) / 2
+    : box.left;
+  return { left: Math.round(Math.max(MARGIN, Math.min(left, window.width - MARGIN - tools.width))), top: Math.round(top) };
+}
+
+function edgeAt(token: HTMLElement, x: number): "left" | "right" | null {
+  return edgeOf(token.getBoundingClientRect(), x);
 }
 
 export function usePictures({ root, readOnly, uploads, show, resize, move, hover }: {

@@ -5064,9 +5064,11 @@ pre.block__editable {
 .mention[data-mention="image"].is-resizing::after {
   position: absolute;
   top: 50%;
-  width: 6px;
+  /* On a small picture the bars are still long enough to see and to take,
+     and never so wide that the two meet. */
+  width: min(6px, 30%);
   height: 44px;
-  max-height: 45%;
+  max-height: max(45%, min(20px, 100% - 8px));
   border: 1px solid rgba(255, 255, 255, 0.9);
   border-radius: 4px;
   background: rgba(15, 15, 15, 0.55);
@@ -5076,11 +5078,11 @@ pre.block__editable {
 }
 
 .mention[data-mention="image"]::before {
-  left: 4px;
+  left: min(4px, 10%);
 }
 
 .mention[data-mention="image"]::after {
-  right: 4px;
+  right: min(4px, 10%);
 }
 
 .mention[data-mention="image"]:is(.is-sizing, .is-resizing) {
@@ -5091,7 +5093,7 @@ pre.block__editable {
    plainly the thing to drag. */
 .blocks:not(.is-read-only) .mention[data-mention="image"].is-sizing-left::before,
 .blocks:not(.is-read-only) .mention[data-mention="image"].is-sizing-right::after {
-  width: 8px;
+  width: min(8px, 40%);
   background: var(--blue);
 }
 
