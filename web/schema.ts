@@ -18,7 +18,7 @@ export const COVER_IDS = ["slate", "dawn", "moss", "tide", "orchid", "clay", "in
 
 /** What a database's property holds, and the layouts of its views. */
 export const PROPERTY_TYPES = ["text", "select", "status", "date", "person", "image"] as const;
-export const VIEW_KINDS = ["table", "board", "list", "gallery", "calendar"] as const;
+export const VIEW_KINDS = ["table", "board", "list", "gallery", "calendar", "chart"] as const;
 
 /** The member's colour schemes: the system's, or one held. */
 export const THEMES = ["system", "light", "dark"] as const;
@@ -129,8 +129,11 @@ const view = t.object({
   /** The rows' order, as Notion's sorts: by the first key, rows alike on it
    *  by the next, and so on. */
   sorts: t.list(sort).optional(),
-  /** Board: the status or select property whose options are the columns. */
+  /** Board: the status or select property whose options are the columns.
+   *  Chart: the one whose options the rows are counted by. */
   group_by: t.string().optional(),
+  /** Chart: a ring (the share of each option) or bars (their counts). */
+  chart: t.choice("donut", "bar").optional(),
   /** Calendar: the date property that places each row on a day. */
   date_by: t.string().optional(),
   /** Table: drawn as a plain Markdown table. */

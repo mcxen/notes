@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Chart view for a database. A database's view can be a Chart (the layout list of its ··· menu): its rows counted by the options of a status or select property, drawn as a ring (each option's share, the total in the middle) or as bars (their counts), in the colours the status options have. The options are listed beside it with their counts and shares; pressing a slice, a bar or a line shows the rows that have that option, and each opens. Chart style and the property counted by are chosen in the same menu.
 - Columns side by side, as Notion's. `/2 columns`, `/3 columns` or `/4 columns` puts empty columns where the caret is, each with a line to write in; the divider between two columns is dragged to give one more room and the other less, The lines in them read one column after another everywhere that has no side by side: Markdown, a search, an assistant over MCP, and a window narrower than about 520 px draws the columns one above another. A column left with no line goes, and so does a frame left with one column, in the same step of undo as the change that left them. The ··· and + at the frame's corner (on hover) put the lines back in one column, delete them, or add another column (up to six); columns are outlined with a dashed line and a dotted line stands between them, and a line always follows the frame, so there is a way to write below it. Dragging a line to the side of another to make columns is not in yet, and columns do not nest.
 ## 0.1.8
 

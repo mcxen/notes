@@ -54,7 +54,7 @@ export function viewKindLabel(kind: DatabaseViewKind): string {
  *  page's language, the ones a person typed as they are. */
 export function viewDisplayName(name: string, kind: DatabaseViewKind): string {
   if (!name) return t(viewKindLabel(kind));
-  const given = /^(Table|Board|List|Gallery|Calendar)(?: (\d+))?$/.exec(name);
+  const given = /^(Table|Board|List|Gallery|Calendar|Chart)(?: (\d+))?$/.exec(name);
   return given ? `${t(given[1])}${given[2] ? ` ${given[2]}` : ""}` : name;
 }
 
@@ -672,7 +672,7 @@ export function createView(
     name: availableName(config.views.map((item) => item.name), viewKindLabel(kind)),
     kind,
   };
-  if (kind === "board") {
+  if (kind === "board" || kind === "chart") {
     let group = groupableProperties(properties)[0];
     if (!group) {
       group = createDatabaseProperty(propertyId(), "status", properties);

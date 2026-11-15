@@ -9706,3 +9706,182 @@ button.export__row:hover {
   height: 28px;
   cursor: text;
 }
+
+/* ── A database as a chart ────────────────────────────────────────────────
+   A ring or bars, and beside it each option with its count; every slice,
+   bar and line is pressed to show the rows that have that option. The fill is
+   the option's own tone (`--tag-dot`). */
+.chart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px 40px;
+  padding: 16px 4px 8px;
+}
+
+.chart__figure {
+  flex: 0 1 240px;
+  min-width: 200px;
+}
+
+.chart[data-chart="bar"] .chart__figure {
+  flex: 1 1 420px;
+}
+
+.chart__ring {
+  display: block;
+  width: 100%;
+  max-width: 240px;
+}
+
+.chart__slice {
+  fill: var(--tag-dot, var(--ink-4));
+  stroke: var(--paper);
+  stroke-width: 1.5;
+  cursor: pointer;
+  transition: opacity var(--t-fast) var(--e-out), transform var(--t-fast) var(--e-out);
+  transform-origin: 100px 100px;
+}
+
+.chart__slice:hover,
+.chart__slice.is-picked {
+  transform: scale(1.03);
+}
+
+.chart__slice.is-dim {
+  opacity: 0.35;
+}
+
+.chart__slice:focus-visible,
+.chart__key:focus-visible,
+.chart__bar-row:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.chart__empty {
+  fill: none;
+  stroke: var(--hairline-strong);
+  stroke-dasharray: 4 4;
+}
+
+.chart__total {
+  fill: var(--ink);
+  font-size: 34px;
+  font-weight: 650;
+}
+
+.chart__caption {
+  fill: var(--ink-3);
+  font-size: 12px;
+}
+
+.chart__legend {
+  display: flex;
+  min-width: 200px;
+  flex: 1 1 220px;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chart__key {
+  display: grid;
+  grid-template-columns: 12px 1fr auto 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.chart__key:hover,
+.chart__key.is-picked,
+.chart__bar-row:hover,
+.chart__bar-row.is-picked {
+  background: var(--fill-hover);
+}
+
+.chart__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tag-dot, var(--ink-4));
+}
+
+.chart__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.chart__share {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.chart__bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chart__bar-row {
+  display: grid;
+  grid-template-columns: minmax(80px, 160px) 1fr 32px;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.chart__bar-track {
+  height: 14px;
+  border-radius: 7px;
+  background: var(--fill-hover);
+  overflow: hidden;
+}
+
+.chart__bar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 7px;
+  background: var(--tag-dot, var(--ink-4));
+}
+
+.chart__bar-count {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.chart__rows {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 1px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+
+.chart__rows-title {
+  padding: 6px 8px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chart__row {
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  color: var(--ink);
+  text-align: left;
+}
+
+.chart__row:hover,
+.chart__row.is-peeked {
+  background: var(--fill-hover);
+}

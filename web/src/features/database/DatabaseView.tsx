@@ -4,6 +4,8 @@ import {
   ArrowUp,
   ArrowUpRight,
   CalendarDays,
+  ChartBar,
+  ChartPie,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -117,6 +119,7 @@ import {
 } from "./database-model";
 import { formatDay, ISO_DAY, OptionTag, PropertyEditor, PropertyIcon, TitleIcon, TypeIcon } from "./properties";
 import { PropertyMenu } from "./PropertyMenu";
+import { ChartLayout } from "./ChartLayout";
 import type { StatusEditing } from "./StatusOptions";
 import { SortPanel, type SortColumn } from "./SortPanel";
 import * as columnIcons from "./property-icons";
@@ -142,6 +145,7 @@ export function ViewIcon({ kind, size = 15 }: { kind: DatabaseViewKind; size?: n
   if (kind === "list") return <LayoutList size={size} />;
   if (kind === "gallery") return <LayoutGrid size={size} />;
   if (kind === "calendar") return <CalendarDays size={size} />;
+  if (kind === "chart") return <ChartPie size={size} />;
   return <Table2 size={size} />;
 }
 
@@ -1388,6 +1392,7 @@ export function DatabaseView({
   });
 
   const board = view.kind === "board" ? boardProperty(view, properties) : undefined;
+  const charted = view.kind === "chart" ? boardProperty(view, properties) : undefined;
   const dates = view.kind === "calendar" ? calendarProperty(view, properties) : undefined;
   // The side peek is the window's; this database marks the row it shows, if
   // it is one of this database's.
@@ -1503,6 +1508,8 @@ export function DatabaseView({
         onMove={(row, value) => setProperty(row, board.id, value)}
       />
     );
+  } else if (view.kind === "chart" && charted) {
+    layout = <ChartLayout rows={rows} property={charted} style={view.chart ?? "donut"} peekId={peeked} onOpen={openRow} />;
   } else if (view.kind === "list") {
     layout = (
       <ListLayout
@@ -1722,7 +1729,14 @@ export function DatabaseView({
                   onSelect={() => changeLayout(menuView, kind)}
                 />
               ))}
-              {menuView.kind === "board" && groupableProperties(properties).length > 1 ? (
+              {menuView.kind === "chart" ? (
+                <>
+                  <div className="menu__section-title">{t("Chart style")}</div>
+                  <MenuItem icon={<ChartPie size={16} />} label={t("Ring")} selected={(menuView.chart ?? "donut") === "donut"} onSelect={() => saveView({ ...menuView, chart: "donut" })} />
+                  <MenuItem icon={<ChartBar size={16} />} label={t("Bars")} selected={menuView.chart === "bar"} onSelect={() => saveView({ ...menuView, chart: "bar" })} />
+                </>
+              ) : null}
+              {(menuView.kind === "board" || menuView.kind === "chart") && groupableProperties(properties).length > 1 ? (
                 <>
                   <div className="menu__section-title">{t("Group by")}</div>
                   {groupableProperties(properties).map((property) => (
