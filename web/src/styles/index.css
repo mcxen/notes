@@ -9601,9 +9601,11 @@ button.export__row:hover {
   align-items: start;
 }
 
+/* Stacked, the cells' outlines stand 4px out and the room between cells is
+   more than twice that, so no two outlines meet. */
 .columns.is-stacked {
   grid-template-columns: minmax(0, 1fr);
-  row-gap: 4px;
+  row-gap: 18px;
 }
 
 .columns__cell {
@@ -9672,7 +9674,7 @@ button.export__row:hover {
    and which are not. */
 .columns > .columns__cell {
   outline: 1px dashed var(--hairline-strong);
-  outline-offset: 6px;
+  outline-offset: 4px;
   border-radius: 3px;
 }
 
