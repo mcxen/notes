@@ -4619,9 +4619,14 @@ pre.block__editable {
   background: rgba(255, 255, 255, 0.14);
 }
 
+/* One track each way that fills the stage, so a picture's max-height and
+   max-width (100%) are the stage's, not its own natural size: a tall picture is
+   fitted in the window, not drawn past its edges where it cannot be reached. */
 .viewer__stage {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   flex: 1;
   place-items: center;
