@@ -132,8 +132,9 @@ const view = t.object({
   /** Board: the status or select property whose options are the columns.
    *  Chart: the one whose options the rows are counted by. */
   group_by: t.string().optional(),
-  /** Chart: a ring (the share of each option) or bars (their counts). */
-  chart: t.choice("donut", "bar").optional(),
+  /** Chart: a ring (the share of each option), bars (their counts), or a ring
+   *  drawn of pixels or of dots. */
+  chart: t.choice("donut", "bar", "pixel", "dots").optional(),
   /** Calendar: the date property that places each row on a day. */
   date_by: t.string().optional(),
   /** Table: drawn as a plain Markdown table. */

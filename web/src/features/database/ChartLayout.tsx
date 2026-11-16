@@ -1,17 +1,21 @@
 import { useState } from "react";
 import type { DatabaseProperty, NotePage } from "../../core/types";
 import { t } from "../../i18n";
-import { arcPath, chartSlices, type Slice } from "./chart-data";
+import { arcPath, chartSlices, type ChartStyle, type Slice, ringCells } from "./chart-data";
 
 /** A database as a chart: its rows counted by the option each has in a status
  *  or a select. A ring shows each option's share of the rows (the total in its
- *  middle), bars their counts; the options are listed beside it with both, and
- *  one pressed — a slice, a bar or its line — shows the rows that have it,
- *  each of which opens. Drawn as SVG and CSS, in the colours the options have. */
+ *  middle), bars their counts; the ring can also be drawn of pixels or of dots,
+ *  on one lattice. The options are listed beside it with both, and one pressed
+ *  — a slice, a bar or its line — shows the rows that have it, each of which
+ *  opens. Drawn as SVG and CSS, in the colours the options have. */
 
 const SIZE = 200;
 const OUTER = 92;
 const INNER = 60;
+/** The pixels and dots of a ring: the lattice's cell, in drawn units. */
+const PIXEL_CELL = 6;
+const DOT_CELL = 7;
 
 const label = (slice: Slice) => slice.name || t("No value");
 const percent = (slice: Slice) => `${Math.round(slice.share * 100)}%`;
@@ -25,7 +29,7 @@ export function ChartLayout({
 }: {
   rows: NotePage[];
   property: DatabaseProperty;
-  style: "donut" | "bar";
+  style: ChartStyle;
   peekId: string | null;
   onOpen(pageId: string, full?: boolean): void;
 }) {
@@ -48,31 +52,52 @@ export function ChartLayout({
       }
     },
   });
+  const classes = (slice: Slice, base: string) =>
+    `${base}${picked === slice.name ? " is-picked" : ""}${picked !== null && picked !== slice.name ? " is-dim" : ""}`;
+  const ring = style !== "bar";
 
+  // The slices as arcs (a ring), or as the cells of a ring of pixels or dots.
   let from = 0;
   const arcs = slices.filter((slice) => slice.count > 0).map((slice) => {
     const arc = { slice, path: arcPath(SIZE / 2, SIZE / 2, OUTER, INNER, from, from + slice.share) };
     from += slice.share;
     return arc;
   });
+  const cell = style === "pixel" ? PIXEL_CELL : DOT_CELL;
+  const cells = style === "pixel" || style === "dots"
+    ? ringCells(slices.map((slice) => slice.share), SIZE / 2, SIZE / 2, cell, OUTER, INNER)
+    : [];
 
   return (
     <div className="chart" data-chart={style}>
       <div className="chart__figure">
-        {style === "donut" ? (
-          <svg className="chart__ring" viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={t("Chart of {name}", { name: property.name })}>
+        {ring ? (
+          <svg className={`chart__ring chart__ring--${style}`} viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={t("Chart of {name}", { name: property.name })}>
             {total === 0 ? (
               <circle className="chart__empty" cx={SIZE / 2} cy={SIZE / 2} r={(OUTER + INNER) / 2} strokeWidth={OUTER - INNER} />
-            ) : arcs.map(({ slice, path }) => (
+            ) : style === "donut" ? arcs.map(({ slice, path }) => (
               <path
                 key={slice.name || "none"}
-                className={`chart__slice${picked === slice.name ? " is-picked" : ""}${picked !== null && picked !== slice.name ? " is-dim" : ""}`}
+                className={classes(slice, "chart__slice")}
                 data-tone={slice.tone}
                 d={path}
                 fillRule="evenodd"
                 {...keys(slice)}
               />
-            ))}
+            )) : slices.map((slice, index) => slice.count > 0 ? (
+              <g
+                key={slice.name || "none"}
+                className={classes(slice, `chart__slice chart__slice--grid`)}
+                data-tone={slice.tone}
+                {...keys(slice)}
+              >
+                {cells.filter((mark) => mark.index === index).map((mark, n) => (style === "pixel" ? (
+                  <rect key={n} x={mark.x - (cell - 1.4) / 2} y={mark.y - (cell - 1.4) / 2} width={cell - 1.4} height={cell - 1.4} />
+                ) : (
+                  <circle key={n} cx={mark.x} cy={mark.y} r={cell * 0.38} />
+                )))}
+              </g>
+            ) : null)}
             <text className="chart__total" x={SIZE / 2} y={SIZE / 2 - 2} textAnchor="middle">{chosen ? chosen.count : total}</text>
             <text className="chart__caption" x={SIZE / 2} y={SIZE / 2 + 18} textAnchor="middle">{chosen ? label(chosen) : t("Total")}</text>
           </svg>
@@ -90,7 +115,7 @@ export function ChartLayout({
           </div>
         )}
       </div>
-      {style === "donut" ? (
+      {ring ? (
         <ul className="chart__legend">
           {slices.map((slice) => (
             <li key={slice.name || "none"} className={`chart__key${picked === slice.name ? " is-picked" : ""}`} {...keys(slice)}>

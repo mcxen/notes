@@ -146,6 +146,19 @@
   --text-pink: #c14c8a;
   --bg-pink: #f9eef3;
   --text-red: #d44c47;
+
+  /* The chart palette: one lightness and chroma for every option, so no slice
+     shouts over the rest (Notion's text colours were too loud and too uneven
+     side by side). Pixels and dots and bars all take these. */
+  --chart-gray: #8e8a83;
+  --chart-brown: #a7795c;
+  --chart-orange: #e07c3a;
+  --chart-yellow: #dcae3e;
+  --chart-green: #5c9f70;
+  --chart-blue: #4c85c2;
+  --chart-purple: #8b6cbd;
+  --chart-pink: #d26b98;
+  --chart-red: #d55d54;
   --bg-red: #fdebec;
 
   /* Elevation. One shadow for every floating surface, exactly as Notion draws
@@ -283,6 +296,17 @@
   --text-pink: #d15796;
   --bg-pink: #4e2c3c;
   --text-red: #df5452;
+
+  /* The chart palette, lighter and softer on the dark paper. */
+  --chart-gray: #8f8c86;
+  --chart-brown: #b38b72;
+  --chart-orange: #e8914f;
+  --chart-yellow: #e5be5e;
+  --chart-green: #70b284;
+  --chart-blue: #6299d4;
+  --chart-purple: #a18bd6;
+  --chart-pink: #e083ab;
+  --chart-red: #e6736b;
   --bg-red: #522e2a;
 
   --shadow-pop:
@@ -9805,7 +9829,20 @@ button.export__row:hover {
 /* ── A database as a chart ────────────────────────────────────────────────
    A ring or bars, and beside it each option with its count; every slice,
    bar and line is pressed to show the rows that have that option. The fill is
-   the option's own tone (`--tag-dot`). */
+   the option's own tone, in the chart palette below. */
+/* Each option's tone (`data-tone`) is its colour in the chart palette; a
+   status's "default" (To-do) and any tone not in it stay gray. */
+.chart [data-tone="default"],
+.chart [data-tone="gray"] { --chart-fill: var(--chart-gray); }
+.chart [data-tone="brown"] { --chart-fill: var(--chart-brown); }
+.chart [data-tone="orange"] { --chart-fill: var(--chart-orange); }
+.chart [data-tone="yellow"] { --chart-fill: var(--chart-yellow); }
+.chart [data-tone="green"] { --chart-fill: var(--chart-green); }
+.chart [data-tone="blue"] { --chart-fill: var(--chart-blue); }
+.chart [data-tone="purple"] { --chart-fill: var(--chart-purple); }
+.chart [data-tone="pink"] { --chart-fill: var(--chart-pink); }
+.chart [data-tone="red"] { --chart-fill: var(--chart-red); }
+
 .chart {
   display: flex;
   flex-wrap: wrap;
@@ -9830,7 +9867,7 @@ button.export__row:hover {
 }
 
 .chart__slice {
-  fill: var(--tag-dot, var(--ink-4));
+  fill: var(--chart-fill, var(--chart-gray));
   stroke: var(--paper);
   stroke-width: 1.5;
   cursor: pointer;
@@ -9865,6 +9902,21 @@ button.export__row:hover {
 .chart__bar-row:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 2px;
+}
+
+/* The ring of pixels or of dots: the same slices, drawn as cells of one
+   lattice. A square is crisp on the grid; a dot is round. */
+.chart__slice--grid > * {
+  stroke: none;
+}
+
+.chart__ring--pixel .chart__slice--grid > * {
+  shape-rendering: crispEdges;
+}
+
+.chart__slice--grid:focus-visible > * {
+  stroke: var(--blue);
+  stroke-width: 1;
 }
 
 .chart__empty {
@@ -9916,7 +9968,7 @@ button.export__row:hover {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--tag-dot, var(--ink-4));
+  background: var(--chart-fill, var(--chart-gray));
 }
 
 .chart__count {
@@ -9957,7 +10009,7 @@ button.export__row:hover {
   height: 100%;
   min-width: 2px;
   border-radius: 7px;
-  background: var(--tag-dot, var(--ink-4));
+  background: var(--chart-fill, var(--chart-gray));
 }
 
 .chart__bar-count {

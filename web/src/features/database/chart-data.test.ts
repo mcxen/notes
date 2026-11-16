@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DatabaseProperty, NotePage } from "../../core/types";
-import { arcPath, chartSlices } from "./chart-data";
+import { arcPath, chartSlices, ringCells } from "./chart-data";
 
 const row = (id: string, values: Record<string, string>): NotePage => ({ id, title: id, properties: values } as unknown as NotePage);
 
@@ -56,5 +56,30 @@ describe("the arc of a ring", () => {
     const whole = arcPath(50, 50, 40, 25, 0, 1);
     expect(whole.match(/A 40 40/g)).toHaveLength(2);
     expect(whole).not.toMatch(/NaN/);
+  });
+});
+
+describe("a ring drawn from pixels or dots", () => {
+  it("keeps every cell between the ring's radii, and no cell outside them", () => {
+    const cells = ringCells([1], 100, 100, 6, 92, 60);
+    expect(cells.length).toBeGreaterThan(300);
+    for (const cell of cells) {
+      const radius = Math.hypot(cell.x - 100, cell.y - 100);
+      expect(radius).toBeGreaterThanOrEqual(60);
+      expect(radius).toBeLessThanOrEqual(92);
+    }
+  });
+
+  it("gives a share the cells on its own side, clockwise from the top", () => {
+    const cells = ringCells([0.5, 0.5], 100, 100, 6, 92, 60);
+    // The right half (from the top, clockwise, to the bottom) is the first slice.
+    expect(cells.filter((cell) => cell.index === 0).every((cell) => cell.x > 100)).toBe(true);
+    expect(cells.filter((cell) => cell.index === 1).every((cell) => cell.x < 100)).toBe(true);
+    expect(cells.filter((cell) => cell.index === 0).length).toBe(cells.filter((cell) => cell.index === 1).length);
+  });
+
+  it("gives nothing to a slice with no share, and every cell to the one that has all", () => {
+    expect(ringCells([0, 1, 0], 100, 100, 6, 92, 60).every((cell) => cell.index === 1)).toBe(true);
+    expect(ringCells([], 100, 100, 6, 92, 60)).toEqual([]);
   });
 });

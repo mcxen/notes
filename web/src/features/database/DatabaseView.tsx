@@ -6,10 +6,12 @@ import {
   CalendarDays,
   ChartBar,
   ChartPie,
+  CircleDot,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Columns3,
+  Grid3x3,
   Copy,
   EyeOff,
   FileText,
@@ -1734,6 +1736,8 @@ export function DatabaseView({
                   <div className="menu__section-title">{t("Chart style")}</div>
                   <MenuItem icon={<ChartPie size={16} />} label={t("Ring")} selected={(menuView.chart ?? "donut") === "donut"} onSelect={() => saveView({ ...menuView, chart: "donut" })} />
                   <MenuItem icon={<ChartBar size={16} />} label={t("Bars")} selected={menuView.chart === "bar"} onSelect={() => saveView({ ...menuView, chart: "bar" })} />
+                  <MenuItem icon={<Grid3x3 size={16} />} label={t("Pixel ring")} selected={menuView.chart === "pixel"} onSelect={() => saveView({ ...menuView, chart: "pixel" })} />
+                  <MenuItem icon={<CircleDot size={16} />} label={t("Dot ring")} selected={menuView.chart === "dots"} onSelect={() => saveView({ ...menuView, chart: "dots" })} />
                 </>
               ) : null}
               {(menuView.kind === "board" || menuView.kind === "chart") && groupableProperties(properties).length > 1 ? (

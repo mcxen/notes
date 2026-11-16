@@ -78,3 +78,46 @@ export function arcPath(cx: number, cy: number, outer: number, inner: number, fr
   const [x4, y4] = point(inner, from);
   return `M ${x1} ${y1} A ${outer} ${outer} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${inner} ${inner} 0 ${large} 0 ${x4} ${y4} Z`;
 }
+
+/** How a chart is drawn: a ring or bars (the first two), or a ring made of
+ *  pixels (square cells) or of dots, each on the same lattice. */
+export type ChartStyle = "donut" | "bar" | "pixel" | "dots";
+
+/** A cell of a ring drawn from squares or dots: its centre, and the slice it
+ *  falls in (`index`, into the shares given). */
+export interface RingCell {
+  x: number;
+  y: number;
+  index: number;
+}
+
+/** The cells of a ring on a lattice of `cell`-sized squares centred on the
+ *  ring's middle: every cell whose centre lies between `inner` and `outer`
+ *  from it, and the slice it falls in, by the shares (fractions of a turn,
+ *  from the top, clockwise). The lattice is symmetric about both axes, so
+ *  two equal shares get equal cells. */
+export function ringCells(shares: readonly number[], cx: number, cy: number, cell: number, outer: number, inner: number): RingCell[] {
+  const cuts: number[] = [];
+  let sum = 0;
+  for (const share of shares) {
+    sum += share;
+    cuts.push(sum);
+  }
+  // The last cut takes whatever rounding leaves over, so no cell is lost.
+  if (cuts.length) cuts[cuts.length - 1] = Infinity;
+  const reach = Math.ceil(outer / cell) + 1;
+  const cells: RingCell[] = [];
+  for (let i = -reach; i < reach; i += 1) {
+    for (let j = -reach; j < reach; j += 1) {
+      const dx = (i + 0.5) * cell;
+      const dy = (j + 0.5) * cell;
+      const radius = Math.hypot(dx, dy);
+      if (radius < inner || radius > outer) continue;
+      // Clockwise from the top: nought at the top, a quarter at the right.
+      const turn = (Math.atan2(dx, -dy) / (Math.PI * 2) + 1) % 1;
+      const index = cuts.findIndex((cut) => turn < cut);
+      if (index >= 0) cells.push({ x: cx + dx, y: cy + dy, index });
+    }
+  }
+  return cells;
+}

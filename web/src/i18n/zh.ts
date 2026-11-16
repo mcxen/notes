@@ -84,6 +84,8 @@ export const zh: Record<string, string> = {
   "Chart style": "图表样式",
   "Ring": "环状图",
   "Bars": "柱状图",
+  "Pixel ring": "像素环形图",
+  "Dot ring": "点阵环形图",
   "Total": "总数",
   "No value": "无值",
   "Chart of {name}": "{name}的图表",
