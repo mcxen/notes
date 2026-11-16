@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- An empty date or picture cell no longer clashes with its picker. An unset date's "Empty" hint sat over the picker's own 年/月/日 when the cell was focused and its row hovered; now the hint goes once the cell is focused, and the picker's segments read as the hint in that colour. The hint of a date and of a picture now follows the page's language (it said "Empty" in English on a Chinese page).
+
 - Chart colours and styles. The chart's slices take a calmer palette (one lightness for every option, a softer one on the dark paper) in place of Notion's loud text colours. A chart's style in its ··· menu now has two more rings: a ring of square pixels, and a ring of dots, drawn on one lattice so each slice fills whole cells; the ring and bars stay as they were.
 
 ## 0.1.10

@@ -400,6 +400,7 @@ export function ImageProperty({
       <button
         type="button"
         className={`db__images ${files.length ? "" : "is-empty"} ${dropping ? "is-drop" : ""} ${anchor ? "is-open" : ""}`}
+        data-empty={t("Empty")}
         aria-label={name}
         aria-haspopup="dialog"
         onClick={(event) => {

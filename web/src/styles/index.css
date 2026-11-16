@@ -7125,16 +7125,29 @@ button.db__th:hover,
   color: var(--ink-3);
 }
 
-/* An unset date reads "Empty", like every other unset property, and only
-   where empty values are shown at all: always in a page's properties, on
-   approach in a table. The picker's own "mm/dd/yyyy" is never shown. */
+/* An unset date reads "Empty" (its `data-empty`, in the page's language) on
+   approach in a table, and always in a page's properties — the way an unset
+   text cell's placeholder does. Focused, the picker's own segments stand where
+   the word would: in the hint's colour, and the word is gone, so the two never
+   lie on each other. The wrapper is the row's height and centres its field, so
+   the word sits on the same line as the field's text. */
 .db__date {
   position: relative;
-  display: block;
+  display: flex;
+  height: var(--db-row, 33px);
+  align-items: center;
+}
+
+.db__date > .db__cell--date {
+  height: 100%;
 }
 
 .db__date.is-empty .db__cell--date:not(:focus)::-webkit-datetime-edit {
   color: transparent;
+}
+
+.db__date.is-empty .db__cell--date:focus::-webkit-datetime-edit {
+  color: var(--ink-4);
 }
 
 .db__date.is-empty::after {
@@ -7142,20 +7155,16 @@ button.db__th:hover,
   top: 50%;
   left: 8px;
   color: var(--ink-4);
-  content: "Empty";
+  content: attr(data-empty);
   font-size: 14px;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-50%);
 }
 
-.db__table tr:hover .db__date.is-empty::after,
-.page-props__row .db__date.is-empty::after {
+.db__table tr:hover .db__date.is-empty:not(:focus-within)::after,
+.page-props__row .db__date.is-empty:not(:focus-within)::after {
   opacity: 1;
-}
-
-.db__date.is-empty:focus-within::after {
-  opacity: 0;
 }
 
 /* The picker's calendar mark appears when the field is approached. */
@@ -7280,7 +7289,7 @@ button.db__th:hover,
 
 .db__images.is-empty::after {
   color: transparent;
-  content: "Empty";
+  content: attr(data-empty);
   font-size: 14px;
   transition: color var(--t-fast) var(--e-out);
 }

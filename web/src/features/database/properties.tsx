@@ -191,11 +191,11 @@ export function PropertyEditor({
     // to find the day. A value typed before dates were dates still shows in
     // every other view; the picker simply starts empty for it.
     // The native field cannot hold a placeholder of its own, so an unset date
-    // says "Empty" the way every other unset Notion property does, from the
-    // wrapper — never "mm/dd/yyyy".
+    // says "Empty" (in the page's language) the way every other unset property
+    // does, from the wrapper — never "mm/dd/yyyy".
     const set = ISO_DAY.test(value);
     return (
-      <span className={`db__date ${set ? "" : "is-empty"}`}>
+      <span className={`db__date ${set ? "" : "is-empty"}`} data-empty={t("Empty")}>
         <input
           type="date"
           className="db__cell db__cell--date"
