@@ -151,6 +151,8 @@ export const zh: Record<string, string> = {
   "Copied as image": "已复制为图片",
   "Copy code": "复制代码",
   "Code copied": "代码已复制",
+  "Run in Terminal": "在终端里运行",
+  "Could not run that code: {reason}": "无法运行这段代码：{reason}",
   "Copy link": "复制链接",
   "Link copied": "链接已复制",
   "Edit": "编辑",

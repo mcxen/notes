@@ -1,4 +1,4 @@
-import { Check, ChevronRight, Copy, GripVertical, Plus } from "lucide-react";
+import { Check, ChevronRight, Copy, GripVertical, Play, Plus } from "lucide-react";
 import { memo, type CSSProperties, type ClipboardEvent, type DragEvent, type KeyboardEvent, type ReactNode } from "react";
 import type { AnchorRect } from "../../hooks/useAnchoredPosition";
 import { rectOf } from "../../hooks/useAnchoredPosition";
@@ -10,6 +10,7 @@ import { blockDefinition } from "./block-registry";
 import { MathBlock } from "./MathBlock";
 import { MermaidBlock } from "./MermaidBlock";
 import { CODE_LANGUAGES, codeLanguage } from "./code-highlight";
+import { runsInTerminal } from "./run-code";
 import { InlineEditor } from "./InlineEditor";
 import { EmbedBlock, type EmbedActions } from "./EmbedBlock";
 import { FileBlock, type MediaActions, type UploadState } from "./MediaBlocks";
@@ -124,6 +125,8 @@ export interface BlockActions extends MediaActions, TableActions, EmbedActions {
   openLinkedPage(pageId: string, full: boolean): void;
   setLanguage(block: Block, language: string): void;
   copyCode(block: Block): void;
+  /** A Bash block's Run button: its commands, in the terminal. */
+  runCode(block: Block): void;
   pickIcon(block: Block, anchor: AnchorRect): void;
   change(block: Block, content: InlineContent, text: string, element: HTMLElement, composing: boolean): void;
   describeMention: DescribeMention;
@@ -374,9 +377,16 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
               >
                 {CODE_LANGUAGES.map((language) => <option key={language.id} value={language.id}>{language.label}</option>)}
               </select>
-              <button type="button" className="icon-btn" aria-label={t("Copy code")} onClick={() => actions.copyCode(block)}>
-                <Copy size={14} />
-              </button>
+              <span className="block__code-tools">
+                {runsInTerminal(block.language) ? (
+                  <button type="button" className="icon-btn" aria-label={t("Run in Terminal")} title={t("Run in Terminal")} onClick={() => actions.runCode(block)}>
+                    <Play size={14} />
+                  </button>
+                ) : null}
+                <button type="button" className="icon-btn" aria-label={t("Copy code")} onClick={() => actions.copyCode(block)}>
+                  <Copy size={14} />
+                </button>
+              </span>
             </div>
           );
           // Mermaid is drawn as a diagram under its source.

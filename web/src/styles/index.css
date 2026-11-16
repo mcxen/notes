@@ -3389,10 +3389,15 @@ pre.block__editable {
   background: var(--fill-hover);
 }
 
+.block__code-tools {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
 .block__code-bar .icon-btn {
   width: 22px;
   height: 22px;
-  margin-left: auto;
   opacity: 0;
 }
 

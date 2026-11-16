@@ -77,6 +77,7 @@ import { SelectionBar } from "./SelectionBar";
 import { MARKS } from "./marks";
 import { clearReveal, onReveal, peekReveal } from "../quickfind/reveal";
 import { copyBlocksAsImage } from "./copy-image";
+import { runInTerminal } from "./run-code";
 import { BlockRow, type BlockActions, type LinkLine } from "./BlockRow";
 import {
   appendFragment,
@@ -222,7 +223,7 @@ type PageMenuProps = ComponentProps<typeof PageMenu>;
 const ROW_ACTIONS: Record<Exclude<keyof BlockActions, "describeMention" | "showFile" | "writeTable">, true> = {
   add: true, dragOver: true, drop: true, toggleCheck: true, toggleOpen: true, openBacklinks: true,
   toggleLink: true, openLinkMenu: true, rowDragStart: true, rowDragEnd: true, openBlockMenu: true,
-  openLinkedPage: true, setLanguage: true, copyCode: true, change: true, keyDown: true, paste: true, pickIcon: true,
+  openLinkedPage: true, setLanguage: true, copyCode: true, runCode: true, change: true, keyDown: true, paste: true, pickIcon: true,
   pickFile: true, downloadFile: true, resizeCard: true,
   retryUpload: true, leaveTable: true, selectTable: true, readEmbed: true,
 };
@@ -1779,6 +1780,10 @@ export function DocumentEditor({
         void navigator.clipboard.writeText(inlinePlainText(block.content))
           .then(() => toast(t("Code copied"), "success"))
           .catch(() => toast(t("Could not copy that code"), "error"));
+      },
+      runCode: (block) => {
+        void runInTerminal(inlinePlainText(block.content)).catch((reason: unknown) =>
+          toast(t("Could not run that code: {reason}", { reason: reason instanceof Error ? reason.message : String(reason) }), "error"));
       },
       change: onBlockChange,
       keyDown: onBlockKeyDown,

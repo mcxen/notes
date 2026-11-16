@@ -215,6 +215,14 @@ export const Notebooks = {
     return call("Notebooks.Look");
   },
   /**
+   * RunInTerminal runs a Bash code block's text in the system's terminal,
+   * after the user agrees to it in a dialog that shows the text. A dialog
+   * that is dismissed runs nothing, and is no error.
+   */
+  runInTerminal(code: string): Promise<void> {
+    return call("Notebooks.RunInTerminal", code);
+  },
+  /**
    * SetTheme makes the app's appearance the theme a window's page shows. The page
    * draws itself from the theme it keeps (Light, Dark or the system's), but the
    * window's material (the translucent sidebar), the title bar's buttons and the

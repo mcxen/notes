@@ -321,4 +321,10 @@ var zh = map[string]string{
 	"Take off the web":             "取消发布",
 	"Taking the page off the web…": "正在取消发布…",
 	"The page is off the web.":     "页面已取消发布。",
+
+	// Running a code block
+	"Run this in Terminal?": "在终端里运行这段代码？",
+	"… and %d more lines":   "……还有 %d 行",
+	"It runs as you, and can change or delete anything you can. Run only what you understand.": "它以你的身份运行，你能改动或删除的东西它都能。只运行你看得懂的代码。",
+	"Run": "运行",
 }

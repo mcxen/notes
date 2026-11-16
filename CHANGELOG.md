@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Run a Bash code block in Terminal. On a Mac, a code block in Bash (or `sh`, `shell`, `zsh`, `console`) has a ▶ button beside its copy button. Pressing it asks first, in a dialog that shows the first lines of the code, and runs nothing until you press Run; Cancel is the default. The code then opens in a Terminal window, as a script in your home folder, with your own shell and PATH, so a password prompt and the output are there to read. The script is deleted when it starts. The button is not drawn in a browser or on Windows and Linux.
+
 - Publish pages to the web, on your own Cloudflare account. Settings › Cloud turns it on (off by default: until then there is no menu entry and Notes asks no worker for anything), takes your worker's address and token, checks the connection, lists what is published and takes pages off, and copies a setup prompt for your coding agent: it deploys the worker in `share-worker/` (a Worker with a D1 database and an R2 bucket; the steps are in its DEPLOY.md), asks which account and whether to use your own domain, and hands back the address and the token. A page's ··· menu then has Publish to the web: the page and, when asked, the pages under it (a database's rows, each its own page, linked from the table and with a trail up to its parent), its pictures and files, equations typeset, Mermaid diagrams drawn. Publishing again updates a page at the same address, which reads `/title-id`; links to pages that are not published show as their names, and a report says how many. Pages are unlisted, not private: anyone with the link can read them, and they are sent with `noindex` and a policy that lets no script run. No address or account is built into Notes.
 
 ## 0.1.9
