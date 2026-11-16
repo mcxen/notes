@@ -1,10 +1,28 @@
-import { orderedBlocks } from "../../core/block-tree";
+import { lineLink, orderedBlocks } from "../../core/block-tree";
 import { normalizeEmbed } from "../../core/embeds";
 import { isImageType } from "../../core/files";
 import { escapeHtml, inlinePlainText, inlineToHtml } from "../../core/inline-content";
 import { tableCells, tableGrid, tableToHtml } from "../../core/simple-table";
 import type { Block, BlockKind, BlockTree, InlineContent } from "../../core/types";
 import { readableTree, type FileRef } from "../editor/adapters";
+
+/** What a published page draws that an exported file does not: the page supplies
+ *  the markup (an equation typeset, a diagram drawn, a page's own line), or
+ *  null to keep the export's plainer form. */
+export interface HtmlHooks {
+  math?(source: string): string | null;
+  diagram?(source: string): string | null;
+  /** A line that stands for a page (a link to a sub-page, or a database shown in
+   *  place when `expanded`), or null to leave it as the page's name. */
+  page?(pageId: string, expanded: boolean): string | null;
+}
+
+interface Draw {
+  fileRef: FileRef | undefined;
+  hooks: HtmlHooks | undefined;
+  /** The lines that are nothing but a link to a page, found before the words are made readable. */
+  lines: Map<string, { page_id: string; expanded?: boolean }>;
+}
 
 const LIST_TAG: Partial<Record<BlockKind, "ul" | "ol">> = { bullet: "ul", todo: "ul", numbered: "ol" };
 
@@ -24,7 +42,7 @@ function inlineHtml(content: InlineContent, fileRef: FileRef | undefined): strin
   return html;
 }
 
-function blocksHtml(tree: BlockTree, parentId: string | null, fileRef: FileRef | undefined): string {
+function blocksHtml(tree: BlockTree, parentId: string | null, draw: Draw): string {
   let html = "";
   let open: "ul" | "ol" | null = null;
   for (const block of orderedBlocks(tree, parentId)) {
@@ -34,15 +52,21 @@ function blocksHtml(tree: BlockTree, parentId: string | null, fileRef: FileRef |
       if (list) html += `<${list}>`;
       open = list;
     }
-    html += blockHtml(tree, block, fileRef);
+    html += blockHtml(tree, block, draw);
   }
   if (open) html += `</${open}>`;
   return html;
 }
 
-function blockHtml(tree: BlockTree, block: Block, fileRef: FileRef | undefined): string {
+function blockHtml(tree: BlockTree, block: Block, draw: Draw): string {
+  const { fileRef, hooks } = draw;
   const inner = inlineHtml(block.content, fileRef);
-  const children = blocksHtml(tree, block.id, fileRef);
+  const children = blocksHtml(tree, block.id, draw);
+  const shown = draw.lines.get(block.id);
+  if (shown) {
+    const line = hooks?.page?.(shown.page_id, Boolean(shown.expanded));
+    if (line != null) return line + children;
+  }
   switch (block.kind) {
     case "heading1": return `<h1>${inner}</h1>${children}`;
     case "heading2": return `<h2>${inner}</h2>${children}`;
@@ -54,10 +78,18 @@ function blockHtml(tree: BlockTree, block: Block, fileRef: FileRef | undefined):
     case "toggle": return `<details open><summary>${inner}</summary>${children}</details>`;
     case "quote": return `<blockquote>${inner}</blockquote>${children}`;
     case "callout": return `<div class="callout"><span class="callout-icon">${escapeHtml(block.icon || "💡")}</span><div>${inner}${children}</div></div>`;
-    case "code": return `<pre><code>${escapeHtml(inlinePlainText(block.content))}</code></pre>`;
+    case "code": {
+      const source = inlinePlainText(block.content);
+      const drawn = block.language === "mermaid" ? hooks?.diagram?.(source) : null;
+      return drawn ?? `<pre><code>${escapeHtml(source)}</code></pre>`;
+    }
     // The TeX source, fenced. The export does not load KaTeX: a saved page
     // stays one file, and the equation is still readable.
-    case "math": return `<pre class="math">$$${escapeHtml(inlinePlainText(block.content))}$$</pre>`;
+    case "math": {
+      const source = inlinePlainText(block.content);
+      const typeset = hooks?.math?.(source);
+      return typeset ? `<div class="math">${typeset}</div>` : `<pre class="math">$$${escapeHtml(source)}$$</pre>`;
+    }
     case "divider": return "<hr>";
     case "table": {
       const grid = tableGrid(block.table);
@@ -100,9 +132,21 @@ details > summary { cursor: pointer; } a { color: #2383e2; }
 @media (prefers-color-scheme: dark) { body { color: rgba(255,255,255,.9); background: #191919; } figcaption { color: #9b9a97; } hr, td, th { border-color: rgba(255,255,255,.14); } }
 `;
 
+/** A page's lines as HTML, with no document around them: the part a published page carries. */
+export function bodyToHtml(tree: BlockTree, titleOf: (pageId: string) => string, fileRef: FileRef | undefined, hooks?: HtmlHooks): string {
+  const lines: Draw["lines"] = new Map();
+  if (hooks?.page) {
+    for (const block of Object.values(tree.by_id)) {
+      const link = lineLink(block);
+      if (link) lines.set(block.id, link);
+    }
+  }
+  return blocksHtml(readableTree(tree, titleOf, Boolean(fileRef)), null, { fileRef, hooks, lines });
+}
+
 /** A page as a whole HTML document: its name, its lines, its pictures where the
  *  export keeps them. */
 export function pageToHtml(title: string, tree: BlockTree, titleOf: (pageId: string) => string, fileRef: FileRef | undefined, lang: string): string {
-  const body = blocksHtml(readableTree(tree, titleOf, Boolean(fileRef)), null, fileRef);
+  const body = bodyToHtml(tree, titleOf, fileRef);
   return `<!doctype html>\n<html lang="${escapeHtml(lang)}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>${escapeHtml(title)}</title>\n<style>${STYLE}</style>\n</head>\n<body>\n<h1>${escapeHtml(title)}</h1>\n${body}\n</body>\n</html>\n`;
 }

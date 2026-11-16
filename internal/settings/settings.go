@@ -65,10 +65,42 @@ type Settings struct {
 	// NoPasteImages stops a page pasted from the web from downloading the
 	// pictures it names. They are downloaded unless this is set.
 	NoPasteImages bool `json:"noPasteImages,omitempty"`
+	// Share publishes pages to the user's own Notes Share worker. Off unless Enabled.
+	Share Share `json:"share,omitempty"`
 	// Hotkey shows or hides the windows from anywhere, as "CmdOrCtrl+Shift+N".
 	// Empty means no shortcut.
 	Hotkey string `json:"hotkey,omitempty"`
 }
+
+// DefaultShareFileMB is the largest file a published page carries, in megabytes, unless another is set.
+const DefaultShareFileMB = 25
+
+// Share is the settings of publishing pages to the web. Notes runs no server
+// for it: the user deploys a worker on their own Cloudflare account (see
+// share-worker/) and enters its address and token here.
+type Share struct {
+	// Enabled turns publishing on: the page menu offers it. It is off by default,
+	// and while it is off Notes makes no request to a worker.
+	Enabled bool `json:"enabled,omitempty"`
+	// URL is the worker's address, on the user's own domain or workers.dev.
+	URL string `json:"url,omitempty"`
+	// Token is the secret the worker checks. The settings file is kept
+	// readable by its owner only.
+	Token string `json:"token,omitempty"`
+	// MaxFileMB is the largest file a published page carries; 0 means DefaultShareFileMB.
+	MaxFileMB int `json:"maxFileMB,omitempty"`
+}
+
+// FileMB is the largest file a published page carries, in megabytes.
+func (s Share) FileMB() int {
+	if s.MaxFileMB <= 0 {
+		return DefaultShareFileMB
+	}
+	return s.MaxFileMB
+}
+
+// Configured says whether there is an address and a token to publish with.
+func (s Share) Configured() bool { return s.URL != "" && s.Token != "" }
 
 // DefaultMCPPort is the port the MCP server listens on unless another is set.
 const DefaultMCPPort = 8999
@@ -149,7 +181,7 @@ func (s Settings) Save(path string) error {
 		return err
 	}
 	tmp := path + ".tmp"
-	// Private to the owner: it holds the key of the MCP server.
+	// Private to the owner: it holds the key of the MCP server and the token of the share worker.
 	if err := os.WriteFile(tmp, append(data, '\n'), 0o600); err != nil {
 		return err
 	}

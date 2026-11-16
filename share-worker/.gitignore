@@ -1,0 +1,8 @@
+node_modules/
+.wrangler/
+wrangler.jsonc
+public/katex/
+.dev.vars
+# Names and ids of your own deployment: no secrets in it, but it is yours.
+share.deploy.json
+wrangler*.jsonc

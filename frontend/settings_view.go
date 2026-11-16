@@ -35,6 +35,7 @@ var settingsPages = []settingsPage{
 	{"vaults", "Vaults", vaultsGlyph},
 	{"sync", "Sync", syncGlyph},
 	{"integrations", "Integrations", plugGlyph},
+	{"cloud", "Cloud", cloudGlyph},
 	{"about", "About", aboutGlyph},
 }
 
@@ -60,6 +61,11 @@ type settingsWindow struct {
 	mcpPublic string
 	// The shortcut as typed, until Return applies it.
 	hotkey string
+
+	// Settings › Cloud: the address, the token and the file limit as typed, until
+	// Return saves them, and what the last check of the worker found.
+	cloudURL, cloudToken, cloudMB string
+	cloud                         cloudState
 }
 
 // openSettings opens the settings window on a page, or brings it forward.
@@ -109,6 +115,8 @@ func (s *settingsWindow) refresh() {
 		s.mcpPort = fmt.Sprint(st.MCP.PortOrDefault())
 		s.mcpPublic = st.MCP.PublicURL
 		s.hotkey = st.Hotkey
+		s.cloudURL = st.Share.URL
+		s.cloudMB = fmt.Sprint(st.Share.FileMB())
 	}
 	entries, err := syncLog().Entries()
 	if err == nil {
@@ -176,6 +184,8 @@ func (s *settingsWindow) view(c *ui.Context) {
 							s.syncPage(c, pal)
 						case "integrations":
 							s.integrationsPage(c, pal)
+						case "cloud":
+							s.cloudPage(c, pal)
 						case "about":
 							s.aboutPage(c, pal)
 						default:
@@ -268,6 +278,9 @@ var searchEntries = []searchEntry{
 	{"integrations", "MCP server", "mcp ai assistant claude cursor key token port frp proxy api integrations"},
 	{"integrations", "Vaults for assistants", "mcp vault allow assistants read only"},
 	{"integrations", "Connect an assistant", "prompt copy claude code command stdio config"},
+	{"cloud", "Publish to the web", "publish web share cloudflare worker d1 r2 domain page link 发布 网页 分享 云端 域名"},
+	{"cloud", "Set up a worker", "prompt copy agent deploy cloudflare token 部署 提示词 令牌"},
+	{"cloud", "Published pages", "published unpublish links list 已发布 取消发布"},
 	{"about", "Version", "version about update"},
 	{"about", "Settings file", "settings file json config path"},
 }

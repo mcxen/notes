@@ -1,0 +1,19 @@
+{
+  "name": "notes-share",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The worker the Notes app publishes pages to: your own Cloudflare account, a D1 database and an R2 bucket.",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/assets.mjs && node --test test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20260702.1",
+    "katex": "0.19.1",
+    "typescript": "5.9.3",
+    "wrangler": "4.105.0"
+  }
+}

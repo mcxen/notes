@@ -4,6 +4,7 @@ import {
   CornerDownRight,
   CornerUpLeft,
   FileDown,
+  Globe,
   MoreHorizontal,
   MoveHorizontal,
   Redo2,
@@ -13,6 +14,8 @@ import {
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ExportDialog } from "../export/ExportDialog";
+import { PublishDialog } from "../publish/PublishDialog";
+import { useShareStatus } from "../publish/useShareStatus";
 import { MenuDivider, MenuItem, MenuList } from "../../components/Menu";
 import { Popover } from "../../components/Popover";
 import { Tooltip } from "../../components/Tooltip";
@@ -72,6 +75,9 @@ export function PageActions({
   const [moreAnchor, setMoreAnchor] = useState<AnchorRect | null>(null);
   const [moveAnchor, setMoveAnchor] = useState<AnchorRect | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  // Publishing is off unless it is turned on in Settings › Cloud: then the menu has no entry for it.
+  const { status: share, refresh: refreshShare } = useShareStatus();
   // Where the page may go, read only while the picker is open.
   const moveTargets = useWorkspaceState(
     (state) => (moveAnchor ? Object.values(state.pages).filter((candidate) => canMovePage(page.id, candidate.id)) : null),
@@ -214,6 +220,9 @@ export function PageActions({
             />
           ) : null}
           <MenuItem icon={<FileDown size={16} />} label={t("Export…")} onSelect={() => { setMoreAnchor(null); setExporting(true); }} />
+          {share.enabled ? (
+            <MenuItem icon={<Globe size={16} />} label={share.publications[page.id] ? t("Published to the web…") : t("Publish to the web…")} onSelect={() => { setMoreAnchor(null); setPublishing(true); }} />
+          ) : null}
           {onHistory ? (
             <MenuItem icon={<Clock3 size={16} />} label={t("Page history")} onSelect={() => { setMoreAnchor(null); onHistory(); }} />
           ) : null}
@@ -252,6 +261,7 @@ export function PageActions({
         />
       ) : null}
       {exporting ? <ExportDialog page={page} onClose={() => setExporting(false)} /> : null}
+      {publishing ? <PublishDialog page={page} status={share} onChanged={refreshShare} onClose={() => setPublishing(false)} /> : null}
     </>
   );
 }

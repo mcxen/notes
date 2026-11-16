@@ -62,6 +62,28 @@ export interface Look {
   outline: boolean;
 }
 
+export interface Page {
+  title: string;
+  html: string;
+  icon?: string;
+  parent?: string;
+  position?: number;
+  files: string[];
+}
+
+export interface Publication {
+  id: string;
+  url: string;
+  parent?: string;
+  published: string;
+}
+
+export interface Reply {
+  id: string;
+  url: string;
+  missing: string[];
+}
+
 export interface Report {
   uploaded: string[];
   downloaded: string[];
@@ -78,6 +100,20 @@ export interface Row {
   collection: Collection;
   id: string;
   value: Record<string, unknown>;
+}
+
+/** ShareStatus is what a page needs to know to offer publishing: never the token. */
+export interface ShareStatus {
+  /** Enabled is the switch in Settings › Cloud. */
+  enabled: boolean;
+  /** Configured says a worker address and a token are entered. */
+  configured: boolean;
+  /** URL is the worker's address. */
+  url: string;
+  /** MaxFileMB is the largest file a published page carries. */
+  maxFileMB: number;
+  /** Publications are the pages of this vault that are published, by page id. */
+  publications: Record<string, Publication>;
 }
 
 export interface Snapshot {
@@ -190,6 +226,37 @@ export const Notebooks = {
    */
   setTheme(theme: string): Promise<void> {
     return call("Notebooks.SetTheme", theme);
+  },
+  /**
+   * ShareCheck asks the worker whether it can take what this Notes sends: the
+   * address and the token are right, and its version and database are not behind.
+   */
+  shareCheck(): Promise<void> {
+    return call("Notebooks.ShareCheck");
+  },
+  /**
+   * SharePublish sends a page to the worker, or updates it in place, and keeps
+   * where it is. `id` is the page's address on the worker, chosen by the page the
+   * first time: the same id updates it. The reply says which of its files the
+   * worker lacks (ShareUpload).
+   */
+  sharePublish(pageID: string, id: string, page: Page): Promise<Reply> {
+    return call("Notebooks.SharePublish", pageID, id, page);
+  },
+  /** ShareStatus says whether this window may publish, and what of this vault is published. */
+  shareStatus(): Promise<ShareStatus> {
+    return call("Notebooks.ShareStatus");
+  },
+  /**
+   * ShareUnpublish takes a page off the web: the worker deletes it and its files,
+   * and Notes forgets where it was.
+   */
+  shareUnpublish(pageID: string): Promise<void> {
+    return call("Notebooks.ShareUnpublish", pageID);
+  },
+  /** ShareUpload sends one file of a published page. */
+  shareUpload(id: string, name: string, contentType: string, data: string): Promise<void> {
+    return call("Notebooks.ShareUpload", id, name, contentType, data);
   },
   /**
    * Snapshot returns the records of the vault, once, when the window opens: all
