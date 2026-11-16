@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.10
 
 - Run a Bash code block in Terminal. On a Mac, a code block in Bash (or `sh`, `shell`, `zsh`, `console`) has a ▶ button beside its copy button. Pressing it asks first, in a dialog that shows the first lines of the code, and runs nothing until you press Run; Cancel is the default. The code then opens in a Terminal window, as a script in your home folder, with your own shell and PATH, so a password prompt and the output are there to read. The script is deleted when it starts. The button is not drawn in a browser or on Windows and Linux.
 
