@@ -72,3 +72,40 @@ func TestVaultFilesServesOnlyTheAttachmentsOfTheNamedVault(t *testing.T) {
 		}
 	}
 }
+
+// A quit, or a logout or shutdown that cannot wait, has the vaults written
+// when closeAll returns: a change made a moment before is not left to the
+// quiet-period timer.
+func TestCloseAllWritesWhatIsPending(t *testing.T) {
+	dir := t.TempDir()
+	v, err := vault.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := newNotebooks()
+	n.add(&session{vault: v, cancel: func() {}})
+	if _, err := v.Write(vault.Write{Action: "put", Collection: vault.Pages, ID: "p_quit", Value: vault.Record{"id": "p_quit", "title": "Last words"}}); err != nil {
+		t.Fatal(err)
+	}
+	if !v.Pending() {
+		t.Fatal("the write should still be waiting for its timer")
+	}
+	n.closeAll()
+	if v.Pending() {
+		t.Fatal("closeAll left a change unwritten")
+	}
+	again, err := vault.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer again.Close()
+	found := false
+	for _, row := range again.Snapshot().Records {
+		if row.ID == "p_quit" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("the reopened vault does not have the page written just before closing")
+	}
+}

@@ -75,10 +75,14 @@ func Run() error {
 			actions.bringForward()
 		}
 	})
+	// Runs when the app quits, and also when the OS ends the session (logout,
+	// restart, shutdown), which cannot be refused and may end the process the
+	// moment this returns: so the vaults are written first, here, not later by
+	// a timer or a window's close. Nothing in it waits for the network.
 	app.OnBeforeQuit(func(*mygo.QuitEvent) {
 		notebooks.leaving.Store(true)
-		actions.mcp.stop()
 		notebooks.closeAll()
+		actions.mcp.stop()
 	})
 	return app.Run()
 }

@@ -224,7 +224,9 @@ func (n *Notebooks) byVaultID(id string) *session {
 	return n.byID[id]
 }
 
-// closeAll flushes and closes every open vault. It runs when the app quits.
+// closeAll flushes and closes every open vault, the ones hidden to the tray
+// too. It runs when the app quits, or the OS ends the session, and returns
+// only once everything is on the disk.
 func (n *Notebooks) closeAll() {
 	n.mu.Lock()
 	open := make([]*session, 0, len(n.byWindow))
