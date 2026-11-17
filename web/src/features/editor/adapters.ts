@@ -6,6 +6,7 @@ import { isImageType } from "../../core/files";
 import type { Block, BlockKind, BlockTree, InlineContent, InlineMarks, SimpleTable, StoredFile } from "../../core/types";
 import { blockShortcut } from "./block-registry";
 import { codeLanguage } from "./code-highlight";
+import { detectCodeLanguage } from "./detect-language";
 import { markdownInlineToContent } from "./inline-markdown";
 import { layout } from "./layout";
 import { readableDescriber } from "./mentions";
@@ -86,7 +87,9 @@ function parseMarkdown(value: string, idFactory: () => string): MarkdownDraft[] 
         code.push(lines[index]);
         index += 1;
       }
-      drafts.push({ kind: "code", content: [{ text: code.join("\n") }], language: fence[1] || undefined, depth: 0 });
+      // A fence that names no language has its code read for one.
+      const source = code.join("\n");
+      drafts.push({ kind: "code", content: [{ text: source }], language: fence[1] || detectCodeLanguage(source) || undefined, depth: 0 });
       continue;
     }
     // A display equation: `$$` on its own line around the source, or `$$x$$`

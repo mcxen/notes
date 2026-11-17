@@ -15,7 +15,8 @@ import type { HistoryFocus } from "../../core/workspace-history";
 import { markdownShortcut } from "./adapters";
 import { isSourceBlock } from "./block-registry";
 import { readBlocks } from "./block-clipboard";
-import { lastCodeLanguage, rememberCodeLanguage } from "./code-highlight";
+import { codeLanguage, lastCodeLanguage, PLAIN_TEXT, rememberCodeLanguage } from "./code-highlight";
+import { detectCodeLanguage } from "./detect-language";
 import {
   applyEditorTransaction,
   embedPage,
@@ -296,7 +297,16 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
       const range = selectionOffsets(event.currentTarget) ?? { start: caret, end: caret };
       const code = inlinePlainText(block.content);
       const next = code.slice(0, range.start) + text + code.slice(range.end);
-      execute(updateBlockContent(tree, block.id, inlineFromText(next)), { id: block.id, start: range.start + text.length, force: true });
+      /* Code pasted into a block that has no language yet — or one left
+         plain, with nothing in it — has its language read from the code. A
+         language the block was given stays: it was chosen. One step of undo
+         brings back the words and the language together. */
+      const unset = !block.language || (codeLanguage(block.language).id === PLAIN_TEXT && !code.trim());
+      const detected = block.kind === "code" && unset ? detectCodeLanguage(next) : null;
+      const pasted = detected
+        ? updateBlockFields(tree, block.id, { content: inlineFromText(next), language: detected })
+        : updateBlockContent(tree, block.id, inlineFromText(next));
+      execute(pasted, { id: block.id, start: range.start + text.length, force: true });
       return;
     }
     // A picture or file on the clipboard — a screenshot, an image copied from

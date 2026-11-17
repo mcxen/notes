@@ -125,4 +125,16 @@ describe("content copied from a web page", () => {
     // The ones past the limit are only their words.
     expect(Object.keys(fragment.tree.by_id).length).toBe(MAX_PASTED_IMAGES + 10);
   });
+
+  it("gives a code block no page named a language for the language its code is in", () => {
+    const languages = (html: string) => Object.values(read(html)!.tree.by_id).filter((block) => block.kind === "code").map((block) => block.language);
+    expect(languages("<pre><code>SELECT id, name\nFROM users\nWHERE id = 1;</code></pre>")).toEqual(["sql"]);
+    expect(languages("<pre>def add(a, b):\n    return a + b\n</pre>")).toEqual(["python"]);
+    expect(languages("<pre><code>$ npm install\n$ npm run dev</code></pre>")).toEqual(["bash"]);
+    expect(languages('<pre><code>#include &lt;iostream&gt;\nint main() {\n  std::cout &lt;&lt; 1;\n}</code></pre>')).toEqual(["cpp"]);
+    // What the page says wins, in a class or an attribute; what is unclear stays unset.
+    expect(languages('<pre><code class="language-go">SELECT * FROM t;</code></pre>')).toEqual(["go"]);
+    expect(languages('<pre data-lang="Java">x</pre>')).toEqual(["java"]);
+    expect(languages("<pre>hello there</pre>")).toEqual([undefined]);
+  });
 });

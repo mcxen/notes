@@ -2,6 +2,7 @@ import { BLOCK_ORDER_STEP, createBlock } from "../../core/block-tree";
 import { inlinePlainText, isKeptLink, normalizeInlineContent } from "../../core/inline-content";
 import { tableFromCells } from "../../core/simple-table";
 import type { Block, BlockKind, BlockTree, InlineContent } from "../../core/types";
+import { detectCodeLanguage } from "./detect-language";
 import { gridFromTable } from "./table-clipboard";
 import { inlineFromNodes } from "./rich-text";
 
@@ -94,8 +95,11 @@ function normalizeStyles(root: Element): void {
  *  Prism's and highlight.js's `language-js`. */
 function codeLanguage(pre: Element): string | undefined {
   for (let element: Element | null = pre.querySelector("code") ?? pre; element; element = element.parentElement) {
-    const match = /(?:language|lang|highlight-source)-([\w+#-]+)/i.exec(element.getAttribute("class") ?? "");
+    const match = /(?:(?:language|lang|highlight-source)-|brush:\s*)([\w+#-]+)/i.exec(element.getAttribute("class") ?? "");
     if (match) return match[1].toLowerCase();
+    // Some pages put it in an attribute instead: `data-lang="python"`.
+    const named = element.getAttribute("data-lang") ?? element.getAttribute("data-language");
+    if (named && /^[\w+#-]+$/.test(named)) return named.toLowerCase();
     if (element.tagName === "ARTICLE" || element.tagName === "BODY") break;
   }
   return undefined;
@@ -212,7 +216,9 @@ class Reader {
         return;
       case "PRE": {
         const text = (element.textContent ?? "").replace(/\r\n?/g, "\n").replace(/\n$/, "");
-        if (text.trim()) this.add(parent, "code", { content: [{ text }], language: codeLanguage(element) });
+        // The language the page's markup names; a page that names none —
+        // most do not — has its code read for it.
+        if (text.trim()) this.add(parent, "code", { content: [{ text }], language: codeLanguage(element) ?? detectCodeLanguage(text) ?? undefined });
         return;
       }
       case "TABLE": {
