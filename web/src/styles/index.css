@@ -4708,11 +4708,17 @@ pre.block__editable {
 }
 
 .viewer__stage img.is-zoomed {
-  cursor: grab;
   border-radius: 0;
 }
 
-.viewer__stage img.is-zoomed:active {
+/* A picture that overflows the stage is taken hold of anywhere on it; touch
+   drags it too, not the page. */
+.viewer__stage.is-pannable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.viewer__stage.is-pannable:active {
   cursor: grabbing;
 }
 

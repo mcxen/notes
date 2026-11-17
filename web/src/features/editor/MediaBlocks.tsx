@@ -4,7 +4,7 @@ import { formatFileSize, normalizeStoredFile } from "../../core/files";
 import type { Block, StoredFile } from "../../core/types";
 import { Modal } from "../../components/Modal";
 import { peekFileUrl, type ShownFile } from "./file-store";
-import { actualSize, FIT, limitsFor, percentOf, wheelFactor, zoomAbout, type Zoom } from "./viewer-zoom";
+import { actualSize, canScroll, clampPan, FIT, limitsFor, panLimits, percentOf, scrollBy, wheelFactor, zoomAbout, type Box, type Zoom } from "./viewer-zoom";
 import { t } from "../../i18n";
 
 export type UploadState = "uploading" | "failed";
@@ -206,11 +206,22 @@ export function ZoomViewer({
   // The picture fitted in the window, and its own size: what 100% is measured against.
   const [size, setSize] = useState({ fit: 0, natural: 0 });
   const dragged = useRef(false);
+  /* The stage, and the picture fitted in it (its layout size, whatever the zoom
+     transform is doing): what the picture can be moved within. */
+  const areaOf = (): { stage: Box; fit: Box } | null => {
+    const frame = stage.current;
+    const element = image.current;
+    if (!frame || !element) return null;
+    return { stage: { width: frame.clientWidth, height: frame.clientHeight }, fit: { width: element.offsetWidth, height: element.offsetHeight } };
+  };
   const measure = useCallback(() => {
     const element = image.current;
     if (!element || !element.naturalWidth) return;
     // The fitted width is the layout's, whatever the zoom transform is now doing.
     setSize({ fit: element.offsetWidth, natural: element.naturalWidth });
+    // A smaller window may leave the picture further out than it can now be.
+    const area = areaOf();
+    if (area) setZoom((current) => clampPan(current, area.stage, area.fit));
   }, []);
   // Another picture (← →) starts fitted.
   useEffect(() => { setZoom(FIT); }, [identity]);
@@ -223,34 +234,60 @@ export function ZoomViewer({
     const box = stage.current?.getBoundingClientRect();
     return box ? { x: clientX - (box.left + box.width / 2), y: clientY - (box.top + box.height / 2) } : { x: 0, y: 0 };
   };
-  const zoomBy = (factor: number, point = { x: 0, y: 0 }) => setZoom((current) => zoomAbout(current, factor, point, limits));
+  const zoomBy = (factor: number, point = { x: 0, y: 0 }) => {
+    const area = areaOf() ?? undefined;
+    setZoom((current) => zoomAbout(current, factor, point, limits, area));
+  };
   const toActual = () => {
     const target = actualSize(size.fit, size.natural);
-    setZoom((current) => (Math.abs(current.scale - target) < 0.01 ? FIT : zoomAbout(current, target / current.scale, { x: 0, y: 0 }, limits)));
+    const area = areaOf() ?? undefined;
+    setZoom((current) => (Math.abs(current.scale - target) < 0.01 ? FIT : zoomAbout(current, target / current.scale, { x: 0, y: 0 }, limits, area)));
   };
-  // The wheel and a trackpad's pinch zoom about the pointer; it needs a listener
-  // that may stop the page scrolling, which React's onWheel may not.
+  /* A trackpad's pinch (a wheel with Ctrl held) zooms about the pointer. Any other
+     wheel or two-finger scroll moves a picture that overflows the stage along the
+     way it scrolls, so a tall picture is read down to its foot; only where there
+     is nowhere to move does the wheel zoom. It needs a listener that may stop the
+     page scrolling, which React's onWheel may not. */
   useEffect(() => {
     const element = stage.current;
     if (!element) return;
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
+      const area = areaOf();
+      if (!event.ctrlKey && area) {
+        // A wheel counted in lines or pages, not pixels, is scaled up to pixels.
+        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? area.stage.height : 1;
+        const dx = event.deltaX * unit;
+        const dy = event.deltaY * unit;
+        if (canScroll(zoom, dx, dy, area.stage, area.fit)) {
+          setZoom((current) => scrollBy(current, dx, dy, area.stage, area.fit));
+          return;
+        }
+      }
       zoomBy(wheelFactor(event.deltaY, event.ctrlKey), centred(event.clientX, event.clientY));
     };
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
   });
-  // A press and a drag pan a picture that is zoomed.
-  const startPan = (event: ReactPointerEvent<HTMLImageElement>) => {
+  /* A press and a drag anywhere on the stage move a picture that overflows it,
+     not only on the picture itself: a tall picture is a narrow strip, hard to
+     take hold of. */
+  const room = areaOf();
+  const pannable = room ? panLimits(zoom.scale, room.stage, room.fit) : { x: 0, y: 0 };
+  const canPan = pannable.x > 0 || pannable.y > 0;
+  const startPan = (event: ReactPointerEvent<HTMLDivElement>) => {
     dragged.current = false;
-    if (zoom.scale <= 1 || event.button !== 0) return;
+    const frame = areaOf();
+    if (!frame || event.button !== 0 || (event.target as HTMLElement).closest("button, .viewer__tools")) return;
+    const limit = panLimits(zoom.scale, frame.stage, frame.fit);
+    if (limit.x <= 0 && limit.y <= 0) return;
     event.preventDefault();
     const start = { x: event.clientX, y: event.clientY, zoom };
     const onMove = (move: PointerEvent) => {
       const dx = move.clientX - start.x;
       const dy = move.clientY - start.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) dragged.current = true;
-      setZoom({ ...start.zoom, x: start.zoom.x + dx, y: start.zoom.y + dy });
+      setZoom(clampPan({ ...start.zoom, x: start.zoom.x + dx, y: start.zoom.y + dy }, frame.stage, frame.fit));
     };
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);
@@ -291,7 +328,7 @@ export function ZoomViewer({
         {onDownload ? <button type="button" className="icon-btn" aria-label={t("Download")} onClick={onDownload}><Download size={16} /></button> : null}
         <button type="button" className="icon-btn" aria-label={t("Close")} onClick={onClose}><X size={16} /></button>
       </div>
-      <div className="viewer__stage" ref={stage} onClick={() => { if (!dragged.current) onClose(); dragged.current = false; }}>
+      <div className={canPan ? "viewer__stage is-pannable" : "viewer__stage"} ref={stage} onPointerDown={startPan} onClick={() => { if (!dragged.current) onClose(); dragged.current = false; }}>
         {url ? (
           <img
             ref={image}
@@ -301,7 +338,6 @@ export function ZoomViewer({
             className={zoom.scale > 1 ? "is-zoomed" : undefined}
             style={{ transform: `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})` }}
             onLoad={measure}
-            onPointerDown={startPan}
             onDoubleClick={(event) => { event.stopPropagation(); toActual(); }}
             onClick={(event) => event.stopPropagation()}
           />
