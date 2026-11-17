@@ -291,6 +291,17 @@ function positionAt(element: HTMLElement, offset: number): { node: Node; offset:
   return { node: element, offset: 0 };
 }
 
+/** The words of an editable between two plain-text offsets, as a DOM range
+ *  that is not selected — for drawing over them. */
+export function domRangeIn(element: HTMLElement, start: number, end: number): Range {
+  const from = positionAt(element, start);
+  const to = positionAt(element, end);
+  const range = document.createRange();
+  range.setStart(from.node, from.offset);
+  range.setEnd(to.node, to.offset);
+  return range;
+}
+
 export function focusRange(element: HTMLElement, start: number, end = start): void {
   element.focus({ preventScroll: true });
   const selection = window.getSelection();

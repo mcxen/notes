@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Find and replace in a page. ⌘F (Ctrl+F) opens a bar at the page's top right: the words found are painted over the page, the current one apart, with "3 of 12" beside the field; Enter and ⇧Enter (or ⌘G and ⇧⌘G) step through them, scrolling to each, and one under a folded toggle opens it. Words selected in the page fill the field. Match case and Whole word are buttons on the bar. ⌥⌘F (Ctrl+H off a Mac), or the arrow at the bar's left, adds the replace row: Enter replaces the current one and moves to the next; Replace all changes every one on the page in a single step of undo. Marks (bold, a link…) stay on what is replaced, a mention stays where it is, and a page that is only read can be searched but not changed. Esc closes the bar and selects the match it was on. It searches the words of a page's lines, not its title, the cells of a table or a database's properties.
+
 - An empty date or picture cell no longer clashes with its picker. An unset date's "Empty" hint sat over the picker's own 年/月/日 when the cell was focused and its row hovered; now the hint goes once the cell is focused, and the picker's segments read as the hint in that colour. The hint of a date and of a picture now follows the page's language (it said "Empty" in English on a Chinese page).
 
 - Chart colours and styles. The chart's slices take a calmer palette (one lightness for every option, a softer one on the dark paper) in place of Notion's loud text colours. A chart's style in its ··· menu now has two more rings: a ring of square pixels, and a ring of dots, drawn on one lattice so each slice fills whole cells; the ring and bars stay as they were.

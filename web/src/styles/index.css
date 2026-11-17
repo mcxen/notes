@@ -9503,6 +9503,97 @@ html.translucent[data-theme="dark"] .sidebar {
   color: inherit;
 }
 
+/* Find in page (⌘F): the words found are painted over the page, the current
+   one apart. The bar floats at the page's top right, over the scroller. */
+::highlight(find-match) {
+  background-color: rgba(255, 212, 0, 0.4);
+  color: inherit;
+}
+
+::highlight(find-current) {
+  background-color: rgba(255, 150, 0, 0.7);
+  color: inherit;
+}
+
+.findbar {
+  position: fixed;
+  z-index: 40;
+  top: calc(var(--topbar-h) + 10px);
+  right: 18px;
+  display: flex;
+  width: min(420px, calc(100vw - 36px));
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border-radius: var(--r-lg);
+  background: var(--elevated);
+  box-shadow: var(--shadow-pop);
+}
+
+.findbar__row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.findbar__twist-space {
+  width: 22px;
+  height: 28px;
+  flex: none;
+}
+
+.findbar__twist {
+  width: 22px;
+}
+
+.findbar__twist[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.findbar__input {
+  min-width: 0;
+  height: 28px;
+  flex: 1;
+  margin-right: 2px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--fill);
+  color: var(--ink);
+  font-size: 14px;
+  outline: 0;
+}
+
+.findbar__input:focus {
+  box-shadow: 0 0 0 2px var(--blue-tint), inset 0 0 0 1px var(--blue);
+}
+
+.findbar__input::placeholder {
+  color: var(--ink-4);
+}
+
+.findbar__status {
+  flex: none;
+  padding: 0 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.findbar__status.is-none {
+  color: var(--danger);
+}
+
+.findbar .icon-btn[aria-pressed="true"] {
+  background: var(--blue-tint);
+  color: var(--blue);
+}
+
+.findbar .icon-btn:disabled {
+  opacity: 0.35;
+}
+
 .block.is-found {
   animation: block-found 1.8s var(--e-out, ease-out);
 }

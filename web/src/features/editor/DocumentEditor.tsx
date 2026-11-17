@@ -118,6 +118,8 @@ import { embedFromUrl, normalizeEmbed } from "../../core/embeds";
 import { readEmbedDetails } from "./embed-details";
 import { FormatToolbar, type FormatState } from "./FormatToolbar";
 import { TitleField } from "./TitleField";
+import { FindBar, type FindRequest } from "./FindBar";
+import type { FindMatch } from "./find";
 import { layout, type Item, type Rendered } from "./layout";
 import { PageFrame } from "./PageFrame";
 import { ColumnsFrame } from "./ColumnsFrame";
@@ -341,6 +343,8 @@ export function DocumentEditor({
   const [dragIds, setDragIds] = useState<string[] | null>(null);
   const [drop, setDrop] = useState<DropState | null>(null);
   const [picker, setPicker] = useState<PickerOpen | null>(null);
+  /* Find and replace in this page (⌘F), open or not. */
+  const [find, setFind] = useState<FindRequest | null>(null);
 
   const pendingFocus = useRef<PendingFocus | null>(null);
   /* A slash the writer has waved away — with Escape, or by typing on past a
@@ -884,6 +888,62 @@ export function DocumentEditor({
     showFound();
     return onReveal(showFound);
   }, [rows, showFound]);
+
+  /* ⌘F finds in the page, with the words selected in it, if any; ⌥⌘F — Ctrl+H
+     off a Mac — finds and replaces. A page shown in another, or an older
+     version of one, is not searched: the page around it is. Of the page and
+     the side peek beside it, the one with the caret answers, else the page. */
+  const findable = !embed && !historical;
+  useEffect(() => {
+    if (!findable) return;
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented || imeComposing(event)) return;
+      const wantsFind = (event.metaKey || event.ctrlKey) && event.code === "KeyF" && !event.shiftKey;
+      const replace = wantsFind && event.altKey || !mac && event.ctrlKey && !event.metaKey && !event.altKey && event.code === "KeyH";
+      if (!wantsFind && !replace) return;
+      const article = articleRef.current;
+      if (!article) return;
+      const active = document.activeElement;
+      const mine = article.contains(active)
+        || (!article.closest(".side-peek") && !active?.closest(".side-peek"));
+      if (!mine) return;
+      event.preventDefault();
+      const selected = window.getSelection();
+      const words = selected && !selected.isCollapsed && article.contains(selected.anchorNode) ? selected.toString() : "";
+      setFind((now) => ({
+        n: (now?.n ?? 0) + 1,
+        query: words && words.length <= 200 && !/[\n\r]/.test(words) ? words : "",
+        replace: replace || Boolean(now?.replace),
+      }));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [findable]);
+
+  /* A word found under a folded toggle: the toggle is opened, as it would be
+     by hand — for everyone, on a page that is written; here only, on one that
+     is read. */
+  const showFoundIn = useCallback((found: FindMatch) => {
+    const folded: string[] = [];
+    const seen = new Set<string>();
+    for (let id = tree.by_id[found.blockId]?.parent_id; id && !seen.has(id); id = tree.by_id[id]?.parent_id) {
+      seen.add(id);
+      if (!openOf(tree.by_id[id])) folded.push(id);
+    }
+    if (!folded.length) return;
+    if (readOnly) {
+      setReaderOpen((now) => ({ ...now, ...Object.fromEntries(folded.map((id) => [id, true])) }));
+      return;
+    }
+    execute({ mutations: folded.flatMap((id) => updateBlockFields(tree, id, { collapsed: false })?.mutations ?? []) });
+  }, [execute, openOf, readOnly, tree]);
+
+  /* Closed, the page selects the word the bar was on, as a browser's does. */
+  const closeFind = useCallback((current: FindMatch | null) => {
+    setFind(null);
+    if (current) selectRanges(blocksRef.current, [current]);
+  }, []);
 
   // ⌘⇧C: copy as image — the selected blocks, else the paragraphs of the text
   // selection. It is left alone in the title and other fields.
@@ -2780,6 +2840,18 @@ export function DocumentEditor({
       ) : null}
 
       {overlays}
+
+      {find && findable ? (
+        <FindBar
+          root={blocksRef}
+          tree={tree}
+          readOnly={readOnly}
+          request={find}
+          onReplace={(change) => execute(change)}
+          onShow={showFoundIn}
+          onClose={closeFind}
+        />
+      ) : null}
     </article>
   );
 }

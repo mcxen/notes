@@ -46,6 +46,9 @@ computer.
 
 - **History.** Every page keeps its recent versions; restore any of them.
 
+- **Find and replace** in a page: ⌘F paints the words found and steps through them;
+  the replace row changes one or all of them, as a single step of undo.
+
 - **Copy as image**, with the pictures among the words.
 
 - **Light, dark or the system's**, and a translucent sidebar on macOS.
