@@ -98,7 +98,8 @@ func newServer(host Host, version string) *mcp.Server {
 			"then its body as Markdown. Change a part of a page with notes_edit_page (old_text to new_text, one paragraph at a time), add to its end " +
 			"with notes_update_page (append by default; replace swaps the whole body), and move pages to the Trash with notes_trash_page. " +
 			"[[A page's title]] in Markdown is a link to that page. Pictures and files on a page are listed by notes_fetch; open one with " +
-			"notes_read_attachment and add one with notes_add_attachment. Pass vault to pick a vault by name; omit it for the default.",
+			"notes_read_attachment and add one with notes_add_attachment. A page's earlier versions are listed by notes_page_history, read with " +
+			"notes_read_version and brought back with notes_restore_version. Pass vault to pick a vault by name; omit it for the default.",
 	})
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_list_vaults", Description: "List the vaults you may use, the first being the default."}, s.listVaults)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_search", Description: "Find pages by words in their title or text: every word of the query has to be there, in any order. The best matches come first (the title before the text, then the most recently changed)."}, s.search)
@@ -112,6 +113,7 @@ func newServer(host Host, version string) *mcp.Server {
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_read_attachment", Description: "Open a picture or file on a page, by a path from the attachments of notes_fetch: a picture is shown as an image, a text file as text, any other file as bytes. Very large pictures come as their smaller preview."}, s.readAttachment)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_add_attachment", Description: "Put a picture or file on a page, after what it holds: name it, and give its bytes base64-encoded (up to 2.5 MB). The page's earlier version is kept in its history."}, s.addAttachment)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_trash_page", Description: "Move a page to the Trash. It can be restored with notes_restore_page, or from the Trash in Notes."}, s.trash)
+	addHistoryTools(srv, s)
 	mcp.AddTool(srv, &mcp.Tool{Name: "notes_restore_page", Description: "Take a page back out of the Trash."}, s.restore)
 	return srv
 }
@@ -1000,6 +1002,12 @@ func checkpoint(v *vault.Vault, pageID string, page map[string]any, stored map[s
 			return nil, nil
 		}
 	}
+	return keepVersion(pageID, page, stored, now, "Changed by an assistant", false)
+}
+
+// keepVersion writes the page as it is now into its history. A restored one
+// is never coalesced with another, as in the app.
+func keepVersion(pageID string, page map[string]any, stored map[string]map[string]any, now, summary string, restored bool) ([]vault.Write, error) {
 	versionID := newID("version")
 	snapshot := map[string]any{
 		"id": pageID, "kind": "document", "icon": str(page["icon"]),
@@ -1015,8 +1023,12 @@ func checkpoint(v *vault.Vault, pageID string, page map[string]any, stored map[s
 		tree[id] = webBlock(id, record)
 	}
 	snapshot["block_tree"] = map[string]any{"by_id": tree}
-	payload, err := json.Marshal(map[string]any{"id": versionID, "page_id": pageID, "author_id": author, "author_name": authorName,
-		"summary": "Changed by an assistant", "created_at": now, "snapshot": snapshot})
+	record := map[string]any{"id": versionID, "page_id": pageID, "author_id": author, "author_name": authorName,
+		"summary": summary, "created_at": now, "snapshot": snapshot}
+	if restored {
+		record["restored"] = true
+	}
+	payload, err := json.Marshal(record)
 	if err != nil {
 		return nil, err
 	}

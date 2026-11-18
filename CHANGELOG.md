@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- MCP server: a page's history. notes_page_history lists a page's earlier versions, newest first (the ones the app kept as it was written, and the one kept before each change an assistant made); notes_read_version reads one as Markdown; notes_restore_version brings the title and body back to it. The page as it is now is kept in its history first, so a restore can be taken back; the page's place, icon and properties stay. A page in the Trash is not restored, and Read only turns the restore off (the history can still be read).
+
 - Pages are saved when the computer shuts down, restarts or logs out. Notes now runs on MyGo 0.9.2 (it was 0.8.3), whose quit handlers also run when the system ends the session; Notes writes every open vault (the ones hidden to the tray too) first thing in its quit handler, before anything slower, so a change made a moment before is on the disk when the system takes the app away. Nothing changes for a normal quit.
 
 - Pasted code finds its own language. Code copied from a web page (a `<pre>` block that names no language), a Markdown fence with none (```` ``` ````), and code pasted into a code block that has no language yet (or is empty and plain text), are read for it: Bash (a shebang, a `$ ` prompt, `npm`/`git`/`apt` commands, `if … fi`), SQL, C++ and C, Python, Java, C#, JavaScript and TypeScript, Go, Rust, PHP, Ruby, Swift, Kotlin, JSON, HTML and XML, CSS, YAML and diffs. A language the page's markup names (`language-js`, `data-lang`) or the block was given is kept. When it is not clear — a line or two, or words that only look like code — the block stays plain text, never a guess. The paste and its language are one step of undo.
