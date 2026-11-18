@@ -60,6 +60,8 @@ export interface Look {
   translucent: boolean;
   /** Outline is whether pages show their outline. */
   outline: boolean;
+  /** Skin is the wallpaper behind the list and the page. */
+  skin: SkinView;
 }
 
 export interface Page {
@@ -114,6 +116,32 @@ export interface ShareStatus {
   maxFileMB: number;
   /** Publications are the pages of this vault that are published, by page id. */
   publications: Record<string, Publication>;
+}
+
+/** SkinLayerView is one side's background; a picture is named by its file. */
+export interface SkinLayerView {
+  kind: string;
+  image: string;
+  from: string;
+  via: string;
+  to: string;
+  angle: number;
+  blur: number;
+  veil: number;
+  brightness: number;
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+}
+
+/** SkinView is the wallpaper a vault window draws, every value within limits. */
+export interface SkinView {
+  sidebar: SkinLayerView;
+  page: SkinLayerView;
+  span: boolean;
+  spanVeil: number;
+  seam: number;
+  seamBlur: number;
 }
 
 export interface Snapshot {
@@ -320,6 +348,8 @@ export const events = {
    * window controls show the right button.
    */
   windowMaximized: event<boolean>("window:maximized"),
+  /** LookChanged carries the new look to a vault window with no reload. */
+  lookChanged: event<Look>("look:changed"),
   /** SyncStates is the sync state of each window's vault. */
   syncState: event<SyncState>("sync:state"),
 } as const;

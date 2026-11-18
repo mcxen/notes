@@ -7,6 +7,8 @@ import { DocumentEditor } from "../features/editor/DocumentEditor";
 import { linkedPageId } from "../features/editor/mentions";
 import { QuickFind } from "../features/quickfind/QuickFind";
 import { Sidebar } from "../features/sidebar/Sidebar";
+import { SkinLayers } from "../features/skin/SkinLayers";
+import { skinShape, useSkin } from "../features/skin/skin-store";
 import { TopBar } from "../features/topbar/TopBar";
 import { useFold } from "../hooks/useFold";
 import type { NotePage } from "../core/types";
@@ -58,6 +60,7 @@ export function App() {
   const [historyUsed, setHistoryUsed] = useState(false);
   const [historyPreview, setHistoryPreview] = useState<NotePage | null>(null);
   const folded = useFold();
+  const skin = skinShape(useSkin());
   /* Same sum the Sidebar does. The shell only needs it for the width of the
      first track; what goes IN that track is the Sidebar's business. */
   const railed = folded || preferences.sidebar_collapsed;
@@ -248,9 +251,10 @@ export function App() {
   return (
     <div
       ref={setShell}
-      className={`app-shell ${railed ? "app-shell--railed" : ""} ${peekOpen && peek.docked ? "app-shell--peek" : ""}`}
+      className={`app-shell ${railed ? "app-shell--railed" : ""} ${peekOpen && peek.docked ? "app-shell--peek" : ""}${skin.side ? " app-shell--skin-side" : ""}${skin.page ? " app-shell--skin-page" : ""}${skin.seam ? " app-shell--skin-seam" : ""}`}
       style={{ ["--sidebar-w" as string]: `${preferences.sidebar_width}px`, ["--peek-w" as string]: `${peek.width}px` }}
     >
+      <SkinLayers />
       <Sidebar />
       <div className="app-main">
         <TopBar

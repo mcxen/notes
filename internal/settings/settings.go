@@ -70,6 +70,8 @@ type Settings struct {
 	// Hotkey shows or hides the windows from anywhere, as "CmdOrCtrl+Shift+N".
 	// Empty means no shortcut.
 	Hotkey string `json:"hotkey,omitempty"`
+	// Skin is the user's own wallpaper behind the list and the page. None unless set.
+	Skin Skin `json:"skin,omitzero"`
 }
 
 // DefaultShareFileMB is the largest file a published page carries, in megabytes, unless another is set.

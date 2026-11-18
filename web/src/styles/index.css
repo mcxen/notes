@@ -10198,3 +10198,107 @@ button.export__row:hover {
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* ── Wallpaper (Settings › Wallpaper) ──────────────────────────────────────
+   One layer under the panes (`features/skin/SkinLayers.tsx`); the panes go
+   clear and their paper becomes the art's veil, so text keeps its contrast. */
+
+.skin {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: grid;
+  overflow: hidden;
+  /* The shell's columns, so the layer follows the list folding and dragging. */
+  grid-template-columns: inherit;
+  grid-template-rows: minmax(0, 1fr);
+  pointer-events: none;
+  user-select: none;
+}
+
+.skin__side,
+.skin__page {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.skin__side { grid-area: 1 / 1; }
+.skin__page { grid-area: 1 / 2; }
+
+/* One picture across both sides. */
+.skin__span {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* The art is larger than its box by twice its blur, so the blur never fades
+   to nothing at the edges. */
+.skin__art {
+  position: absolute;
+  inset: calc(var(--skin-blur) * -2);
+  background-position: var(--skin-x) var(--skin-y);
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: blur(var(--skin-blur)) brightness(var(--skin-bright));
+  transform: scale(var(--skin-zoom));
+  transform-origin: var(--skin-x) var(--skin-y);
+}
+
+.skin__veil {
+  position: absolute;
+  inset: 0;
+}
+
+.skin__veil--side { background: var(--sidebar); }
+.skin__veil--page { background: var(--paper); }
+
+/* The seam: a strip centred on the edge between the two sides, which blurs
+   what is behind it — the two backgrounds — and fades out to both sides, so
+   one melts into the other. A zero-width cell at the start of the page's
+   column pins it to the edge wherever the edge is. */
+.skin__split {
+  position: relative;
+  grid-area: 1 / 2;
+  width: 0;
+  justify-self: start;
+}
+
+.skin__seam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--skin-seam) / -2);
+  width: var(--skin-seam);
+  -webkit-backdrop-filter: blur(var(--skin-seam-blur));
+  backdrop-filter: blur(var(--skin-seam-blur));
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 50%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 50%, transparent);
+}
+
+/* The panes are clear over their wallpaper. These are more specific than the
+   translucent sidebar's rules above, which they must beat. */
+html .app-shell--skin-side .sidebar,
+html .app-shell--skin-side .rail {
+  background: transparent;
+}
+
+html .app-shell--skin-page .app-main,
+html .app-shell--skin-page .page-surface {
+  background: transparent;
+}
+
+/* The bar over a scrolling page keeps something solid behind its buttons and
+   title, as the paper did: a frosted paper, whatever the veil. */
+html .app-shell--skin-page .topbar {
+  background: color-mix(in srgb, var(--paper) 72%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+/* The hairline between the panes would cut through the seam. */
+.app-shell--skin-seam .sidebar,
+.app-shell--skin-seam .rail {
+  box-shadow: none;
+}

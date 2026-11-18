@@ -38,6 +38,10 @@ func Run() error {
 	if err := mygo.Protocol.Handle("vault", serveVaultFiles(notebooks)); err != nil {
 		return err
 	}
+	// The wallpaper's pictures, kept beside the settings file.
+	if err := mygo.Protocol.Handle("skin", serveSkinFiles(settingsPath())); err != nil {
+		return err
+	}
 
 	actions := &appActions{notebooks: notebooks, settings: settingsPath(), mcp: &mcpRunner{}}
 	connections.app = actions

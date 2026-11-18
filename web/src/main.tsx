@@ -10,7 +10,8 @@ import { WorkspaceProvider } from "./app/workspace-context";
 import { isMyGo } from "mygo-runtime";
 import { Fragment, type ReactNode } from "react";
 import { useLang } from "./i18n";
-import { Notebooks } from "./platform/mygo";
+import { events, Notebooks, type Look } from "./platform/mygo";
+import { setSkin } from "./features/skin/skin-store";
 import "./styles/index.css";
 
 markWindowChrome();
@@ -25,15 +26,17 @@ const root = createRoot(document.getElementById("root")!);
 
 /* In the desktop app the sidebar's material comes from the settings, and the
    page must know before its first paint: the class is set first. */
+function applyLook(value: Look) {
+  document.documentElement.classList.toggle("translucent", value.translucent);
+  document.documentElement.classList.toggle("no-outline", !value.outline);
+  setSkin(value.skin);
+}
+
 const look: Promise<void> = isMyGo()
-  ? Notebooks.look().then(
-      value => {
-        document.documentElement.classList.toggle("translucent", value.translucent);
-        document.documentElement.classList.toggle("no-outline", !value.outline);
-      },
-      () => undefined,
-    )
+  ? Notebooks.look().then(applyLook, () => undefined)
   : Promise.resolve();
+/* The wallpaper changes while its sliders move: the new look arrives whole. */
+if (isMyGo()) events.lookChanged.on(applyLook);
 void look.then(() => {
   /* Two boundaries, so a render error never leaves a blank window. One inside
      the workspace, around what draws it: the workspace stays open behind the

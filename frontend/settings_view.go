@@ -32,6 +32,7 @@ type settingsPage struct {
 var settingsPages = []settingsPage{
 	{"general", "General", generalGlyph},
 	{"appearance", "Appearance", appearanceGlyph},
+	{"wallpaper", "Wallpaper", wallpaperGlyph},
 	{"vaults", "Vaults", vaultsGlyph},
 	{"sync", "Sync", syncGlyph},
 	{"integrations", "Integrations", plugGlyph},
@@ -66,6 +67,11 @@ type settingsWindow struct {
 	// Return saves them, and what the last check of the worker found.
 	cloudURL, cloudToken, cloudMB string
 	cloud                         cloudState
+
+	// Settings › Wallpaper: the side the history's pictures are used for (0 the
+	// list, 1 the page), and the small copies read so far.
+	skinTarget int
+	thumbs     map[string]*ui.Bitmap
 }
 
 // openSettings opens the settings window on a page, or brings it forward.
@@ -178,6 +184,8 @@ func (s *settingsWindow) view(c *ui.Context) {
 						switch page.id {
 						case "appearance":
 							s.appearancePage(c, pal)
+						case "wallpaper":
+							s.wallpaperPage(c, pal)
 						case "vaults":
 							s.vaultsPage(c, pal)
 						case "sync":
@@ -271,6 +279,12 @@ var searchEntries = []searchEntry{
 	{"general", "Shortcut to show or hide", "shortcut hotkey keyboard show hide 快捷键 显示 隐藏"},
 	{"appearance", labelTranslucent, "translucent vibrancy material transparent glass 半透明 侧栏 材质"},
 	{"appearance", labelOutline, "outline headings table of contents toc 大纲 目录 标题"},
+	{"wallpaper", "Background", "wallpaper skin background picture image photo gradient color blur theme custom 壁纸 皮肤 背景 图片 渐变 模糊 自定义"},
+	{"wallpaper", labelSkinSeam, "seam blur transition edge between list page 模糊 过渡 接缝 分界"},
+	{"wallpaper", labelSkinSpan, "one picture across window span stretch 整张 通铺 跨越"},
+	{"wallpaper", "Veil", "veil overlay readable opacity paper 遮罩 蒙层 可读 不透明"},
+	{"wallpaper", "Blur", "blur soften 模糊"},
+	{"wallpaper", "Brightness", "brightness dark light dim 亮度 变暗 变亮"},
 	{"vaults", "Recent vaults", "vault folder recent remove show finder explorer"},
 	{"vaults", "Add a vault", "new open folder"},
 	{"sync", "Remote vaults", "sync webdav smb remote cloud disconnect password sign in nas 同步 远程 密码 登录 断开"},

@@ -16,6 +16,8 @@ type Look struct {
 	Translucent bool `json:"translucent"`
 	// Outline is whether pages show their outline.
 	Outline bool `json:"outline"`
+	// Skin is the wallpaper behind the list and the page.
+	Skin SkinView `json:"skin"`
 }
 
 // Look returns the appearance the settings ask for.
@@ -24,7 +26,12 @@ func (n *Notebooks) Look(ctx context.Context) (Look, error) {
 	if err != nil {
 		return Look{}, err
 	}
-	return Look{Translucent: translucent(st), Outline: !st.HideOutline}, nil
+	return lookOf(st), nil
+}
+
+// lookOf is the appearance the settings ask for.
+func lookOf(st settings.Settings) Look {
+	return Look{Translucent: translucent(st), Outline: !st.HideOutline, Skin: skinView(st)}
 }
 
 // translucent reports whether the sidebar is translucent: on macOS, unless the
