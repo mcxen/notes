@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.11
 
 - MCP server: richer browsing, Markdown tables, batch edits, and database management. All tools now expose standard MCP titles and annotations (`readOnlyHint` / `destructiveHint`), MCP edits schedule remote sync when a vault is synced, and the prompt in Settings › Integrations lists all tools including page history. New tools: `notes_page_tree` (flat hierarchy outline), `notes_list_trash` (inspect deleted pages), `notes_list_todos` (aggregate open/done tasks), `notes_query_database` (filter, sort, paginate, and count groups over database rows and views), `notes_create_database`, and `notes_update_database` (add, rename, and remove columns or append options). `notes_search` supports `parent_id`, `kind`, `updated_after`/`updated_before`, and `vault: "*"` across every allowed vault; `notes_list_pages` returns `kind`, `child_count`, and database `row_order` / workspace `roots` order; `notes_edit_page` accepts an atomic `edits` batch; `notes_move_page` can move pages into a database as rows; `notes_read_attachment` reads pictures from a row's Image properties; and Markdown pipe tables can now be written as well as read.
 
