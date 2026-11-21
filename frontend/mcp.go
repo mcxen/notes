@@ -115,7 +115,18 @@ func (h mcpHost) ReadOnly() bool {
 
 func (h mcpHost) Open(folder string) (*mcpsvc.Access, error) {
 	if s := h.n.sessionAt(folder); s != nil {
-		return &mcpsvc.Access{Vault: s.vault, Changed: func(c vault.Changes) { _ = VaultChanged.Emit(s.window, c) }, Close: func() {}}, nil
+		return &mcpsvc.Access{
+			Vault: s.vault,
+			Changed: func(c vault.Changes) {
+				if s.window != nil {
+					_ = VaultChanged.Emit(s.window, c)
+				}
+				if len(c.Changes) > 0 && s.remote != nil {
+					s.remote.Schedule(3 * time.Second)
+				}
+			},
+			Close: func() {},
+		}, nil
 	}
 	v, err := vault.Open(folder)
 	if err != nil {
@@ -221,21 +232,30 @@ func mcpPrompt(st settings.Settings) string {
 	fmt.Fprintf(&b, "Vaults you may use: %s.\nPass the \"vault\" argument to pick another one by name; omit it for the default.\n\n", vaults)
 	b.WriteString(`Tools:
 - notes_list_vaults: list the vaults you may use.
-- notes_search(query, limit?, vault?): find pages that have every word of the query, in their title or text; the best matches first.
-- notes_list_pages(parent_id?, vault?): list the sub-pages of a page, or the top level.
+- notes_search(query, parent_id?, kind?, updated_after?, updated_before?, limit?, vault?): find pages that have every word of the query, in their title or text; the best matches first. Filter by parent_id (sub-tree), kind ("document", "database", "row"), or date bounds (YYYY-MM-DD / RFC3339), or pass vault "*" to search every allowed vault.
+- notes_list_pages(parent_id?, vault?): list the sub-pages of a page, or the top level (with kind and child_count, in row_order under a database and roots order at the top).
+- notes_page_tree(parent_id?, depth?, include_rows?, limit?, vault?): return a flat pre-order outline of the page hierarchy in one call.
 - notes_recent_pages(limit?, vault?): list the pages changed most recently.
+- notes_list_trash(limit?, vault?): list pages currently in the Trash so they can be inspected or restored.
+- notes_list_todos(status?, parent_id?, limit?, vault?): aggregate to-do items ("open", "done", or "all") across pages.
 - notes_fetch(page_id, vault?): read a page. The answer is text: a few lines about the page (title, id, parent, sub-pages, the pages it links to and is linked from, attachments with their paths), a line of ---, then the body as Markdown.
-- notes_read_attachment(page_id, path, vault?): open a picture or file of a page: a picture comes back as an image you can see, a text file as text, any other file as bytes.
+- notes_read_attachment(page_id, path, vault?): open a picture or file on a page (or in a database row's Image property): a picture comes back as an image you can see, a text file as text, any other file as bytes.
 - notes_add_attachment(page_id, name, data, type?, vault?): put a picture or file (base64, up to 2.5 MB) on a page, after what it holds.
 - notes_create_page(title, markdown?, parent_id?, if_exists?, properties?, vault?): make a page; under a database it is a row, and properties ({"Status": "Doing"}, by the property's name) sets its values. With if_exists "append", a page that already has this title under the same parent gets the Markdown added to it instead, so the call can be repeated (a daily log, say).
-- notes_edit_page(page_id, old_text, new_text, nth?, vault?): change a part of a page. old_text is text of one paragraph (a line, a code block or a quote) as notes_fetch shows it; it becomes new_text. Several lines in new_text add paragraphs after it; an empty new_text removes the paragraph. Pass nth when old_text is on the page several times. This is the way to change a page that holds pictures, tables or links.
+- notes_edit_page(page_id, old_text?, new_text?, nth?, edits?, vault?): change parts of a page. Pass old_text (text of one paragraph as notes_fetch shows it) and new_text (with optional nth), or pass edits ([{old_text, new_text, nth?}]) to apply multiple changes atomically in one call. Several lines in new_text add paragraphs after it; an empty new_text removes the paragraph. This is the way to change a page that holds pictures, tables or links.
 - notes_update_page(page_id, title?, markdown?, mode?, properties?, vault?): change a page's title, or its body as a whole, or the values of a database row (properties, by the property's name; an empty string clears one; notes_fetch on the database lists the properties and their options). mode is "append" (the default, adds to the end) or "replace" (swaps the whole body).
-- notes_move_page(page_id, parent_id?, vault?): move a page under another, or to the top level.
+- notes_move_page(page_id, parent_id?, vault?): move a page under another (including into a database to make it a row), or to the top level.
 - notes_trash_page(page_id, vault?): move a page to the Trash.
 - notes_restore_page(page_id, vault?): take a page back out of the Trash.
+- notes_query_database(database_id, view?, query?, filters?, sort_by?, sort_dir?, group_by?, limit?, offset?, vault?): filter, sort, paginate, and count groups over a database's rows (optionally reusing a saved view).
+- notes_create_database(title, parent_id?, icon?, title_name?, view_kind?, properties?, vault?): create a database with typed columns (text, select, status, date, person, image) and an initial view (table, board, list, gallery, calendar, chart).
+- notes_update_database(database_id, title?, title_name?, add_properties?, rename_properties?, add_options?, remove_properties?, vault?): update a database's title or schema (add/rename/remove columns, add select/status options).
+- notes_page_history(page_id, limit?, vault?): list earlier versions of a page, newest first.
+- notes_read_version(page_id, version_id, vault?): read an earlier version of a page as Markdown.
+- notes_restore_version(page_id, version_id, vault?): restore a page's title and body to an earlier version.
 Every change keeps the version before it in the page's history.
 
-Markdown: "# ", "## " and "### " headings; "- " bullets; "1. " numbered items; "- [ ] " and "- [x] " to-dos; "> " quotes; fenced code blocks with a language after the opening fence; two spaces of indentation for a nested item; **bold**, *italic*, ~~strike~~, ` + "`code`" + ` and [text](url). [[A page's title]] (or [[its id]]) is a link to that page.
+Markdown: "# ", "## " and "### " headings; "- " bullets; "1. " numbered items; "- [ ] " and "- [x] " to-dos; "> " quotes; fenced code blocks with a language after the opening fence; "$$ ... $$" display equations; "| A | B |" pipe tables; two spaces of indentation for a nested item; **bold**, *italic*, ~~strike~~, ` + "`code`" + ` and [text](url). [[A page's title]] (or [[its id]]) is a link to that page.
 replace refuses a page with pictures, files, tables, embeds or page links: use notes_edit_page or append for those.
 `)
 	if st.MCP.ReadOnly {

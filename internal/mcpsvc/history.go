@@ -16,9 +16,24 @@ import (
 )
 
 func addHistoryTools(srv *mcp.Server, s *server) {
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_page_history", Description: "List the earlier versions of a page, newest first: the ones the app kept as the page was written, and the one kept before each change an assistant made. Read one with notes_read_version."}, s.pageHistory)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_read_version", Description: "Read an earlier version of a page, by a version_id from notes_page_history: a few lines about it, a line of ---, then its body as Markdown, as notes_fetch gives a page."}, s.readVersion)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_restore_version", Description: "Bring a page's title and body back to an earlier version. The page as it is now is kept in its history first, so a restore can itself be taken back. The page's place, icon and properties stay as they are."}, s.restoreVersion)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_page_history",
+		Title:       "Page History",
+		Description: "List the earlier versions of a page, newest first: the ones the app kept as the page was written, and the one kept before each change an assistant made. Read one with notes_read_version.",
+		Annotations: readOnlyTool("Page History"),
+	}, s.pageHistory)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_read_version",
+		Title:       "Read Page Version",
+		Description: "Read an earlier version of a page, by a version_id from notes_page_history: a few lines about it, a line of ---, then its body as Markdown, as notes_fetch gives a page.",
+		Annotations: readOnlyTool("Read Page Version"),
+	}, s.readVersion)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_restore_version",
+		Title:       "Restore Page Version",
+		Description: "Bring a page's title and body back to an earlier version. The page as it is now is kept in its history first, so a restore can itself be taken back. The page's place, icon and properties stay as they are.",
+		Annotations: mutatingTool("Restore Page Version", true, false),
+	}, s.restoreVersion)
 }
 
 type historyIn struct {

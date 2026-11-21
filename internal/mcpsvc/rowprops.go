@@ -175,55 +175,80 @@ func (lib library) rowLines(id string) string {
 func oneLine(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // databaseLines are the lines notes_fetch adds for a database: its columns, and
-// the board's grouping.
+// its views.
 func (lib library) databaseLines(id string) string {
 	cols := lib.columns(id)
-	if len(cols) == 0 {
-		return ""
-	}
 	var b strings.Builder
-	b.WriteString("Properties:\n")
-	for _, c := range cols {
-		switch c.kind {
-		case "status":
-			var names []string
-			for _, o := range c.statuses {
-				names = append(names, o.name)
+	if len(cols) > 0 {
+		b.WriteString("Properties:\n")
+		for _, c := range cols {
+			switch c.kind {
+			case "status":
+				var names []string
+				for _, o := range c.statuses {
+					names = append(names, o.name)
+				}
+				fmt.Fprintf(&b, "- %s (status): %s\n", c.name, strings.Join(names, ", "))
+			case "select":
+				fmt.Fprintf(&b, "- %s (select): %s\n", c.name, strings.Join(c.options, ", "))
+			case "date":
+				fmt.Fprintf(&b, "- %s (date, YYYY-MM-DD)\n", c.name)
+			default:
+				fmt.Fprintf(&b, "- %s (%s)\n", c.name, c.kind)
 			}
-			fmt.Fprintf(&b, "- %s (status): %s\n", c.name, strings.Join(names, ", "))
-		case "select":
-			fmt.Fprintf(&b, "- %s (select): %s\n", c.name, strings.Join(c.options, ", "))
-		case "date":
-			fmt.Fprintf(&b, "- %s (date, YYYY-MM-DD)\n", c.name)
-		default:
-			fmt.Fprintf(&b, "- %s (%s)\n", c.name, c.kind)
 		}
 	}
 	config, _ := lib.pages[id]["database"].(map[string]any)
 	views, _ := config["views"].([]any)
+	var viewLabels []string
+	var boardLines []string
 	for _, item := range views {
 		v, _ := item.(map[string]any)
-		if v == nil || str(v["kind"]) != "board" {
+		if v == nil {
+			continue
+		}
+		vName := str(v["name"])
+		vKind := str(v["kind"])
+		if vName != "" && vKind != "" {
+			viewLabels = append(viewLabels, fmt.Sprintf("%s (%s)", vName, vKind))
+		}
+		if vKind != "board" {
 			continue
 		}
 		for _, c := range cols {
 			if c.id == str(v["group_by"]) {
-				fmt.Fprintf(&b, "Board view %q groups by %s\n", str(v["name"]), c.name)
-				return b.String()
+				boardLines = append(boardLines, fmt.Sprintf("Board view %q groups by %s\n", vName, c.name))
+				break
 			}
 		}
+	}
+	if len(viewLabels) > 0 {
+		fmt.Fprintf(&b, "Views: %s\n", strings.Join(viewLabels, ", "))
+	}
+	for _, line := range boardLines {
+		b.WriteString(line)
 	}
 	return b.String()
 }
 
-// columnNamed finds the column a name means.
-func columnNamed(cols []column, name string) (column, error) {
+// columnLookup finds a database column by name: exact trimmed match first, else
+// a unique case-insensitive match.
+func columnLookup(cols []column, name string) (column, error) {
 	name = strings.TrimSpace(name)
-	var found []column
+	var exact []column
+	var fold []column
 	for _, c := range cols {
-		if strings.TrimSpace(c.name) == name {
-			found = append(found, c)
+		trimmed := strings.TrimSpace(c.name)
+		if trimmed == name {
+			exact = append(exact, c)
 		}
+		if strings.EqualFold(trimmed, name) {
+			fold = append(fold, c)
+		}
+	}
+	found := exact
+	if len(found) == 0 {
+		found = fold
 	}
 	switch len(found) {
 	case 1:
@@ -236,6 +261,11 @@ func columnNamed(cols []column, name string) (column, error) {
 		return column{}, fmt.Errorf("the database has no property %q; its properties are: %s", name, strings.Join(names, ", "))
 	}
 	return column{}, fmt.Errorf("the database has several properties called %q: rename one of them in Notes first", name)
+}
+
+// columnNamed finds the column a name means.
+func columnNamed(cols []column, name string) (column, error) {
+	return columnLookup(cols, name)
 }
 
 // checked is a value as it is kept for a column, or an error saying what it

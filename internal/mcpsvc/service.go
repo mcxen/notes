@@ -91,30 +91,114 @@ type server struct {
 	mu   sync.Mutex // one tool call at a time: each may open a vault of its own
 }
 
+func boolPtr(v bool) *bool { return &v }
+
+func readOnlyTool(title string) *mcp.ToolAnnotations {
+	return &mcp.ToolAnnotations{Title: title, ReadOnlyHint: true, OpenWorldHint: boolPtr(false)}
+}
+
+func additiveTool(title string, idempotent bool) *mcp.ToolAnnotations {
+	return &mcp.ToolAnnotations{Title: title, ReadOnlyHint: false, DestructiveHint: boolPtr(false), IdempotentHint: idempotent, OpenWorldHint: boolPtr(false)}
+}
+
+func mutatingTool(title string, destructive, idempotent bool) *mcp.ToolAnnotations {
+	return &mcp.ToolAnnotations{Title: title, ReadOnlyHint: false, DestructiveHint: boolPtr(destructive), IdempotentHint: idempotent, OpenWorldHint: boolPtr(false)}
+}
+
 func newServer(host Host, version string) *mcp.Server {
 	s := &server{host: host}
 	srv := mcp.NewServer(&mcp.Implementation{Name: "notes", Title: "Notes", Version: version}, &mcp.ServerOptions{
 		Instructions: "Read and edit the user's notes. Pages hold paragraphs; notes_fetch reads a page: a few lines about it, then a line of ---, " +
-			"then its body as Markdown. Change a part of a page with notes_edit_page (old_text to new_text, one paragraph at a time), add to its end " +
-			"with notes_update_page (append by default; replace swaps the whole body), and move pages to the Trash with notes_trash_page. " +
-			"[[A page's title]] in Markdown is a link to that page. Pictures and files on a page are listed by notes_fetch; open one with " +
-			"notes_read_attachment and add one with notes_add_attachment. A page's earlier versions are listed by notes_page_history, read with " +
-			"notes_read_version and brought back with notes_restore_version. Pass vault to pick a vault by name; omit it for the default.",
+			"then its body as Markdown (including pipe tables). Browse the hierarchy with notes_page_tree and notes_list_pages, inspect deleted pages with " +
+			"notes_list_trash, aggregate tasks with notes_list_todos, and search with notes_search (supports filters and vault \"*\" across all allowed vaults). " +
+			"Change parts of a page with notes_edit_page (single old_text/new_text or batch edits), add to its end or replace with notes_update_page, " +
+			"move with notes_move_page, and trash or restore with notes_trash_page / notes_restore_page. Query, create, and update databases with " +
+			"notes_query_database, notes_create_database, and notes_update_database. [[A page's title]] in Markdown is a link to that page. " +
+			"Pictures and files on a page or row are listed by notes_fetch; open one with notes_read_attachment and add one with notes_add_attachment. " +
+			"A page's earlier versions are listed by notes_page_history, read with notes_read_version and brought back with notes_restore_version. " +
+			"Pass vault to pick a vault by name; omit it for the default.",
 	})
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_list_vaults", Description: "List the vaults you may use, the first being the default."}, s.listVaults)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_search", Description: "Find pages by words in their title or text: every word of the query has to be there, in any order. The best matches come first (the title before the text, then the most recently changed)."}, s.search)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_list_pages", Description: "List the pages under a parent page, or at the top when parent_id is omitted."}, s.listPages)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_recent_pages", Description: "List the pages changed most recently, newest first."}, s.recent)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_fetch", Description: "Read a page. The answer is text: a few lines about the page (its title, id, parent, sub-pages, the pages it links to and is linked from, its attachments with the path notes_read_attachment takes), then a line of ---, then its body as Markdown."}, s.fetch)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_create_page", Description: "Create a page with a title and an optional Markdown body, under parent_id when given. Under a database it is a row: properties sets its values by the property's name (notes_fetch on the database lists them and the options). With if_exists append, a page that already has this title (under the same parent) gets the Markdown added to it instead: safe to call again and again."}, s.create)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_update_page", Description: "Change a page's title, its body, and the values of a database row: mode append (default) adds Markdown to the end, replace swaps the whole body; properties sets values by the property's name (an empty string clears one). To change a part of a page, use notes_edit_page. The page's earlier version is kept in its history."}, s.update)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_edit_page", Description: "Change a part of a page: old_text, as notes_fetch shows it, becomes new_text. old_text has to be within one paragraph (one line, one code block or one quote) and be there once; make it longer, or pass nth, when it is there several times. new_text may be several lines: the first takes the paragraph's place, the rest follow it. An empty new_text that leaves the paragraph empty removes it. Pictures, links to pages and everything else on the page stay as they are. The page's earlier version is kept in its history."}, s.edit)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_move_page", Description: "Move a page under another page, or to the top level when parent_id is omitted. Its sub-pages go with it."}, s.move)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_read_attachment", Description: "Open a picture or file on a page, by a path from the attachments of notes_fetch: a picture is shown as an image, a text file as text, any other file as bytes. Very large pictures come as their smaller preview."}, s.readAttachment)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_add_attachment", Description: "Put a picture or file on a page, after what it holds: name it, and give its bytes base64-encoded (up to 2.5 MB). The page's earlier version is kept in its history."}, s.addAttachment)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_trash_page", Description: "Move a page to the Trash. It can be restored with notes_restore_page, or from the Trash in Notes."}, s.trash)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_list_vaults",
+		Title:       "List Vaults",
+		Description: "List the vaults you may use, the first being the default.",
+		Annotations: readOnlyTool("List Vaults"),
+	}, s.listVaults)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_search",
+		Title:       "Search Notes",
+		Description: "Find pages by words in their title or text: every word of the query has to be there, in any order. Supports filtering by parent_id, kind, updated_after/updated_before, and vault \"*\" across all allowed vaults. The best matches come first (the title before the text, then the most recently changed).",
+		Annotations: readOnlyTool("Search Notes"),
+	}, s.search)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_list_pages",
+		Title:       "List Pages",
+		Description: "List the pages under a parent page, or at the top when parent_id is omitted, including kind and child_count.",
+		Annotations: readOnlyTool("List Pages"),
+	}, s.listPages)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_recent_pages",
+		Title:       "Recent Pages",
+		Description: "List the pages changed most recently, newest first.",
+		Annotations: readOnlyTool("Recent Pages"),
+	}, s.recent)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_fetch",
+		Title:       "Fetch Page",
+		Description: "Read a page. The answer is text: a few lines about the page (its title, id, parent, sub-pages, the pages it links to and is linked from, its attachments with the path notes_read_attachment takes), then a line of ---, then its body as Markdown.",
+		Annotations: readOnlyTool("Fetch Page"),
+	}, s.fetch)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_create_page",
+		Title:       "Create Page",
+		Description: "Create a page with a title and an optional Markdown body, under parent_id when given. Under a database it is a row: properties sets its values by the property's name (notes_fetch on the database lists them and the options). With if_exists append, a page that already has this title (under the same parent) gets the Markdown added to it instead: safe to call again and again.",
+		Annotations: additiveTool("Create Page", false),
+	}, s.create)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_update_page",
+		Title:       "Update Page",
+		Description: "Change a page's title, its body, and the values of a database row: mode append (default) adds Markdown to the end, replace swaps the whole body; properties sets values by the property's name (an empty string clears one). To change a part of a page, use notes_edit_page. The page's earlier version is kept in its history.",
+		Annotations: mutatingTool("Update Page", true, false),
+	}, s.update)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_edit_page",
+		Title:       "Edit Page",
+		Description: "Change parts of a page: pass old_text and new_text (with optional nth), or pass edits as a list of {old_text, new_text, nth?} applied in order in one atomic call. old_text has to be within one paragraph (one line, one code block or one quote) and be there once; make it longer, or pass nth, when it is there several times. new_text may be several lines: the first takes the paragraph's place, the rest follow it. An empty new_text that leaves the paragraph empty removes it. Pictures, links to pages and everything else on the page stay as they are. The page's earlier version is kept in its history.",
+		Annotations: mutatingTool("Edit Page", true, false),
+	}, s.edit)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_move_page",
+		Title:       "Move Page",
+		Description: "Move a page under another page (including into a database to make it a row), or to the top level when parent_id is omitted. Its sub-pages go with it.",
+		Annotations: additiveTool("Move Page", true),
+	}, s.move)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_read_attachment",
+		Title:       "Read Attachment",
+		Description: "Open a picture or file on a page (or in a database row's Image property), by a path from the attachments of notes_fetch: a picture is shown as an image, a text file as text, any other file as bytes. Very large pictures come as their smaller preview.",
+		Annotations: readOnlyTool("Read Attachment"),
+	}, s.readAttachment)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_add_attachment",
+		Title:       "Add Attachment",
+		Description: "Put a picture or file on a page, after what it holds: name it, and give its bytes base64-encoded (up to 2.5 MB). The page's earlier version is kept in its history.",
+		Annotations: additiveTool("Add Attachment", false),
+	}, s.addAttachment)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_trash_page",
+		Title:       "Trash Page",
+		Description: "Move a page to the Trash. It can be restored with notes_restore_page, or from the Trash in Notes.",
+		Annotations: mutatingTool("Trash Page", true, true),
+	}, s.trash)
+	mcp.AddTool(srv, &mcp.Tool{
+		Name:        "notes_restore_page",
+		Title:       "Restore Page",
+		Description: "Take a page back out of the Trash.",
+		Annotations: additiveTool("Restore Page", true),
+	}, s.restore)
+	addBrowseTools(srv, s)
+	addDatabaseTools(srv, s)
 	addHistoryTools(srv, s)
-	mcp.AddTool(srv, &mcp.Tool{Name: "notes_restore_page", Description: "Take a page back out of the Trash."}, s.restore)
 	return srv
 }
 
@@ -133,9 +217,13 @@ type listVaultsOut struct {
 }
 
 type searchIn struct {
-	Vault string `json:"vault,omitempty" jsonschema:"the vault's name or folder; omit for the default"`
-	Query string `json:"query" jsonschema:"the words to find in page titles and text"`
-	Limit int    `json:"limit,omitempty" jsonschema:"at most this many pages (default 20, up to 100)"`
+	Vault         string `json:"vault,omitempty" jsonschema:"the vault's name or folder, \"*\" to search every allowed vault, or omit for the default"`
+	Query         string `json:"query" jsonschema:"the words to find in page titles and text"`
+	ParentID      string `json:"parent_id,omitempty" jsonschema:"only search within this page and its sub-pages (cannot be combined with vault \"*\")"`
+	Kind          string `json:"kind,omitempty" jsonschema:"filter by page kind: document, database, or row"`
+	UpdatedAfter  string `json:"updated_after,omitempty" jsonschema:"only pages updated on or after this date (YYYY-MM-DD) or RFC3339 timestamp"`
+	UpdatedBefore string `json:"updated_before,omitempty" jsonschema:"only pages updated on or before this date (YYYY-MM-DD) or RFC3339 timestamp"`
+	Limit         int    `json:"limit,omitempty" jsonschema:"at most this many pages (default 20, up to 100)"`
 }
 
 type recentIn struct {
@@ -149,11 +237,15 @@ type listPagesIn struct {
 }
 
 type pageHit struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	ParentID  string `json:"parent_id,omitempty"`
-	UpdatedAt string `json:"updated_at,omitempty"`
-	Snippet   string `json:"snippet,omitempty"`
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	Kind       string `json:"kind,omitempty"`
+	Icon       string `json:"icon,omitempty"`
+	ParentID   string `json:"parent_id,omitempty"`
+	Vault      string `json:"vault,omitempty"`
+	ChildCount int    `json:"child_count,omitempty"`
+	UpdatedAt  string `json:"updated_at,omitempty"`
+	Snippet    string `json:"snippet,omitempty"`
 	// Properties are a database row's values by the column's name.
 	Properties map[string]string `json:"properties,omitempty"`
 }
@@ -251,6 +343,9 @@ type library struct {
 	// byTitle is the pages not in the Trash by their title in lower case, for
 	// a [[title]] written in Markdown.
 	byTitle map[string][]string
+	// roots is the top-level page order from workspace_settings/roots.
+	roots       []string
+	childCounts map[string]int
 }
 
 func load(v *vault.Vault) library {
@@ -269,12 +364,26 @@ func load(v *vault.Vault) library {
 				}
 				lib.stored[pageID][blockID] = row.Value
 			}
+		case vault.Settings:
+			if row.ID == "roots" {
+				if raw, ok := row.Value["roots"].([]any); ok {
+					for _, item := range raw {
+						if id := str(item); id != "" {
+							lib.roots = append(lib.roots, id)
+						}
+					}
+				}
+			}
 		}
 	}
 	lib.byTitle = map[string][]string{}
-	for id := range lib.pages {
+	lib.childCounts = map[string]int{}
+	for id, page := range lib.pages {
 		if title := strings.ToLower(strings.TrimSpace(lib.title(id))); title != "" && !lib.trashed(id) {
 			lib.byTitle[title] = append(lib.byTitle[title], id)
+		}
+		if !lib.archived(id) {
+			lib.childCounts[str(page["parent_id"])]++
 		}
 	}
 	return lib
@@ -394,13 +503,87 @@ func (lib library) trashed(id string) bool {
 	return false
 }
 
-// children lists the pages under parent (or at the top), not in the Trash, by title.
+func (lib library) kindOf(id string) string {
+	if lib.isDatabase(id) {
+		return "database"
+	}
+	return "document"
+}
+
+func (lib library) rowOrderKey(id string) float64 {
+	page := lib.pages[id]
+	if _, ok := page["row_order"]; ok {
+		return numVal(page["row_order"])
+	}
+	if t := parseTime(str(page["created_at"])); !t.IsZero() {
+		return float64(t.UnixMilli())
+	}
+	return 0
+}
+
+// subtree returns the set containing parentID and every non-trashed descendant.
+func (lib library) subtree(parentID string) map[string]bool {
+	byParent := map[string][]string{}
+	for id, page := range lib.pages {
+		if !lib.archived(id) {
+			p := str(page["parent_id"])
+			byParent[p] = append(byParent[p], id)
+		}
+	}
+	scope := map[string]bool{}
+	queue := []string{parentID}
+	for len(queue) > 0 {
+		cur := queue[0]
+		queue = queue[1:]
+		if scope[cur] || lib.pages[cur] == nil || lib.trashed(cur) {
+			continue
+		}
+		scope[cur] = true
+		queue = append(queue, byParent[cur]...)
+	}
+	return scope
+}
+
+// children lists the pages under parent (or at the top), not in the Trash, in
+// row_order under a database, in roots order at the top when set, else by title.
 func (lib library) children(parent string) []string {
 	var ids []string
 	for id, page := range lib.pages {
 		if str(page["parent_id"]) == parent && !lib.archived(id) {
 			ids = append(ids, id)
 		}
+	}
+	if parent != "" && lib.isDatabase(parent) {
+		sort.Slice(ids, func(i, j int) bool {
+			if a, b := lib.rowOrderKey(ids[i]), lib.rowOrderKey(ids[j]); a != b {
+				return a < b
+			}
+			return ids[i] < ids[j]
+		})
+		return ids
+	}
+	if parent == "" && len(lib.roots) > 0 {
+		rank := make(map[string]int, len(lib.roots))
+		for i, id := range lib.roots {
+			if _, ok := rank[id]; !ok {
+				rank[id] = i
+			}
+		}
+		sort.Slice(ids, func(i, j int) bool {
+			ri, okI := rank[ids[i]]
+			rj, okJ := rank[ids[j]]
+			if okI != okJ {
+				return okI
+			}
+			if okI && okJ && ri != rj {
+				return ri < rj
+			}
+			if a, b := lib.title(ids[i]), lib.title(ids[j]); a != b {
+				return a < b
+			}
+			return ids[i] < ids[j]
+		})
+		return ids
 	}
 	sort.Slice(ids, func(i, j int) bool {
 		if a, b := lib.title(ids[i]), lib.title(ids[j]); a != b {
@@ -412,8 +595,17 @@ func (lib library) children(parent string) []string {
 }
 
 func (lib library) hit(id, snippet string) pageHit {
-	return pageHit{ID: id, Title: lib.title(id), ParentID: str(lib.pages[id]["parent_id"]),
-		UpdatedAt: str(lib.pages[id]["updated_at"]), Snippet: snippet, Properties: lib.rowMap(id)}
+	return pageHit{
+		ID:         id,
+		Title:      lib.title(id),
+		Kind:       lib.kindOf(id),
+		Icon:       str(lib.pages[id]["icon"]),
+		ParentID:   str(lib.pages[id]["parent_id"]),
+		ChildCount: lib.childCounts[id],
+		UpdatedAt:  str(lib.pages[id]["updated_at"]),
+		Snippet:    snippet,
+		Properties: lib.rowMap(id),
+	}
 }
 
 // ---- reads ------------------------------------------------------------------
@@ -437,105 +629,205 @@ func most(asked int) int {
 	return asked
 }
 
+type searchHit struct {
+	hit  pageHit
+	rank int
+}
+
 func (s *server) search(_ context.Context, _ *mcp.CallToolRequest, in searchIn) (*mcp.CallToolResult, pagesOut, error) {
 	out := pagesOut{Pages: []pageHit{}}
 	words := strings.Fields(strings.ToLower(in.Query))
 	if len(words) == 0 {
 		return nil, out, errors.New("the query is empty")
 	}
+	kind := strings.TrimSpace(in.Kind)
+	if kind != "" && kind != "document" && kind != "database" && kind != "row" {
+		return nil, out, fmt.Errorf("kind %q must be document, database, or row", in.Kind)
+	}
+	after, err := parseTimeBound(in.UpdatedAfter, false)
+	if err != nil {
+		return nil, out, err
+	}
+	before, err := parseTimeBound(in.UpdatedBefore, true)
+	if err != nil {
+		return nil, out, err
+	}
+	if !after.IsZero() && !before.IsZero() && after.After(before) {
+		return nil, out, errors.New("updated_after must not be after updated_before")
+	}
 	query := strings.Join(words, " ")
-	err := s.within(in.Vault, func(v *vault.Vault, _ *Access) error {
-		lib := load(v)
-		type found struct {
-			hit  pageHit
-			rank int
+	var all []searchHit
+
+	if strings.TrimSpace(in.Vault) == "*" {
+		if strings.TrimSpace(in.ParentID) != "" {
+			return nil, out, errors.New(`parent_id cannot be combined with vault "*"`)
 		}
-		var all []found
-		for id := range lib.pages {
-			if lib.trashed(id) {
-				continue
-			}
-			title := strings.ToLower(lib.title(id))
-			// The words of each paragraph, as they are read: without marks, and
-			// a link to a page by the page's title.
-			var plain, lower []string
-			for _, entry := range markdown.Outline(lib.blocks[id], lib.name) {
-				text := strings.Join(strings.Fields(markdown.Words(entry.Block, lib.name)), " ")
-				if text != "" {
-					plain = append(plain, text)
-					lower = append(lower, strings.ToLower(text))
-				}
-			}
-			within := func(word string) int {
-				for i, text := range lower {
-					if strings.Contains(text, word) {
-						return i
-					}
-				}
-				return -1
-			}
-			inTitle, missing := 0, false
-			for _, word := range words {
-				if strings.Contains(title, word) {
-					inTitle++
-				} else if within(word) < 0 {
-					missing = true
-					break
-				}
-			}
-			if missing {
-				continue
-			}
-			// The words together in the title, then all of them there, then
-			// some of them, then together in the text.
-			rank := inTitle * 10
-			if strings.Contains(title, query) {
-				rank += 1000
-			}
-			if inTitle == len(words) {
-				rank += 500
-			}
-			// The paragraph shown: the one with the words together, else the
-			// first with a word the title does not have, else with any of them.
-			at, around := within(query), query
-			if at >= 0 {
-				rank += 5
-			}
-			for _, word := range words {
-				if at < 0 && !strings.Contains(title, word) {
-					at, around = within(word), word
-				}
-			}
-			for _, word := range words {
-				if at < 0 {
-					at, around = within(word), word
-				}
-			}
-			text := ""
-			if at >= 0 {
-				text = snippet(plain[at], around)
-			}
-			all = append(all, found{hit: lib.hit(id, text), rank: rank})
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		refs := s.host.Vaults()
+		if len(refs) == 0 {
+			return nil, out, errors.New("no vault is open to assistants: choose vaults in Notes › Settings › Integrations")
 		}
-		sort.Slice(all, func(i, j int) bool {
-			a, b := all[i], all[j]
-			if a.rank != b.rank {
-				return a.rank > b.rank
+		for _, ref := range refs {
+			if err := s.searchVault(ref, words, query, kind, after, before, &all); err != nil {
+				return nil, out, err
 			}
-			if a.hit.UpdatedAt != b.hit.UpdatedAt {
-				return a.hit.UpdatedAt > b.hit.UpdatedAt
+		}
+	} else {
+		err = s.within(in.Vault, func(v *vault.Vault, _ *Access) error {
+			lib := load(v)
+			var scope map[string]bool
+			if in.ParentID != "" {
+				if lib.pages[in.ParentID] == nil || lib.trashed(in.ParentID) {
+					return fmt.Errorf("no page %q in this vault", in.ParentID)
+				}
+				scope = lib.subtree(in.ParentID)
 			}
-			return a.hit.ID < b.hit.ID
+			all = searchLibrary(lib, words, query, scope, kind, after, before, "")
+			return nil
 		})
-		for _, f := range all {
-			if len(out.Pages) >= most(in.Limit) {
+		if err != nil {
+			return nil, out, err
+		}
+	}
+
+	sort.Slice(all, func(i, j int) bool {
+		a, b := all[i], all[j]
+		if a.rank != b.rank {
+			return a.rank > b.rank
+		}
+		if a.hit.UpdatedAt != b.hit.UpdatedAt {
+			return a.hit.UpdatedAt > b.hit.UpdatedAt
+		}
+		if a.hit.Vault != b.hit.Vault {
+			return a.hit.Vault < b.hit.Vault
+		}
+		return a.hit.ID < b.hit.ID
+	})
+	for _, f := range all {
+		if len(out.Pages) >= most(in.Limit) {
+			break
+		}
+		out.Pages = append(out.Pages, f.hit)
+	}
+	return nil, out, nil
+}
+
+func (s *server) searchVault(ref VaultRef, words []string, query, kind string, after, before time.Time, all *[]searchHit) error {
+	access, err := s.host.Open(ref.Folder)
+	if err != nil {
+		return err
+	}
+	defer access.Close()
+	*all = append(*all, searchLibrary(load(access.Vault), words, query, nil, kind, after, before, ref.Name)...)
+	return nil
+}
+
+func searchLibrary(lib library, words []string, query string, scope map[string]bool, kind string, after, before time.Time, vaultName string) []searchHit {
+	var all []searchHit
+	hasTimeFilter := !after.IsZero() || !before.IsZero()
+	for id := range lib.pages {
+		if lib.trashed(id) {
+			continue
+		}
+		if scope != nil && !scope[id] {
+			continue
+		}
+		if kind != "" {
+			_, isRow := lib.databaseOf(id)
+			isDB := lib.isDatabase(id)
+			switch kind {
+			case "database":
+				if !isDB {
+					continue
+				}
+			case "row":
+				if !isRow || isDB {
+					continue
+				}
+			case "document":
+				if isDB || isRow {
+					continue
+				}
+			}
+		}
+		if hasTimeFilter {
+			updated := parseTime(str(lib.pages[id]["updated_at"]))
+			if updated.IsZero() {
+				continue
+			}
+			if !after.IsZero() && updated.Before(after) {
+				continue
+			}
+			if !before.IsZero() && updated.After(before) {
+				continue
+			}
+		}
+		title := strings.ToLower(lib.title(id))
+		// The words of each paragraph, as they are read: without marks, and
+		// a link to a page by the page's title.
+		var plain, lower []string
+		for _, entry := range markdown.Outline(lib.blocks[id], lib.name) {
+			text := strings.Join(strings.Fields(markdown.Words(entry.Block, lib.name)), " ")
+			if text != "" {
+				plain = append(plain, text)
+				lower = append(lower, strings.ToLower(text))
+			}
+		}
+		within := func(word string) int {
+			for i, text := range lower {
+				if strings.Contains(text, word) {
+					return i
+				}
+			}
+			return -1
+		}
+		inTitle, missing := 0, false
+		for _, word := range words {
+			if strings.Contains(title, word) {
+				inTitle++
+			} else if within(word) < 0 {
+				missing = true
 				break
 			}
-			out.Pages = append(out.Pages, f.hit)
 		}
-		return nil
-	})
-	return nil, out, err
+		if missing {
+			continue
+		}
+		// The words together in the title, then all of them there, then
+		// some of them, then together in the text.
+		rank := inTitle * 10
+		if strings.Contains(title, query) {
+			rank += 1000
+		}
+		if inTitle == len(words) {
+			rank += 500
+		}
+		// The paragraph shown: the one with the words together, else the
+		// first with a word the title does not have, else with any of them.
+		at, around := within(query), query
+		if at >= 0 {
+			rank += 5
+		}
+		for _, word := range words {
+			if at < 0 && !strings.Contains(title, word) {
+				at, around = within(word), word
+			}
+		}
+		for _, word := range words {
+			if at < 0 {
+				at, around = within(word), word
+			}
+		}
+		text := ""
+		if at >= 0 {
+			text = snippet(plain[at], around)
+		}
+		hit := lib.hit(id, text)
+		hit.Vault = vaultName
+		all = append(all, searchHit{hit: hit, rank: rank})
+	}
+	return all
 }
 
 func (s *server) listPages(_ context.Context, _ *mcp.CallToolRequest, in listPagesIn) (*mcp.CallToolResult, pagesOut, error) {
@@ -630,7 +922,7 @@ func (lib library) pageText(id string) string {
 	pages("Sub-pages", lib.children(id))
 	pages("Links to", lib.linked(blocks))
 	pages("Linked from", lib.backlinks(id))
-	if files := attachmentsOf(blocks); len(files) > 0 {
+	if files := lib.pageAttachments(id); len(files) > 0 {
 		b.WriteString("Attachments:\n")
 		for _, f := range files {
 			kind := f.Type
@@ -849,8 +1141,8 @@ func (s *server) move(_ context.Context, _ *mcp.CallToolRequest, in moveIn) (*mc
 			switch {
 			case !ok || lib.trashed(in.ParentID):
 				return fmt.Errorf("no page %q to put it under in this vault", in.ParentID)
-			case str(target["kind"]) == "database":
-				return errors.New("a page is not moved into a database here: its rows are made in Notes")
+			case str(target["kind"]) == "database" && lib.isDatabase(in.PageID):
+				return errors.New("a database cannot be moved into another database")
 			}
 			// Never under itself or a page it holds, which would cut the branch off.
 			seen := map[string]bool{}
@@ -865,11 +1157,17 @@ func (s *server) move(_ context.Context, _ *mcp.CallToolRequest, in moveIn) (*mc
 			out.Note = "already there"
 			return nil
 		}
-		var parent any
+		now := stamp()
+		patch := map[string]any{"updated_at": now, "updated_by": authorName}
 		if in.ParentID != "" {
-			parent = in.ParentID
+			patch["parent_id"] = in.ParentID
+			if lib.isDatabase(in.ParentID) && page["row_order"] == nil {
+				patch["row_order"] = float64(time.Now().UnixMilli())
+			}
+		} else {
+			patch["parent_id"] = nil
 		}
-		changes, err := apply(v, []vault.Write{{Action: "patch", Collection: vault.Pages, ID: in.PageID, Patch: map[string]any{"parent_id": parent}}})
+		changes, err := apply(v, []vault.Write{{Action: "patch", Collection: vault.Pages, ID: in.PageID, Patch: patch}})
 		if err != nil {
 			return err
 		}
@@ -1094,6 +1392,53 @@ func webTable(table map[string]any) map[string]any {
 func str(v any) string {
 	s, _ := v.(string)
 	return s
+}
+
+func numVal(v any) float64 {
+	switch n := v.(type) {
+	case float64:
+		return n
+	case json.Number:
+		f, _ := n.Float64()
+		return f
+	case int:
+		return float64(n)
+	case int64:
+		return float64(n)
+	}
+	return 0
+}
+
+func parseTime(raw string) time.Time {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02T15:04:05.000Z"} {
+		if t, err := time.Parse(layout, raw); err == nil {
+			return t.UTC()
+		}
+	}
+	return time.Time{}
+}
+
+func parseTimeBound(raw string, endOfDay bool) (time.Time, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return time.Time{}, nil
+	}
+	if t, err := time.Parse("2006-01-02", raw); err == nil && t.Format("2006-01-02") == raw {
+		if endOfDay {
+			return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, int(time.Second-time.Nanosecond), time.UTC), nil
+		}
+		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
+		if t, err := time.Parse(layout, raw); err == nil {
+			return t.UTC(), nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("invalid date or timestamp %q: use YYYY-MM-DD or RFC3339 (e.g. 2026-11-21T00:00:00Z)", raw)
 }
 
 func stamp() string {

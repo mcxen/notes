@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"notes/internal/settings"
+	"notes/internal/vault"
 )
 
 func TestPromptHoldsTheAddressKeyAndTools(t *testing.T) {
@@ -16,7 +17,13 @@ func TestPromptHoldsTheAddressKeyAndTools(t *testing.T) {
 	}
 	st := settings.Settings{MCP: settings.MCP{Enabled: true, Key: "sk-abc", Vaults: []string{work}, PublicURL: "https://notes.example.com"}}
 	p := mcpPrompt(st)
-	for _, want := range []string{"https://notes.example.com/mcp", "Authorization: Bearer sk-abc", "notes_search", "notes_update_page", "Work (default: Work)"} {
+	for _, want := range []string{
+		"https://notes.example.com/mcp", "Authorization: Bearer sk-abc",
+		"notes_search", "notes_update_page", "notes_page_tree", "notes_list_trash", "notes_list_todos",
+		"notes_query_database", "notes_create_database", "notes_update_database",
+		"notes_page_history", "notes_read_version", "notes_restore_version",
+		"Work (default: Work)",
+	} {
 		if !strings.Contains(p, want) {
 			t.Errorf("prompt misses %q", want)
 		}
@@ -76,5 +83,46 @@ func TestMaskedKeyNeverShowsTheWhole(t *testing.T) {
 func TestPortDefaultsTo8999(t *testing.T) {
 	if (settings.MCP{}).PortOrDefault() != 8999 || (settings.MCP{Port: 9100}).PortOrDefault() != 9100 {
 		t.Error("the default port is not 8999")
+	}
+}
+
+func TestMCPHostSchedulesRemoteSyncOnChanges(t *testing.T) {
+	dir := t.TempDir()
+	v, err := vault.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer v.Close()
+
+	rs := &remoteSync{wake: make(chan struct{}, 1)}
+	nb := newNotebooks()
+	nb.byWindow[nil] = &session{vault: v, remote: rs}
+
+	access, err := (mcpHost{n: nb}).Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer access.Close()
+
+	// No changes should not arm a sync timer.
+	access.Changed(vault.Changes{})
+	rs.mu.Lock()
+	if rs.timer != nil {
+		rs.timer.Stop()
+		rs.mu.Unlock()
+		t.Fatal("empty changes armed remote sync timer")
+	}
+	rs.mu.Unlock()
+
+	// Actual changes should schedule remote sync.
+	access.Changed(vault.Changes{Changes: []vault.Change{{Collection: vault.Pages, ID: "page_1"}}})
+	rs.mu.Lock()
+	timer := rs.timer
+	if timer != nil {
+		timer.Stop()
+	}
+	rs.mu.Unlock()
+	if timer == nil {
+		t.Fatal("non-empty changes did not schedule remote sync")
 	}
 }

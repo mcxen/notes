@@ -526,6 +526,26 @@ func FromMarkdown(src string, newID func() string) []Block {
 			add(depth, Block{Kind: "math", Runs: []Run{{Text: source}}})
 			continue
 		}
+		if i+1 < len(lines) && isTableStart(body, lines[i+1]) {
+			rawLines := []string{body, strings.TrimSpace(lines[i+1])}
+			rawRows := []string{body}
+			hasLeadPipe := strings.HasPrefix(body, "|")
+			i++ // the separator line
+			for i+1 < len(lines) {
+				nextBody := strings.TrimSpace(lines[i+1])
+				if nextBody == "" || !strings.Contains(nextBody, "|") || (hasLeadPipe && !strings.HasPrefix(nextBody, "|")) ||
+					strings.HasPrefix(nextBody, "```") || reDivider.MatchString(nextBody) {
+					break
+				}
+				i++
+				rawLines = append(rawLines, nextBody)
+				rawRows = append(rawRows, nextBody)
+			}
+			if blk, ok := parsePipeTable(rawRows, rawLines); ok {
+				add(depth, blk)
+			}
+			continue
+		}
 		if reDivider.MatchString(body) {
 			add(depth, Block{Kind: "divider"})
 			continue
@@ -561,15 +581,106 @@ func FromMarkdown(src string, newID func() string) []Block {
 }
 
 var (
-	reHeading = regexp.MustCompile(`^(#{1,3}) (.*)$`)
-	reTodo    = regexp.MustCompile(`^[-*+] \[( |x|X)\] ?(.*)$`)
+	reHeading  = regexp.MustCompile(`^(#{1,3}) (.*)$`)
+	reTodo     = regexp.MustCompile(`^[-*+] \[( |x|X)\] ?(.*)$`)
 	// A list's mark is followed by a space, or stands alone (an empty item):
 	// "**bold** first", "-5 degrees" and "3.14 is pi" are words, not items.
 	reBullet   = regexp.MustCompile(`^[-*+](?: (.*))?$`)
 	reNumbered = regexp.MustCompile(`^\d+[.)](?: (.*))?$`)
 	reDivider  = regexp.MustCompile(`^(---|\*\*\*|___)$`)
 	reQuote    = regexp.MustCompile(`^> ?(.*)$`)
+	reTableSep = regexp.MustCompile(`^\|?\s*:?-{1,}:?\s*(\|\s*:?-{1,}:?\s*)*\|?$`)
 )
+
+// A table's dimensions and estimated record size stay within what the editor's
+// simple table keeps (web/src/core/simple-table.ts).
+const (
+	maxTableColumns = 20
+	maxTableRows    = 200
+	maxTableBytes   = 96 * 1024
+)
+
+func isTableStart(body, nextLine string) bool {
+	next := strings.TrimSpace(nextLine)
+	if !strings.Contains(next, "-") || !reTableSep.MatchString(next) {
+		return false
+	}
+	return (strings.HasPrefix(body, "|") && strings.HasPrefix(next, "|")) ||
+		(strings.Contains(body, "|") && strings.Contains(next, "|"))
+}
+
+// splitPipeRow splits one Markdown table row at unescaped bars, keeping \| as |.
+func splitPipeRow(row string) []string {
+	row = strings.TrimSpace(row)
+	row = strings.TrimPrefix(row, "|")
+	if strings.HasSuffix(row, "|") {
+		slashes := 0
+		for j := len(row) - 2; j >= 0 && row[j] == '\\'; j-- {
+			slashes++
+		}
+		if slashes%2 == 0 {
+			row = row[:len(row)-1]
+		}
+	}
+	var out []string
+	var cur strings.Builder
+	for i := 0; i < len(row); i++ {
+		if row[i] == '\\' && i+1 < len(row) && row[i+1] == '|' {
+			cur.WriteByte('|')
+			i++
+			continue
+		}
+		if row[i] == '|' {
+			out = append(out, strings.TrimSpace(cur.String()))
+			cur.Reset()
+			continue
+		}
+		cur.WriteByte(row[i])
+	}
+	return append(out, strings.TrimSpace(cur.String()))
+}
+
+func parsePipeTable(rawRows, rawLines []string) (Block, bool) {
+	grid := make([][]string, len(rawRows))
+	numCols := 0
+	for i, raw := range rawRows {
+		cells := splitPipeRow(raw)
+		if len(cells) > numCols {
+			numCols = len(cells)
+		}
+		grid[i] = cells
+	}
+	if numCols == 0 {
+		return Block{}, false
+	}
+	if numCols > maxTableColumns || len(rawRows) > maxTableRows {
+		return Block{Kind: "code", Runs: []Run{{Text: strings.Join(rawLines, "\n")}}}, true
+	}
+	cols := make([]any, numCols)
+	for c := range cols {
+		cols[c] = map[string]any{"id": fmt.Sprintf("col%d", c+1)}
+	}
+	rows := map[string]any{}
+	size := 0
+	for r, cells := range grid {
+		rowCells := map[string]any{}
+		for c := 0; c < numCols; c++ {
+			text := ""
+			if c < len(cells) {
+				text = cells[c]
+			}
+			size += len(text) + 40
+			if text != "" {
+				rowCells[fmt.Sprintf("col%d", c+1)] = runsToStored(inline(text))
+			}
+		}
+		rows[fmt.Sprintf("row%d", r+1)] = map[string]any{"order": float64(1024 * (r + 1)), "cells": rowCells}
+	}
+	if size > maxTableBytes {
+		return Block{Kind: "code", Runs: []Run{{Text: strings.Join(rawLines, "\n")}}}, true
+	}
+	return Block{Kind: "table", Table: map[string]any{"columns": cols, "rows": rows, "header_row": true}}, true
+}
 
 // inline reads the marks of a line: `code`, **bold**, *italic*, ~~strike~~ and
 // [text](link). Marks do not nest; a run inside a bold or italic keeps its mark.

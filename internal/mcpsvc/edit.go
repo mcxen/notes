@@ -20,12 +20,19 @@ import (
 // written, so a page with pictures or tables, which a whole new body would
 // lose, can still have a word put right.
 
-type editIn struct {
-	Vault   string `json:"vault,omitempty" jsonschema:"the vault's name or folder; omit for the default"`
-	PageID  string `json:"page_id" jsonschema:"the page's id"`
+type editOp struct {
 	OldText string `json:"old_text" jsonschema:"the text to change, as notes_fetch shows it: within one paragraph (a line, a code block or a quote)"`
 	NewText string `json:"new_text" jsonschema:"what it becomes, as Markdown: more lines than one add paragraphs after it; empty takes it out"`
 	Nth     int    `json:"nth,omitempty" jsonschema:"which place to change, counting from 1, when old_text is on the page several times"`
+}
+
+type editIn struct {
+	Vault   string   `json:"vault,omitempty" jsonschema:"the vault's name or folder; omit for the default"`
+	PageID  string   `json:"page_id" jsonschema:"the page's id"`
+	OldText string   `json:"old_text,omitempty" jsonschema:"the text to change, as notes_fetch shows it: within one paragraph (a line, a code block or a quote)"`
+	NewText string   `json:"new_text,omitempty" jsonschema:"what it becomes, as Markdown: more lines than one add paragraphs after it; empty takes it out"`
+	Nth     int      `json:"nth,omitempty" jsonschema:"which place to change, counting from 1, when old_text is on the page several times"`
+	Edits   []editOp `json:"edits,omitempty" jsonschema:"a list of edits to apply in order in one atomic call, instead of single old_text and new_text"`
 }
 
 // kept is a mention among a paragraph's words, and what the Markdown writes
@@ -69,18 +76,43 @@ func unindent(old, fresh string) (string, string) {
 	return strip(old), strip(fresh)
 }
 
+const maxBatchEdits = 100
+
 func (s *server) edit(_ context.Context, _ *mcp.CallToolRequest, in editIn) (*mcp.CallToolResult, pageOut, error) {
 	var out pageOut
 	if s.host.ReadOnly() {
 		return nil, out, errors.New(readOnlyError)
 	}
-	old, fresh := unindent(in.OldText, in.NewText)
-	if strings.TrimSpace(old) == "" {
-		return nil, out, errors.New("old_text is empty: to add to a page, use notes_update_page")
+	if len(in.Edits) > 0 && (in.OldText != "" || in.NewText != "" || in.Nth != 0) {
+		return nil, out, errors.New("use either old_text/new_text or edits, not both")
 	}
-	if in.Nth < 0 {
-		return nil, out, errors.New("nth counts from 1")
+	if len(in.Edits) > maxBatchEdits {
+		return nil, out, fmt.Errorf("at most %d edits per call", maxBatchEdits)
 	}
+	ops := in.Edits
+	if len(ops) == 0 {
+		ops = []editOp{{OldText: in.OldText, NewText: in.NewText, Nth: in.Nth}}
+	}
+	type resolvedOp struct {
+		old, fresh string
+		nth        int
+	}
+	resolvedOps := make([]resolvedOp, len(ops))
+	for i, op := range ops {
+		old, fresh := unindent(op.OldText, op.NewText)
+		prefix := ""
+		if len(ops) > 1 {
+			prefix = fmt.Sprintf("edit %d: ", i+1)
+		}
+		if strings.TrimSpace(old) == "" {
+			return nil, out, errors.New(prefix + "old_text is empty: to add to a page, use notes_update_page")
+		}
+		if op.Nth < 0 {
+			return nil, out, errors.New(prefix + "nth counts from 1")
+		}
+		resolvedOps[i] = resolvedOp{old: old, fresh: fresh, nth: op.Nth}
+	}
+
 	err := s.within(in.Vault, func(v *vault.Vault, access *Access) error {
 		lib := load(v)
 		page, ok := lib.pages[in.PageID]
@@ -90,58 +122,159 @@ func (s *server) edit(_ context.Context, _ *mcp.CallToolRequest, in editIn) (*mc
 		if lib.trashed(in.PageID) {
 			return errors.New("the page is in the Trash: restore it first (notes_restore_page)")
 		}
-		blocks := lib.blocks[in.PageID]
+		blocks := append([]markdown.Block(nil), lib.blocks[in.PageID]...)
+		var blockWrites []vault.Write
+		var singleNote string
 
-		// Every place old_text stands, in reading order.
-		type place struct {
-			block markdown.Block
-			text  string
-			at    int
-		}
-		var places []place
-		held := 0
-		for _, entry := range markdown.Outline(blocks, lib.name) {
-			text := entry.Text()
-			for from := 0; ; {
-				i := strings.Index(text[from:], old)
-				if i < 0 {
-					break
+		for i, op := range resolvedOps {
+			prefix := ""
+			if len(resolvedOps) > 1 {
+				prefix = fmt.Sprintf("edit %d: ", i+1)
+			}
+			// Every place old_text stands, in reading order.
+			type place struct {
+				block markdown.Block
+				text  string
+				at    int
+			}
+			var places []place
+			held := 0
+			for _, entry := range markdown.Outline(blocks, lib.name) {
+				text := entry.Text()
+				for from := 0; ; {
+					idx := strings.Index(text[from:], op.old)
+					if idx < 0 {
+						break
+					}
+					if fixed(entry.Block) {
+						held++
+					} else {
+						places = append(places, place{block: entry.Block, text: text, at: from + idx})
+					}
+					from += idx + len(op.old)
 				}
-				if fixed(entry.Block) {
-					held++
-				} else {
-					places = append(places, place{block: entry.Block, text: text, at: from + i})
+			}
+			switch {
+			case len(places) == 0 && held > 0:
+				return errors.New(prefix + "old_text is in a table, a file or a card, which is changed in Notes")
+			case len(places) == 0 && strings.Contains(op.old, "\n"):
+				return errors.New(prefix + "old_text is not within one paragraph: give the text of one line (or of one code block or quote) as notes_fetch shows it, and change one paragraph at a time")
+			case len(places) == 0:
+				return errors.New(prefix + "old_text is not on the page: give it exactly as notes_fetch shows it")
+			case op.nth > len(places):
+				return fmt.Errorf("%sold_text is on the page %d times: nth is 1 to %d", prefix, len(places), len(places))
+			case len(places) > 1 && op.nth == 0:
+				return fmt.Errorf("%sold_text is on the page %d times: give more of the paragraph, or pass nth (1 to %d) for the place to change", prefix, len(places), len(places))
+			}
+			at := places[max(op.nth, 1)-1]
+			b := at.block
+			changed := at.text[:at.at] + op.fresh + at.text[at.at+len(op.old):]
+
+			// The mentions the change leaves alone are read back as what they were.
+			var mentions []kept
+			for _, run := range b.Runs {
+				if run.Mention != nil {
+					mentions = append(mentions, kept{text: markdown.MentionText(run.Mention, lib.name), run: run})
 				}
-				from += i + len(old)
+			}
+			parsed := markdown.FromMarkdown(protect(changed, mentions), func() string { return newID("block") })
+			unprotect(parsed, mentions)
+			parsed = markdown.LinkPages(parsed, lib.resolve)
+			parsed = rejoin(b, at.text, op.fresh, parsed)
+
+			recordID := vault.BlockRecordID(in.PageID, b.ID)
+			if len(parsed) == 0 {
+				for _, other := range blocks {
+					if other.ParentID == b.ID {
+						return errors.New(prefix + "the paragraph has others under it: change those first, or leave it some words")
+					}
+				}
+				for idx := range blocks {
+					if blocks[idx].ID == b.ID {
+						blocks = append(blocks[:idx], blocks[idx+1:]...)
+						break
+					}
+				}
+				blockWrites = append(blockWrites, vault.Write{Action: "delete", Collection: vault.Blocks, ID: recordID})
+				singleNote = "removed a paragraph"
+			} else {
+				first := parsed[0]
+				kind := first.Kind
+				// A callout is written as a quote and a toggle as a bullet: read
+				// back as one, it is still what it was.
+				if (b.Kind == "callout" && kind == "quote") || (b.Kind == "toggle" && kind == "bullet") {
+					kind = b.Kind
+				}
+				patch := map[string]any{"kind": kind, "content": first.ToRecord()["content"], "checked": nil, "language": nil}
+				if kind == "todo" {
+					patch["checked"] = first.Checked
+				}
+				if kind == "code" && first.Language != "" {
+					patch["language"] = first.Language
+				}
+				if kind == "table" && first.Table != nil {
+					patch["table"] = first.Table
+				}
+				for idx := range blocks {
+					if blocks[idx].ID == b.ID {
+						blocks[idx].Kind = kind
+						blocks[idx].Runs = first.Runs
+						blocks[idx].Checked = kind == "todo" && first.Checked
+						if kind == "code" {
+							blocks[idx].Language = first.Language
+						} else {
+							blocks[idx].Language = ""
+						}
+						if kind == "table" {
+							blocks[idx].Table = first.Table
+						} else {
+							blocks[idx].Table = nil
+						}
+						break
+					}
+				}
+				blockWrites = append(blockWrites, vault.Write{Action: "patch", Collection: vault.Blocks, ID: recordID, Patch: patch})
+
+				// The lines after the first: those written under it go under the
+				// paragraph, after what it holds; the others follow it, before
+				// the paragraph that came next.
+				next, after := 0.0, 0
+				for _, other := range blocks {
+					if other.ParentID == b.ParentID && other.Order > b.Order && (next == 0 || other.Order < next) {
+						next = other.Order
+					}
+				}
+				for _, added := range parsed[1:] {
+					if added.ParentID == "" {
+						after++
+					}
+				}
+				under, followed := lastOrder(blocks, b.ID), 0
+				for _, added := range parsed[1:] {
+					switch added.ParentID {
+					case "":
+						followed++
+						added.ParentID = b.ParentID
+						if next > 0 {
+							added.Order = b.Order + (next-b.Order)*float64(followed)/float64(after+1)
+						} else {
+							added.Order = b.Order + 1024*float64(followed)
+						}
+					case first.ID:
+						under += 1024
+						added.ParentID = b.ID
+						added.Order = under
+					}
+					blocks = append(blocks, added)
+					blockWrites = append(blockWrites, vault.Write{Action: "put", Collection: vault.Blocks,
+						ID: vault.BlockRecordID(in.PageID, added.ID), Value: added.ToRecord()})
+				}
+				singleNote = "changed a paragraph"
+				if n := len(parsed) - 1; n > 0 {
+					singleNote = fmt.Sprintf("changed a paragraph and added %d after it", n)
+				}
 			}
 		}
-		switch {
-		case len(places) == 0 && held > 0:
-			return errors.New("old_text is in a table, a file or a card, which is changed in Notes")
-		case len(places) == 0 && strings.Contains(old, "\n"):
-			return errors.New("old_text is not within one paragraph: give the text of one line (or of one code block or quote) as notes_fetch shows it, and change one paragraph at a time")
-		case len(places) == 0:
-			return errors.New("old_text is not on the page: give it exactly as notes_fetch shows it")
-		case in.Nth > len(places):
-			return fmt.Errorf("old_text is on the page %d times: nth is 1 to %d", len(places), len(places))
-		case len(places) > 1 && in.Nth == 0:
-			return fmt.Errorf("old_text is on the page %d times: give more of the paragraph, or pass nth (1 to %d) for the place to change", len(places), len(places))
-		}
-		at := places[max(in.Nth, 1)-1]
-		b := at.block
-		changed := at.text[:at.at] + fresh + at.text[at.at+len(old):]
-
-		// The mentions the change leaves alone are read back as what they were.
-		var mentions []kept
-		for _, run := range b.Runs {
-			if run.Mention != nil {
-				mentions = append(mentions, kept{text: markdown.MentionText(run.Mention, lib.name), run: run})
-			}
-		}
-		parsed := markdown.FromMarkdown(protect(changed, mentions), func() string { return newID("block") })
-		unprotect(parsed, mentions)
-		parsed = markdown.LinkPages(parsed, lib.resolve)
-		parsed = rejoin(b, at.text, fresh, parsed)
 
 		now := stamp()
 		var writes []vault.Write
@@ -150,70 +283,7 @@ func (s *server) edit(_ context.Context, _ *mcp.CallToolRequest, in editIn) (*mc
 			return err
 		}
 		writes = append(writes, cp...)
-		recordID := vault.BlockRecordID(in.PageID, b.ID)
-		if len(parsed) == 0 {
-			for _, other := range blocks {
-				if other.ParentID == b.ID {
-					return errors.New("the paragraph has others under it: change those first, or leave it some words")
-				}
-			}
-			writes = append(writes, vault.Write{Action: "delete", Collection: vault.Blocks, ID: recordID})
-			out.Note = "removed a paragraph"
-		} else {
-			first := parsed[0]
-			kind := first.Kind
-			// A callout is written as a quote and a toggle as a bullet: read
-			// back as one, it is still what it was.
-			if (b.Kind == "callout" && kind == "quote") || (b.Kind == "toggle" && kind == "bullet") {
-				kind = b.Kind
-			}
-			patch := map[string]any{"kind": kind, "content": first.ToRecord()["content"], "checked": nil, "language": nil}
-			if kind == "todo" {
-				patch["checked"] = first.Checked
-			}
-			if kind == "code" && first.Language != "" {
-				patch["language"] = first.Language
-			}
-			writes = append(writes, vault.Write{Action: "patch", Collection: vault.Blocks, ID: recordID, Patch: patch})
-
-			// The lines after the first: those written under it go under the
-			// paragraph, after what it holds; the others follow it, before
-			// the paragraph that came next.
-			next, after := 0.0, 0
-			for _, other := range blocks {
-				if other.ParentID == b.ParentID && other.Order > b.Order && (next == 0 || other.Order < next) {
-					next = other.Order
-				}
-			}
-			for _, added := range parsed[1:] {
-				if added.ParentID == "" {
-					after++
-				}
-			}
-			under, followed := lastOrder(blocks, b.ID), 0
-			for _, added := range parsed[1:] {
-				switch added.ParentID {
-				case "":
-					followed++
-					added.ParentID = b.ParentID
-					if next > 0 {
-						added.Order = b.Order + (next-b.Order)*float64(followed)/float64(after+1)
-					} else {
-						added.Order = b.Order + 1024*float64(followed)
-					}
-				case first.ID:
-					under += 1024
-					added.ParentID = b.ID
-					added.Order = under
-				}
-				writes = append(writes, vault.Write{Action: "put", Collection: vault.Blocks,
-					ID: vault.BlockRecordID(in.PageID, added.ID), Value: added.ToRecord()})
-			}
-			out.Note = "changed a paragraph"
-			if n := len(parsed) - 1; n > 0 {
-				out.Note = fmt.Sprintf("changed a paragraph and added %d after it", n)
-			}
-		}
+		writes = append(writes, blockWrites...)
 		writes = append(writes, vault.Write{Action: "patch", Collection: vault.Pages, ID: in.PageID,
 			Patch: map[string]any{"updated_at": now, "updated_by": authorName}})
 		changes, err := apply(v, writes)
@@ -222,6 +292,11 @@ func (s *server) edit(_ context.Context, _ *mcp.CallToolRequest, in editIn) (*mc
 		}
 		access.Changed(vault.Changes{Changes: changes})
 		out.ID, out.Title = in.PageID, lib.title(in.PageID)
+		if len(resolvedOps) > 1 {
+			out.Note = fmt.Sprintf("applied %d edits", len(resolvedOps))
+		} else {
+			out.Note = singleNote
+		}
 		return nil
 	})
 	return nil, out, err

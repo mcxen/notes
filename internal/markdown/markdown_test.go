@@ -2,6 +2,7 @@ package markdown
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -250,5 +251,70 @@ func TestAMermaidDiagramIsACodeBlockThatKeepsItsLanguageBothWays(t *testing.T) {
 	}
 	if got := ToMarkdown(blocks, noName); got != src {
 		t.Fatalf("markdown = %q, want %q", got, src)
+	}
+}
+
+func TestPipeTablesRoundTripAndHandleEdgeCases(t *testing.T) {
+	src := "| Name | Score |\n| --- | --- |\n| **Ada** | 100 |"
+	blocks := FromMarkdown(src, ids())
+	if len(blocks) != 1 || blocks[0].Kind != "table" {
+		t.Fatalf("blocks = %+v, want one table block", blocks)
+	}
+	if blocks[0].Table["header_row"] != true {
+		t.Errorf("header_row = %v, want true", blocks[0].Table["header_row"])
+	}
+	if got := ToMarkdown(blocks, noName); got != src {
+		t.Fatalf("round trip:\n%s\n--- want\n%s", got, src)
+	}
+
+	// Single-column table, escaped pipe, outer-pipe-less 2-column table, nested table.
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"one column", "| only |\n| --- |\n| cell |", "| only |\n| --- |\n| cell |"},
+		{"escaped pipe", "| A | B |\n| :--- | ---: |\n| x \\| y | z \\| |", "| A | B |\n| --- | --- |\n| x \\| y | z \\| |"},
+		{"no outer pipes", "A | B\n--- | ---\n1 | 2", "| A | B |\n| --- | --- |\n| 1 | 2 |"},
+		{"nested under bullet", "- item\n  | A | B |\n  | --- | --- |\n  | 1 | 2 |", "- item\n  | A | B |\n  | --- | --- |\n  | 1 | 2 |"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			b := FromMarkdown(tc.in, ids())
+			if len(b) == 0 {
+				t.Fatal("no blocks parsed")
+			}
+			last := b[len(b)-1]
+			if last.Kind != "table" {
+				t.Fatalf("kind = %s, want table (%+v)", last.Kind, b)
+			}
+			if got := ToMarkdown(b, noName); got != tc.want {
+				t.Fatalf("got:\n%s\nwant:\n%s", got, tc.want)
+			}
+		})
+	}
+
+	// A line with a pipe followed by a plain divider is not a table.
+	nonTable := FromMarkdown("a | b\n---", ids())
+	if len(nonTable) != 2 || nonTable[0].Kind != "text" || nonTable[1].Kind != "divider" {
+		t.Fatalf("nonTable = %+v, want text + divider", nonTable)
+	}
+
+	// Oversized tables fall back safely to a code block.
+	wideHeader := "|" + strings.Repeat(" C |", maxTableColumns+1)
+	wideSep := "|" + strings.Repeat(" --- |", maxTableColumns+1)
+	wide := FromMarkdown(wideHeader+"\n"+wideSep, ids())
+	if len(wide) != 1 || wide[0].Kind != "code" {
+		t.Fatalf("wide table = %+v, want code block fallback", wide)
+	}
+
+	var tall strings.Builder
+	tall.WriteString("| A | B |\n| --- | --- |")
+	for r := 1; r <= maxTableRows; r++ {
+		fmt.Fprintf(&tall, "\n| %d | v |", r)
+	}
+	overRows := FromMarkdown(tall.String(), ids())
+	if len(overRows) != 1 || overRows[0].Kind != "code" {
+		t.Fatalf("tall table = %+v, want code block fallback", overRows)
 	}
 }

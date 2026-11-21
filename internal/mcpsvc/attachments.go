@@ -70,6 +70,100 @@ func attachmentsOf(blocks []markdown.Block) []attachmentOut {
 	return out
 }
 
+// propertyAttachments lists pictures stored in a database row's Image
+// properties, in column order.
+func (lib library) propertyAttachments(id string) []markdown.Attachment {
+	page := lib.pages[id]
+	files, _ := page["property_files"].(map[string]any)
+	if len(files) == 0 {
+		return nil
+	}
+	var keys []string
+	seenKey := map[string]bool{}
+	if db, ok := lib.databaseOf(id); ok {
+		for _, c := range lib.columns(db) {
+			if _, has := files[c.id]; has {
+				keys = append(keys, c.id)
+				seenKey[c.id] = true
+			}
+		}
+	}
+	var extra []string
+	for k := range files {
+		if !seenKey[k] {
+			extra = append(extra, k)
+		}
+	}
+	sort.Strings(extra)
+	keys = append(keys, extra...)
+
+	var out []markdown.Attachment
+	for _, k := range keys {
+		list, _ := files[k].([]any)
+		for _, item := range list {
+			m, _ := item.(map[string]any)
+			p := str(m["path"])
+			if p == "" {
+				continue
+			}
+			name := str(m["name"])
+			if name == "" {
+				name = path.Base(p)
+			}
+			out = append(out, markdown.Attachment{
+				Name:    name,
+				Path:    p,
+				Type:    str(m["type"]),
+				Size:    int64(numVal(m["size"])),
+				Preview: str(m["preview"]),
+			})
+		}
+	}
+	return out
+}
+
+// pageAttachments lists all attachments on a page (body blocks and row Image properties).
+func (lib library) pageAttachments(id string) []attachmentOut {
+	out := attachmentsOf(lib.blocks[id])
+	seen := make(map[string]bool, len(out))
+	for _, a := range out {
+		seen[a.Path] = true
+	}
+	for _, a := range lib.propertyAttachments(id) {
+		if seen[a.Path] {
+			continue
+		}
+		seen[a.Path] = true
+		out = append(out, attachmentOut{
+			Name:    a.Name,
+			Type:    a.Type,
+			Size:    a.Size,
+			Picture: rasterImage(a.Type),
+			Path:    a.Path,
+		})
+	}
+	return out
+}
+
+// findAttachment finds an attachment belonging to pageID (in body blocks or property_files).
+func (lib library) findAttachment(pageID, filePath string) (*markdown.Attachment, bool) {
+	for _, b := range lib.blocks[pageID] {
+		for _, a := range b.Attachments() {
+			if a.Path == filePath {
+				a := a
+				return &a, true
+			}
+		}
+	}
+	for _, a := range lib.propertyAttachments(pageID) {
+		if a.Path == filePath {
+			a := a
+			return &a, true
+		}
+	}
+	return nil, false
+}
+
 // rasterImage is a picture the assistants are shown as an image.
 func rasterImage(mediaType string) bool {
 	switch strings.ToLower(mediaType) {
@@ -118,16 +212,8 @@ func (s *server) readAttachment(_ context.Context, _ *mcp.CallToolRequest, in re
 			return fmt.Errorf("no page %q in this vault", in.PageID)
 		}
 		// Only what the page holds is given out, never a path of the caller's own.
-		var found *markdown.Attachment
-		for _, b := range lib.blocks[in.PageID] {
-			for _, a := range b.Attachments() {
-				if a.Path == in.Path {
-					a := a
-					found = &a
-				}
-			}
-		}
-		if found == nil {
+		found, ok := lib.findAttachment(in.PageID, in.Path)
+		if !ok || found == nil {
 			return errors.New("this page holds no such file: use a path from the attachments of notes_fetch")
 		}
 		serve, note := found.Path, ""
