@@ -60,6 +60,7 @@ func Run() error {
 		actions.startup()
 		actions.applyDock()
 		actions.applyMCP()
+		actions.applyClipboard()
 	})
 	app.OnLocaleChanged(func(string) {
 		rememberLanguage()
@@ -85,6 +86,7 @@ func Run() error {
 	// a timer or a window's close. Nothing in it waits for the network.
 	app.OnBeforeQuit(func(*mygo.QuitEvent) {
 		notebooks.leaving.Store(true)
+		notebooks.clipboard.stop()
 		notebooks.closeAll()
 		actions.mcp.stop()
 	})
@@ -261,6 +263,14 @@ func (a *appActions) open(folder string) error {
 	}
 	a.refreshMenu()
 	return nil
+}
+
+// applyClipboard turns clipboard watching on or off as the settings ask.
+func (a *appActions) applyClipboard() {
+	if a.notebooks.clipboard == nil {
+		return
+	}
+	a.notebooks.clipboard.setEnabled(!a.loadSettings().NoWatchClipboard)
 }
 
 func isDirectory(path string) bool {

@@ -383,4 +383,9 @@ var zh = map[string]string{
 	"… and %d more lines":   "……还有 %d 行",
 	"It runs as you, and can change or delete anything you can. Run only what you understand.": "它以你的身份运行，你能改动或删除的东西它都能。只运行你看得懂的代码。",
 	"Run": "运行",
+
+	// Clipboard watcher
+	"Watch the clipboard": "监听剪贴板",
+	"Shows what you copied in grey on an empty paragraph; press Tab to paste it. Keeps the last 5 items.": "在空段落后用浅灰色预览刚复制的内容，按 Tab 即可采用。最多保留最近 5 条。",
+	"Watch Clipboard": "监听剪贴板",
 }

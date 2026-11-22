@@ -67,6 +67,7 @@ export interface BlockRowProps {
   dropShift?: number;
   /** An upload this session is making for the block, if any. */
   upload?: UploadState;
+  ghost?: ReactNode;
   slot?: ReactNode;
   /** Drawn under the paragraph: the blocks its links show in this page. */
   after?: ReactNode;
@@ -132,6 +133,7 @@ export interface BlockActions extends MediaActions, TableActions, EmbedActions {
   describeMention: DescribeMention;
   keyDown(block: Block, event: KeyboardEvent<HTMLElement>): void;
   paste(block: Block, event: ClipboardEvent<HTMLElement>): void;
+  compositionChange?(block: Block, composing: boolean): void;
 }
 
 /** The mark of a page's row — a sub-page's, a folded database's, a line that
@@ -211,6 +213,7 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
       onChange={(content, text, element, composing) => actions.change(block, content, text, element, composing)}
       onKeyDown={(event) => actions.keyDown(block, event)}
       onPaste={(event) => actions.paste(block, event)}
+      onCompositionChange={actions.compositionChange ? (active) => actions.compositionChange!(block, active) : undefined}
     />
   );
 
@@ -223,6 +226,7 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
         props.lonely ? "is-lonely" : "",
         props.dragging ? "is-dragging" : "",
         empty ? "is-empty" : "",
+        props.ghost ? "has-clip-ghost" : "",
         done ? "is-done" : "",
         linkLine ? "is-link-line" : "",
       ].filter(Boolean).join(" ")}
@@ -401,6 +405,7 @@ export const BlockRow = memo(function BlockRow(props: BlockRowProps) {
           );
         })() : definition.editable ? editable : null}
 
+        {props.ghost}
         {props.slot}
       </div>}
       {props.after}

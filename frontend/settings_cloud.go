@@ -166,6 +166,7 @@ func (s *settingsWindow) cloudPage(c *ui.Context, pal *palette) {
 	s.group(c, pal, tr("Set up a worker"), tr("Paste the prompt into your coding agent (Claude Code, Codex, …). It deploys the worker with a D1 database and an R2 bucket on your account, asks which account and domain to use, and gives you the address and the token. Running it again updates the worker."), func() {
 		s.row(c, pal, tr("Copy the setup prompt"), tr("The steps are in share-worker/DEPLOY.md of the Notes repository."), func() {
 			if button(c, "cloud-copy-prompt", tr("Copy the prompt"), true, pal) {
+				s.a.notebooks.clipboard.suppressFor(2 * time.Second)
 				mygo.Clipboard.WriteText(share.SetupPrompt())
 				s.toast = tr("The prompt is copied.")
 			}
@@ -177,6 +178,7 @@ func (s *settingsWindow) cloudPage(c *ui.Context, pal *palette) {
 				p := p
 				s.row(c, pal, p.Title, p.URL, func() {
 					if button(c, "cloud-copy:"+p.ID, tr("Copy link"), false, pal) {
+						s.a.notebooks.clipboard.suppressFor(2 * time.Second)
 						mygo.Clipboard.WriteText(p.URL)
 						s.toast = tr("Copied.")
 					}

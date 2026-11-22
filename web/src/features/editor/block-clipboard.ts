@@ -109,7 +109,7 @@ function payloadFromHtml(html: string): string {
 }
 
 /** Blocks copied from Notes, or null for anything else. */
-export function readBlocks(data: DataTransfer): CopiedBlocks | null {
+export function readBlocks(data: Pick<DataTransfer, "getData">): CopiedBlocks | null {
   const raw = data.getData(BLOCKS_MIME) || payloadFromHtml(data.getData("text/html"));
   if (!raw) return null;
   let payload: Partial<Payload>;

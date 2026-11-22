@@ -41,6 +41,9 @@ func openVault(n *Notebooks, folder string) error {
 		if s.remote != nil {
 			s.remote.Wake()
 		}
+		if n.clipboard != nil {
+			n.clipboard.pruneAndNotify(s.window)
+		}
 	})
 	// Closing a window hides it to the tray when the tray keeps the app; its
 	// vault stays open, so the tray and the MCP server still have it.

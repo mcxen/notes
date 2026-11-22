@@ -6,6 +6,7 @@ import (
 	"log"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/plugins/updater"
@@ -187,6 +188,12 @@ func (a *appActions) buildTrayMenu() *mygo.Menu {
 	}
 	items = append(items,
 		mygo.Separator(),
+		&mygo.MenuItem{
+			Label:   tr("Watch Clipboard"),
+			Type:    mygo.MenuItemCheckbox,
+			Checked: !st.NoWatchClipboard,
+			Click:   func(*mygo.MenuItem, *mygo.Window) { a.setWatchClipboard(st.NoWatchClipboard) },
+		},
 		a.trayMCPItem(st),
 		mygo.Separator(),
 		&mygo.MenuItem{Label: tr("Settings…"), Click: func(*mygo.MenuItem, *mygo.Window) { go a.openSettings("") }},
@@ -236,6 +243,7 @@ func (a *appActions) trayMCPItem(st settings.Settings) *mygo.MenuItem {
 		mygo.Separator(),
 		{Label: toggle, Click: func(*mygo.MenuItem, *mygo.Window) { a.setMCPEnabled(!st.MCP.Enabled) }},
 		{Label: tr("Copy the prompt"), Disabled: st.MCP.Key == "", Click: func(*mygo.MenuItem, *mygo.Window) {
+			a.notebooks.clipboard.suppressFor(2 * time.Second)
 			mygo.Clipboard.WriteText(mcpPrompt(a.loadSettings()))
 		}},
 		{Label: tr("Read only"), Type: mygo.MenuItemCheckbox, Checked: st.MCP.ReadOnly, Click: func(*mygo.MenuItem, *mygo.Window) {
@@ -245,6 +253,15 @@ func (a *appActions) trayMCPItem(st settings.Settings) *mygo.MenuItem {
 			a.refreshSettingsView()
 		}},
 	}}
+}
+
+// setWatchClipboard toggles clipboard watching and saves the setting.
+func (a *appActions) setWatchClipboard(on bool) {
+	st := a.loadSettings()
+	st.NoWatchClipboard = !on
+	a.saveSettings(st)
+	a.applyClipboard()
+	a.refreshSettingsView()
 }
 
 // setMCPEnabled switches the MCP server on or off, making its key the first time.

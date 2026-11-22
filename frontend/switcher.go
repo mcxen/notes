@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"path/filepath"
+	"time"
 
 	"github.com/egoist/mygo"
 
@@ -117,5 +118,6 @@ func (n *Notebooks) CopyImage(ctx context.Context, png string) error {
 	if err != nil {
 		return err
 	}
+	n.clipboard.suppressFor(2 * time.Second)
 	return mygo.Clipboard.WriteImage(data)
 }

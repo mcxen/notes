@@ -3132,6 +3132,121 @@ kbd {
   transition: opacity var(--t-fast) var(--e-out);
 }
 
+.block.is-empty.has-clip-ghost > .block__content .block__editable::before,
+.block.is-empty.has-clip-ghost > .block__content .block__editable:focus::before,
+.block.is-empty.is-lonely.has-clip-ghost > .block__content .block__editable::before {
+  content: none;
+  opacity: 0;
+  transition: none;
+}
+
+.clip-ghost {
+  position: absolute;
+  inset: 3px 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  font-size: var(--read);
+  line-height: var(--lead);
+  color: var(--ink-4);
+  pointer-events: none;
+  user-select: none;
+}
+
+.clip-ghost__preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.clip-ghost__thumb {
+  height: 18px;
+  max-width: 36px;
+  margin-left: 2px;
+  border-radius: 3px;
+  object-fit: cover;
+  opacity: 0.7;
+  border: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+
+.clip-ghost__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip-ghost__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  pointer-events: auto;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+
+.clip-ghost__badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--fill);
+  color: var(--ink-3);
+}
+
+.clip-ghost__nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.clip-ghost__count {
+  padding: 0 2px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.clip-ghost__btn,
+.clip-ghost__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+
+.clip-ghost__btn:hover,
+.clip-ghost__dismiss:hover {
+  background: var(--fill-hover);
+  color: var(--ink-2);
+}
+
+.clip-ghost__kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 4px;
+  background: var(--fill);
+  color: var(--ink-3);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.clip-ghost__kbd:hover {
+  background: var(--fill-hover);
+  color: var(--ink);
+}
+
 /* A link is Notion's (Winston, round 65: "the links are blue, but they need
    to be similar to Notion"): the words keep the ink they stand in, at 70%,
    over an underline of that ink at 40% — never blue, and a link in a red

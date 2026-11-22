@@ -599,4 +599,10 @@ export const zh: Record<string, string> = {
   "Exporting…": "正在导出…",
   "{n} sub-page, kept in a folder": "{n} 个子页面，放在文件夹里",
   "{n} sub-pages, kept in folders": "{n} 个子页面，放在文件夹里",
+  "HTML · {n} lines": "HTML · {n} 行",
+  "{n} lines": "{n} 行",
+  "Previous clipboard item (⌥[)": "上一条剪贴板记录 (⌥[)",
+  "Next clipboard item (⌥])": "下一条剪贴板记录 (⌥])",
+  "Press Tab to paste": "按 Tab 粘贴",
+  "Dismiss (Esc)": "忽略此条 (Esc)",
 };

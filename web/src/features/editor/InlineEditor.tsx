@@ -41,6 +41,7 @@ export const InlineEditor = memo(function InlineEditor({
   onChange,
   onKeyDown,
   onPaste,
+  onCompositionChange,
 }: {
   block: Block;
   readOnly: boolean;
@@ -52,6 +53,7 @@ export const InlineEditor = memo(function InlineEditor({
   onChange(content: InlineContent, text: string, element: HTMLElement, composing: boolean): void;
   onKeyDown(event: KeyboardEvent<HTMLElement>): void;
   onPaste(event: ClipboardEvent<HTMLElement>): void;
+  onCompositionChange?(composing: boolean): void;
 }) {
   const ref = useRef<HTMLElement | null>(null);
   const composing = useRef(false);
@@ -120,9 +122,13 @@ export const InlineEditor = memo(function InlineEditor({
       }}
       onKeyDown={onKeyDown}
       onPaste={onPaste}
-      onCompositionStart={() => { composing.current = true; }}
+      onCompositionStart={() => {
+        composing.current = true;
+        onCompositionChange?.(true);
+      }}
       onCompositionEnd={() => {
         composing.current = false;
+        onCompositionChange?.(false);
         if (source) {
           sync.current();
           return;

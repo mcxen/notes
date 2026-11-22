@@ -274,6 +274,7 @@ var searchEntries = []searchEntry{
 	{"general", labelPickerAtLaunch, "startup launch open picker last vault 启动 选择器 笔记库"},
 	{"general", "Show the tray icon", "tray menu bar notification area icon 托盘 菜单栏 图标"},
 	{"general", labelPasteImages, "paste web page pictures images download clipboard 粘贴 网页 图片 下载"},
+	{"general", labelWatchClipboard, "clipboard watch ghost tab paste history preview 剪贴板 剪切板 监听 幽灵 预览 历史"},
 	{"general", "Close a window to the tray", "close window tray quit hide 关闭 窗口 托盘 退出"},
 	{"general", "Hide the Dock icon", "dock hide macos 程序坞 隐藏 图标"},
 	{"general", "Shortcut to show or hide", "shortcut hotkey keyboard show hide 快捷键 显示 隐藏"},
@@ -399,6 +400,7 @@ const (
 	labelAutoUpdates    = "Check for updates automatically"
 	labelOutline        = "Show the page outline"
 	labelPasteImages    = "Download pictures when pasting from a web page"
+	labelWatchClipboard = "Watch the clipboard"
 )
 
 func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
@@ -483,6 +485,16 @@ func (s *settingsWindow) generalPage(c *ui.Context, pal *palette) {
 		if fetch == s.st.NoPasteImages {
 			s.st.NoPasteImages = !fetch
 			s.save()
+		}
+
+		watch := !s.st.NoWatchClipboard
+		s.row(c, pal, tr(labelWatchClipboard), tr("Shows what you copied in grey on an empty paragraph; press Tab to paste it. Keeps the last 5 items."), func() {
+			toggle(c, "watch-clipboard", &watch, tr(labelWatchClipboard), pal)
+		})
+		if watch == s.st.NoWatchClipboard {
+			s.st.NoWatchClipboard = !watch
+			s.save()
+			s.a.applyClipboard()
 		}
 	})
 	s.group(c, pal, tr("Shortcuts"), "", func() {
@@ -994,6 +1006,7 @@ func (s *settingsWindow) integrationsPage(c *ui.Context, pal *palette) {
 		})
 		s.row(c, pal, tr("Key"), maskedKey(s.st.MCP.Key), func() {
 			if button(c, "mcp-copy-key", tr("Copy key"), false, pal) && s.st.MCP.Key != "" {
+				s.a.notebooks.clipboard.suppressFor(2 * time.Second)
 				mygo.Clipboard.WriteText(s.st.MCP.Key)
 				s.toast = tr("Copied.")
 			}
@@ -1035,18 +1048,21 @@ func (s *settingsWindow) integrationsPage(c *ui.Context, pal *palette) {
 	s.group(c, pal, tr("Connect an assistant"), tr("The prompt has the address, the key, the vaults and the tools: paste it into the assistant's instructions."), func() {
 		s.row(c, pal, tr("Copy the prompt"), tr("Everything an assistant needs, in one text."), func() {
 			if button(c, "mcp-copy-prompt", tr("Copy the prompt"), true, pal) {
+				s.a.notebooks.clipboard.suppressFor(2 * time.Second)
 				mygo.Clipboard.WriteText(mcpPrompt(s.st))
 				s.toast = tr("The prompt is copied.")
 			}
 		})
 		s.row(c, pal, tr("Copy the Claude Code command"), tr("Adds the server to Claude Code with the key."), func() {
 			if button(c, "mcp-copy-claude", tr("Copy"), false, pal) {
+				s.a.notebooks.clipboard.suppressFor(2 * time.Second)
 				mygo.Clipboard.WriteText(claudeCodeCommand(s.st))
 				s.toast = tr("Copied.")
 			}
 		})
 		s.row(c, pal, tr("Copy the stdio entry"), tr("For a client that starts a program instead of an address."), func() {
 			if button(c, "mcp-copy-stdio", tr("Copy"), false, pal) {
+				s.a.notebooks.clipboard.suppressFor(2 * time.Second)
 				mygo.Clipboard.WriteText(stdioConfig())
 				s.toast = tr("Copied.")
 			}

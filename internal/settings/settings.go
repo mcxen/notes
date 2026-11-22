@@ -65,6 +65,9 @@ type Settings struct {
 	// NoPasteImages stops a page pasted from the web from downloading the
 	// pictures it names. They are downloaded unless this is set.
 	NoPasteImages bool `json:"noPasteImages,omitempty"`
+	// NoWatchClipboard stops Notes from watching the system clipboard to preview
+	// recently copied items on empty paragraphs. It is watched unless this is set.
+	NoWatchClipboard bool `json:"noWatchClipboard,omitempty"`
 	// Share publishes pages to the user's own Notes Share worker. Off unless Enabled.
 	Share Share `json:"share,omitempty"`
 	// Hotkey shows or hides the windows from anywhere, as "CmdOrCtrl+Shift+N".

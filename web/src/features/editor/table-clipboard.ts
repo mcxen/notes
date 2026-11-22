@@ -64,7 +64,7 @@ export function gridFromMarkdown(text: string): InlineContent[][] | null {
  *  tab-separated lines — more than one cell of them. `anyText`: text that is
  *  none of these is a grid too — one cell a line — as it is when pasted over
  *  cells selected as cells. */
-export function readGrid(data: DataTransfer, anyText: boolean): ReadGrid | null {
+export function readGrid(data: Pick<DataTransfer, "getData">, anyText: boolean): ReadGrid | null {
   const html = data.getData("text/html");
   const fromHtml = html ? gridFromHtml(html) : null;
   if (fromHtml && (fromHtml.rows.length > 1 || fromHtml.rows[0].length > 1 || anyText)) return fromHtml;

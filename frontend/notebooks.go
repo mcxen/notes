@@ -59,14 +59,22 @@ type Notebooks struct {
 	// and onSyncState runs when one changes (the settings window follows it).
 	syncStates  map[string]SyncState
 	onSyncState func()
+
+	clipboard *clipboardWatcher
 }
 
 func newNotebooks() *Notebooks {
-	return &Notebooks{
+	n := &Notebooks{
 		byWindow:   map[*mygo.Window]*session{},
 		byID:       map[string]*session{},
 		forceClose: map[*mygo.Window]bool{},
 	}
+	n.clipboard = newClipboardWatcher(func(st ClipboardState) {
+		for _, w := range n.windows() {
+			_ = ClipboardChanged.Emit(w, st)
+		}
+	})
+	return n
 }
 
 // closeWindow closes a window for real, as a window that is replaced: the

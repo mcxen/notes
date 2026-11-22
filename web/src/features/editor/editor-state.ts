@@ -1,3 +1,4 @@
+import type { ClipboardPreview } from "../../platform/mygo";
 import type { ImageSlot } from "./html-paste";
 import type { Dispatch, DragEvent, RefObject, SetStateAction } from "react";
 import type { CreatePageOptions } from "../../app/workspace-context";
@@ -67,6 +68,7 @@ export interface EmbedOptions {
 export type SlashState = { blockId: string; from: number; query: string; anchor: AnchorRect };
 /** "@" or "[[" typed in the words. */
 export type MentionState = SlashState & { trigger: MentionTrigger };
+export type ClipboardGhostState = { blockId: string; item: ClipboardPreview; index: number; count: number };
 /** Where something dragged over the page would land. */
 export type DropState = {
   id: string;
@@ -133,12 +135,14 @@ export interface Editor {
   closeMenus(): void;
   applyMarkToBlocks(ranges: BlockTextRange[], mark: ToggleableMark | "link" | "color", value: boolean | string | undefined): void;
   openLink(): void;
-  pastedBlocks(data: DataTransfer): { incoming: CopiedBlocks | null; fragment: BlockTree; images: ImageSlot[] } | null;
+  pastedBlocks(data: Pick<DataTransfer, "getData">): { incoming: CopiedBlocks | null; fragment: BlockTree; images: ImageSlot[] } | null;
   adoptCutPages(incoming: CopiedBlocks | null, fragment: BlockTree, at: string | null): void;
   /** A YouTube or X link pasted onto a line of its own: offer its card, as
    *  Notion's paste menu offers an embed. */
   offerCard(blockId: string, href: string): void;
   toast(message: string, tone?: ToastTone): void;
+  clipboardGhost: ClipboardGhostState | null;
+  adoptingClip: RefObject<boolean>;
 }
 
 /** Keys that move the caret without typing. */

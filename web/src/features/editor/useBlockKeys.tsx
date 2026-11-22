@@ -45,6 +45,7 @@ import { CARET_KEYS, type Editor } from "./editor-state";
 import type { BlockTyping } from "./useBlockTyping";
 import { markForKey } from "./marks";
 import { kindForKeys } from "./block-shortcuts";
+import { cycleClipboardItem, dismissClipboardItem } from "./clipboard-store";
 
 /** A key pressed in a block: the slash and mention menus' keys while one is
  *  open, then Notion's — Enter and Backspace at a line's edges, Tab and
@@ -55,7 +56,7 @@ export function blockKeys(editor: Editor & BlockTyping) {
     page, tree, rows, embed, blocksRef, slash, setSlash, slashIndex, setSlashIndex, slashDismissed, commands,
     mention, setMention, mentionIndex, setMentionIndex, mentionDismissed, mentionOptions, setFormat, resume,
     pendingTextSelection, checkpointHistory, execute, selectBlocks, runReplace, replaceSelection, nextEditable,
-    moveCaret, applyBlockShortcut, runCommand, openMoveTo, closeMenus, chooseMention, applyMarkToBlocks, openLink,
+    moveCaret, applyBlockShortcut, runCommand, adoptClipboard, openMoveTo, closeMenus, chooseMention, applyMarkToBlocks, openLink,
   } = editor;
   const onBlockKeyDown = (block: Block, event: KeyboardEvent<HTMLElement>) => {
     // Keys the input method owns are the input method's: the Enter that picks
@@ -258,8 +259,20 @@ export function blockKeys(editor: Editor & BlockTyping) {
       }
     }
 
+    const ghostActive = editor.clipboardGhost?.blockId === block.id;
+    if (ghostActive && editor.clipboardGhost!.count > 1 && event.altKey && !meta && !event.ctrlKey && !event.shiftKey
+      && (event.code === "BracketLeft" || event.code === "BracketRight")) {
+      event.preventDefault();
+      cycleClipboardItem(event.code === "BracketLeft" ? -1 : 1);
+      return;
+    }
+
     if (event.key === "Escape") {
       event.preventDefault();
+      if (ghostActive) {
+        dismissClipboardItem(editor.clipboardGhost!.item.id);
+        return;
+      }
       closeMenus();
       selectBlocks(block.id);
       return;
@@ -289,6 +302,10 @@ export function blockKeys(editor: Editor & BlockTyping) {
 
     if (event.key === "Tab") {
       event.preventDefault();
+      if (ghostActive && !event.shiftKey && !meta && !event.altKey && !event.ctrlKey) {
+        void adoptClipboard(block);
+        return;
+      }
       execute(event.shiftKey ? outdentBlocks(tree, [block.id]) : indentBlocks(tree, [block.id]), {
         id: block.id,
         start: caretOffset(element),

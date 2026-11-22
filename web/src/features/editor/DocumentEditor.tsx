@@ -189,6 +189,13 @@ import { blockTyping } from "./useBlockTyping";
 import { spaceOfPage } from "../../core/page-tree";
 import { followHref } from "./RichField";
 import { RemoteCarets } from "./RemoteCarets";
+import { ClipboardGhost } from "./ClipboardGhost";
+import {
+  cycleClipboardItem,
+  dismissClipboardItem,
+  isClipboardGhostEligible,
+  useClipboardQueue,
+} from "./clipboard-store";
 import { t, tp } from "../../i18n";
 
 /* The icon and cover pickers are loaded the first time one opens. */
@@ -225,7 +232,7 @@ type PageMenuProps = ComponentProps<typeof PageMenu>;
 const ROW_ACTIONS: Record<Exclude<keyof BlockActions, "describeMention" | "showFile" | "writeTable">, true> = {
   add: true, dragOver: true, drop: true, toggleCheck: true, toggleOpen: true, openBacklinks: true,
   toggleLink: true, openLinkMenu: true, rowDragStart: true, rowDragEnd: true, openBlockMenu: true,
-  openLinkedPage: true, setLanguage: true, copyCode: true, runCode: true, change: true, keyDown: true, paste: true, pickIcon: true,
+  openLinkedPage: true, setLanguage: true, copyCode: true, runCode: true, change: true, keyDown: true, paste: true, compositionChange: true, pickIcon: true,
   pickFile: true, downloadFile: true, resizeCard: true,
   retryUpload: true, leaveTable: true, selectTable: true, readEmbed: true,
 };
@@ -345,6 +352,10 @@ export function DocumentEditor({
   const [picker, setPicker] = useState<PickerOpen | null>(null);
   /* Find and replace in this page (⌘F), open or not. */
   const [find, setFind] = useState<FindRequest | null>(null);
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+  const [composingBlockId, setComposingBlockId] = useState<string | null>(null);
+  const clipQueue = useClipboardQueue();
+  const adoptingClip = useRef(false);
 
   const pendingFocus = useRef<PendingFocus | null>(null);
   /* A slash the writer has waved away — with Escape, or by typing on past a
@@ -445,6 +456,8 @@ export function DocumentEditor({
     setTimeMenu(null);
     setBacklinksOpen(false);
     setFormat(null);
+    setFocusedBlockId(null);
+    setComposingBlockId(null);
   }, [page.id]);
 
   /* A collapse holds only what is typed on from where it left the caret. A
@@ -1113,7 +1126,7 @@ export function DocumentEditor({
   /** What a paste brings, as blocks: blocks copied from Notes, or text of
    *  more than one line. Null for one line of text, which is typed in. A
    *  block that was cut keeps its id, so the paste moves that very page. */
-  const pastedBlocks = useCallback((data: DataTransfer): { incoming: CopiedBlocks | null; fragment: BlockTree; images: ImageSlot[] } | null => {
+  const pastedBlocks = useCallback((data: Pick<DataTransfer, "getData">): { incoming: CopiedBlocks | null; fragment: BlockTree; images: ImageSlot[] } | null => {
     const incoming = readBlocks(data);
     // A grid — a spreadsheet's cells, a web page's table, a Markdown table —
     // comes in as a simple table.
@@ -1145,6 +1158,25 @@ export function DocumentEditor({
     execute(transaction ? { ...transaction, focus: undefined } : null, undefined, options);
   }, [execute]);
 
+  const focusedBlock = focusedBlockId ? tree.by_id[focusedBlockId] : undefined;
+  const ghostBlockId = focusedBlock && clipQueue.activeItem && isClipboardGhostEligible({
+    enabled: clipQueue.enabled,
+    hasItem: Boolean(clipQueue.activeItem),
+    readOnly,
+    embed: Boolean(embed),
+    blockKind: focusedBlock.kind,
+    empty: !inlinePlainText(focusedBlock.content),
+    focused: true,
+    hasSlash: slash?.blockId === focusedBlock.id,
+    hasMention: mention?.blockId === focusedBlock.id,
+    hasTimeMenu: timeMenu?.blockId === focusedBlock.id,
+    hasBlockSelection: Boolean(blockSelection) || selectedIds.length > 0,
+    composing: composingBlockId === focusedBlock.id,
+  }) ? focusedBlock.id : null;
+  const clipboardGhost = ghostBlockId && clipQueue.activeItem
+    ? { blockId: ghostBlockId, item: clipQueue.activeItem, index: clipQueue.activeIndex, count: clipQueue.items.length }
+    : null;
+
   /* The editor as its parts read it — typing, keys, selected blocks' keys,
      pictures and files — and act through it. */
   const editor: Editor = {
@@ -1155,10 +1187,11 @@ export function DocumentEditor({
     showInPlace, ownerOf, titleOf, anchorFor, createPage, checkpointHistory, annotateHistory,
     write, execute, executeOnBlocks, runReplace, replaceSelection, selectBlocks, deleteSelected, duplicateSelected,
     openMoveTo, closeMenus, applyMarkToBlocks, openLink, pastedBlocks, adoptCutPages, offerCard, toast,
+    clipboardGhost, adoptingClip,
   };
   const { uploads, pictureUploads, retries, viewing, setViewing, fileInput, pickTarget, placeFiles, pickFile, latestTree } = useMedia(editor);
   const typing = blockTyping({ ...editor, placeFiles, latestTree });
-  const { onBlockChange, chooseMention, onBlockPaste, nextEditable, runCommand } = typing;
+  const { onBlockChange, chooseMention, onBlockPaste, adoptClipboard, nextEditable, runCommand } = typing;
   const onBlockKeyDown = blockKeys({ ...editor, ...typing });
   useSelectedBlockKeys(editor);
 
@@ -1848,6 +1881,9 @@ export function DocumentEditor({
       change: onBlockChange,
       keyDown: onBlockKeyDown,
       paste: onBlockPaste,
+      compositionChange: (block, active) => {
+        setComposingBlockId(active ? block.id : (prev) => (prev === block.id ? null : prev));
+      },
       pickIcon: (block, anchor) => setPicker({ kind: "callout", blockId: block.id, anchor }),
       showFile: (file, which) => (platform ? showFile(platform.files, file, which) : notShown()),
       pickFile,
@@ -2149,6 +2185,16 @@ export function DocumentEditor({
       dropEdge={drop && (drop.under ?? drop.id) === row.block.id ? drop.edge : null}
       dropShift={drop?.under === row.block.id ? drop.shift : undefined}
       upload={uploads[row.block.id]}
+      ghost={clipboardGhost?.blockId === row.block.id ? (
+        <ClipboardGhost
+          item={clipboardGhost.item}
+          index={clipboardGhost.index}
+          count={clipboardGhost.count}
+          onAdopt={() => void adoptClipboard(row.block)}
+          onDismiss={() => dismissClipboardItem(clipboardGhost.item.id)}
+          onCycle={cycleClipboardItem}
+        />
+      ) : undefined}
       slot={slash?.blockId === row.block.id ? (
         <Popover
           open
@@ -2290,6 +2336,22 @@ export function DocumentEditor({
         beginPointerSelection(event);
       }}
       onMouseDownCapture={onBlocksMouseDown}
+      onFocusCapture={(event) => {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest?.(".clip-ghost")) return;
+        const editable = target?.closest?.(".block__editable");
+        const id = editable?.closest?.("[data-block-id]")?.getAttribute("data-block-id") ?? null;
+        setFocusedBlockId(id);
+        if (!id) setComposingBlockId(null);
+      }}
+      onBlurCapture={(event) => {
+        const next = event.relatedTarget as HTMLElement | null;
+        if (next?.closest?.(".clip-ghost")) return;
+        const nextEditable = next?.closest?.(".block__editable");
+        if (nextEditable && event.currentTarget.contains(nextEditable)) return;
+        setFocusedBlockId(null);
+        setComposingBlockId(null);
+      }}
       onCopy={onCopySelection}
       onCut={onCutSelection}
       onClick={openMentionedPage}

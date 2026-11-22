@@ -12,6 +12,7 @@ import { Fragment, type ReactNode } from "react";
 import { useLang } from "./i18n";
 import { events, Notebooks, type Look } from "./platform/mygo";
 import { setSkin } from "./features/skin/skin-store";
+import { initClipboardStore } from "./features/editor/clipboard-store";
 import "./styles/index.css";
 
 markWindowChrome();
@@ -37,6 +38,7 @@ const look: Promise<void> = isMyGo()
   : Promise.resolve();
 /* The wallpaper changes while its sliders move: the new look arrives whole. */
 if (isMyGo()) events.lookChanged.on(applyLook);
+initClipboardStore();
 void look.then(() => {
   /* Two boundaries, so a render error never leaves a blank window. One inside
      the workspace, around what draws it: the workspace stays open behind the

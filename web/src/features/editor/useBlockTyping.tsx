@@ -17,6 +17,8 @@ import { isSourceBlock } from "./block-registry";
 import { readBlocks } from "./block-clipboard";
 import { codeLanguage, lastCodeLanguage, PLAIN_TEXT, rememberCodeLanguage } from "./code-highlight";
 import { detectCodeLanguage } from "./detect-language";
+import { consumeClipboardMatch, takeClipboardItem } from "./clipboard-store";
+import { readGrid } from "./table-clipboard";
 import {
   applyEditorTransaction,
   embedPage,
@@ -60,6 +62,13 @@ function typedArrow(content: InlineContent, caret: number): InlineContent | null
 
 function caretAt(pageId: string, blockId: string, offset: number): HistoryFocus {
   return { kind: "text", pageId, ranges: [{ blockId, start: offset, end: offset }] };
+}
+
+function fileFromBase64(data: string, name: string, type: string): File {
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new File([bytes], name, { type });
 }
 
 /** Typing in a block: what is typed, and what it turns into — Markdown
@@ -307,6 +316,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
         ? updateBlockFields(tree, block.id, { content: inlineFromText(next), language: detected })
         : updateBlockContent(tree, block.id, inlineFromText(next));
       execute(pasted, { id: block.id, start: range.start + text.length, force: true });
+      consumeClipboardMatch(text);
       return;
     }
     // A picture or file on the clipboard — a screenshot, an image copied from
@@ -318,6 +328,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     if (pastedFiles.length && !readBlocks(event.clipboardData)
       && (!pastedText || (/<img\b/i.test(pastedHtml) && !pastedHtml.replace(/<[^>]*>/g, "").trim()))) {
       event.preventDefault();
+      consumeClipboardMatch("");
       /* Pictures stand among the words at the caret, as in Google Docs; an
          empty line — a list item's too — takes them as its own. A file, or a
          caption's caret, puts each on a line of its own after this one. */
@@ -339,6 +350,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     const linked = pageFromLink(event.clipboardData.getData("text/plain"), pagesRef.current, window.location);
     if (linked && (!words || words.start === words.end) && !replaceSelection()) {
       event.preventDefault();
+      consumeClipboardMatch(event.clipboardData.getData("text/plain"));
       const caret = caretOffset(event.currentTarget);
       const inserted = insertMention(block.content, caret, caret, { kind: "page", page_id: linked });
       execute(updateBlockContent(tree, block.id, inserted.content), { id: block.id, start: inserted.caret, force: true });
@@ -348,12 +360,14 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     const url = event.clipboardData.getData("text/plain").trim();
     if (words && words.start !== words.end && isWebAddress(url)) {
       event.preventDefault();
+      consumeClipboardMatch(url);
       applyMarkToBlocks([{ blockId: block.id, start: words.start, end: words.end }], "link", url);
       return;
     }
     const pasted = pastedBlocks(event.clipboardData);
     if (!pasted) {
       const plain = event.clipboardData.getData("text/plain");
+      consumeClipboardMatch(plain);
       const across = replaceSelection(linkifyContent(inlineFromText(plain)));
       if (across) {
         event.preventDefault();
@@ -401,8 +415,82 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     // The line the caret was in changed under it, and so may the block the
     // caret ends in: both are redrawn before the caret is placed.
     if (focus) pendingTextSelection.current = { ranges: [{ blockId: focus.id, start: focus.offset, end: focus.offset }], forceIds: [target, focus.id] };
+    consumeClipboardMatch(event.clipboardData.getData("text/plain"));
     execute({ mutations: [...cleared, ...transaction.mutations] });
     settlePastedImages(pasted.images);
+  };
+
+  /** Adopts the currently previewed clipboard item into an empty paragraph. */
+  const adoptClipboard = async (block: Block): Promise<void> => {
+    const ghost = editor.clipboardGhost;
+    if (!ghost || ghost.blockId !== block.id || editor.adoptingClip.current) return;
+    editor.adoptingClip.current = true;
+    try {
+      const payload = await takeClipboardItem(ghost.item.id);
+      if (!payload) return;
+      const live = latestTree();
+      const target = live.by_id[block.id];
+      if (!target || target.kind !== "text" || inlinePlainText(target.content)) return;
+
+      if (payload.kind === "image" && payload.image) {
+        const file = fileFromBase64(payload.image, payload.imageName || "clipboard.png", payload.imageType || "image/png");
+        await placeFiles([file], { kind: "line", blockId: target.id, edge: "fill" });
+        return;
+      }
+
+      const plain = payload.text ?? "";
+      const html = payload.html ?? "";
+      const linked = pageFromLink(plain, pagesRef.current, window.location);
+      if (linked) {
+        const inserted = insertMention(target.content, 0, 0, { kind: "page", page_id: linked });
+        execute(updateBlockContent(live, target.id, inserted.content), { id: target.id, start: inserted.caret, force: true });
+        return;
+      }
+
+      const syntheticData = {
+        getData: (type: string) => (type === "text/html" ? html : type === "text/plain" ? plain : ""),
+      };
+
+      if (payload.kind === "text" && plain.includes("\n")) {
+        const norm = plain.replace(/\r\n?/g, "\n").replace(/\n$/, "");
+        if (!readGrid(syntheticData, false) && !/^\s*```/.test(norm)) {
+          const lang = detectCodeLanguage(norm);
+          if (lang) {
+            execute(
+              updateBlockFields(live, target.id, { kind: "code", language: lang, content: inlineFromText(norm) }),
+              { id: target.id, start: norm.length, force: true },
+            );
+            return;
+          }
+        }
+      }
+
+      const pasted = pastedBlocks(syntheticData);
+      if (pasted) {
+        const transaction = pasteFragment(live, target.id, { start: 0, end: 0 }, pasted.fragment, () => createId("block"));
+        if (transaction) {
+          setFormat(null);
+          setSlash(null);
+          const focus = transaction.focus;
+          if (focus) pendingTextSelection.current = { ranges: [{ blockId: focus.id, start: focus.offset, end: focus.offset }], forceIds: [target.id, focus.id] };
+          execute({ mutations: transaction.mutations });
+          settlePastedImages(pasted.images);
+          return;
+        }
+      }
+
+      const line = plain.replace(/\r?\n$/, "");
+      if (!line) return;
+      const inserted = inlineFromText(line);
+      const withLinks = linkifyContent(inserted, 0, line.length);
+      execute(updateBlockContent(live, target.id, withLinks), { id: target.id, start: line.length, force: true });
+      const href = withLinks.find((run) => run.marks?.link)?.marks?.link;
+      if (href && embedFromUrl(href) && lineIsOnlyLink({ ...target, content: withLinks }, href)) {
+        offerCard(target.id, href);
+      }
+    } finally {
+      editor.adoptingClip.current = false;
+    }
   };
 
   /** The next line on from `blockId` that takes the caret — its own words, or
@@ -548,7 +636,7 @@ export function blockTyping(editor: Editor & Pick<ReturnType<typeof useMedia>, "
     }), { id: block.id, start: slash.from, force: true });
   };
 
-  return { onBlockChange, chooseMention, applyBlockShortcut, onBlockPaste, nextEditable, moveCaret, runCommand };
+  return { onBlockChange, chooseMention, applyBlockShortcut, onBlockPaste, adoptClipboard, nextEditable, moveCaret, runCommand };
 }
 
 /** What typing hands the keys: the menus' choices, the caret across lines. */

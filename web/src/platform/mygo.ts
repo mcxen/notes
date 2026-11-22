@@ -19,6 +19,52 @@ export interface Changes {
   changes: Change[];
 }
 
+/**
+ * ClipboardPayload is the full content returned once when the user adopts an
+ * item from the ghost preview.
+ */
+export interface ClipboardPayload {
+  id: string;
+  kind: string;
+  text?: string;
+  html?: string;
+  image?: string;
+  imageType?: string;
+  imageName?: string;
+}
+
+/**
+ * ClipboardPreview is the lightweight metadata sent over events for one recent
+ * clipboard entry. Heavy payloads (full HTML / full-resolution PNG) stay in Go
+ * memory until the user actually adopts the entry with Tab.
+ */
+export interface ClipboardPreview {
+  id: string;
+  /** "text" | "url" | "html" | "image" */
+  kind: string;
+  /** Single-line display summary, or "W×H" for images */
+  preview: string;
+  /** Line count when > 1 */
+  lines?: number;
+  /** Head of multi-line plain text for code-language hint */
+  sample?: string;
+  /** Small data:image/png;base64,... thumbnail */
+  imagePreview?: string;
+  width?: number;
+  height?: number;
+  /** RFC3339 */
+  copiedAt: string;
+}
+
+/**
+ * ClipboardState is the enabled flag and up to 5 unconsumed clipboard previews,
+ * newest first.
+ */
+export interface ClipboardState {
+  enabled: boolean;
+  items: ClipboardPreview[];
+}
+
 export type Collection = string;
 
 export interface Conflict {
@@ -204,6 +250,16 @@ export interface Write {
  */
 export const Notebooks = {
   /**
+   * ClipboardState returns whether clipboard watching is enabled and the recent
+   * unconsumed clipboard previews.
+   */
+  clipboardState: bind<[], ClipboardState>("Notebooks.ClipboardState", () => []),
+  /**
+   * ConsumeClipboardMatch removes a matching item when the user pastes it
+   * manually with Cmd/Ctrl-V.
+   */
+  consumeClipboardMatch: bind<[string], void>("Notebooks.ConsumeClipboardMatch", (text: string) => [text]),
+  /**
    * CopyImage puts a PNG, given as base64, on the system clipboard. The page
    * draws the selected paragraphs; the clipboard is the system's to write.
    */
@@ -213,6 +269,11 @@ export const Notebooks = {
    * folder and its password. The vault itself stays on this computer.
    */
   disconnect: bind<[string], void>("Notebooks.Disconnect", (folder: string) => [folder]),
+  /**
+   * DismissClipboardItem removes an entry from the ghost preview queue across
+   * open vault windows.
+   */
+  dismissClipboardItem: bind<[string], void>("Notebooks.DismissClipboardItem", (id: string) => [id]),
   /**
    * FetchImage downloads a picture a pasted web page named, so that it is kept
    * with the note. It refuses addresses that are not on the open internet and
@@ -274,6 +335,11 @@ export const Notebooks = {
   /** SyncNow syncs this window's vault now and returns what changed. */
   syncNow: bind<[], Report>("Notebooks.SyncNow", () => []),
   /**
+   * TakeClipboardItem returns the full payload of a recent clipboard item and
+   * marks it consumed across open vault windows.
+   */
+  takeClipboardItem: bind<[string], ClipboardPayload>("Notebooks.TakeClipboardItem", (id: string) => [id]),
+  /**
    * TakeCommand is the command the window's page has been asked to do, if any,
    * and it is taken: a command is done once.
    */
@@ -333,6 +399,11 @@ export const Connections = {
 
 /** Events sent by the Go side. Subscribe with `events.name.on(listener)`. */
 export const events = {
+  /**
+   * ClipboardChanged broadcasts the unconsumed recent clipboard queue to open
+   * vault windows whenever the watched clipboard queue changes.
+   */
+  clipboardChanged: event<ClipboardState>("clipboard:changed"),
   /**
    * ViewCommand asks a vault window's page to do a view action it owns: toggle
    * the sidebar, or switch the appearance. The payload names the action.
