@@ -5,8 +5,8 @@
 <h1 align="center">Notes</h1>
 
 <p align="center">
-  A personal notes app for the desktop: blocks, nested pages, databases, backlinks, history,
-  light and dark, in English and 简体中文. Your notes are plain files in a folder you choose.
+  A desktop notes app: blocks, nested pages, databases, backlinks, history, light and dark,
+  in English and 简体中文. Your notes are plain files in a folder you choose.
 </p>
 
 <p align="center">
@@ -14,150 +14,49 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/demo.gif" alt="Notes in use: folding a toggle, styling several paragraphs at once, the page outline, and light and dark themes" width="860">
+  <img src="docs/images/demo.gif" alt="Notes in use" width="860">
 </p>
 
-The interface is a web page in the system's own webview (WKWebView on macOS,
-WebKitGTK on Linux, WebView2 on Windows); the app is written with
-[MyGo](https://github.com/egoist/mygo), in Go, so it is one small binary.
+Built with [MyGo](https://github.com/egoist/mygo) in Go: a single small binary that shows a web UI
+in the system webview (WKWebView, WebKitGTK, WebView2).
 
-Notes live in a **vault**: a folder you choose. Each page is one JSON file,
-attachments are plain files, and nothing else is needed. A vault can also be
-kept in a WebDAV or SMB folder, which then syncs with the copy on this
-computer.
+## Features
 
-## What it does
-
-- **A block editor.** Type `/` for headings, to-dos, lists, quotes, callouts, code,
-  tables, toggle lists and databases. Markdown shortcuts work as you type.
-
-- **Style many paragraphs at once.** Select several, and the bar at the foot of the
-  page turns them into another kind, makes them bold, italic, underlined,
-  struck through or code, and colours them.
-
-- **Toggle lists** that fold what is under them, kept with the page.
-
-- **A page outline.** Short lines at the page's right edge, one for each heading:
-  point at them to read the headings, press one to go there.
-
-- **Pages inside pages**, links with `[[ ]]`, backlinks and a graph.
-
-- **Databases** as table, board, list, gallery and calendar views.
-
-- **History.** Every page keeps its recent versions; restore any of them.
-
-- **Find and replace** in a page: ⌘F paints the words found and steps through them;
-  the replace row changes one or all of them, as a single step of undo.
-
-- **Copy as image**, with the pictures among the words.
-
-- **Light, dark or the system's**, and a translucent sidebar on macOS.
-
-- **Sync** with a WebDAV or SMB folder, merging pages paragraph by paragraph.
-
-- **Updates** from this repository's releases, signed.
+- **Block editor**: `/` menu for headings, to-dos, lists, quotes, callouts, code, tables, toggles and databases; Markdown shortcuts.
+- **Bulk styling**: select several paragraphs to convert, format or colour them at once.
+- **Page outline**, pages inside pages, `[[links]]`, backlinks and a graph.
+- **Databases**: table, board, list, gallery and calendar views.
+- **History** with restore, **find and replace** (⌘F), **copy as image**.
+- **Themes**: light, dark or system.
+- **Sync** with WebDAV or SMB, merging pages paragraph by paragraph.
+- **Signed updates** from this repository's releases.
 
 <p align="center">
-  <img src="docs/images/overview.png" alt="A page in the dark theme with the page outline at its right edge" width="860">
+  <img src="docs/images/overview.png" alt="A page in the dark theme with the page outline" width="860">
 </p>
-
-<p align="center">
-  <img src="docs/images/selection.png" alt="Several paragraphs selected, with the bar for turning them into another kind, styling and colouring them" width="860">
-</p>
-
-<p align="center">
-  <img src="docs/images/outline.png" alt="The page outline opened by pointing at its lines" width="860">
-</p>
-
-## Layout
-
-```
-main.go              starts the app (frontend.Run)
-mygo.json            name, identifier, version, and the frontend's build commands
-frontend/            the windows, menus, the services the page calls, the vault:// scheme
-internal/vault/      records in memory, JSON files on disk, external changes, backup import
-internal/sync/       manifest, sync rounds, three-way merge of pages
-internal/storage/    remote folders: WebDAV, SMB, and a local folder (for tests)
-internal/settings/   recent vaults and remote folders, in settings.json
-web/                 the React interface (src/), and its tests and build
-```
-
-The web app keeps the same record model as before. In the desktop app, its
-records are saved to the vault by the Go service; in a plain browser (`npm run
-dev` in `web/`) they stay in IndexedDB, which is useful for working on the
-interface alone.
 
 ## Download
 
-Installers for macOS, Windows and Linux are on the
-[releases page](https://github.com/mcxen/notes/releases). The macOS app is
-signed ad hoc and not notarized: open it with right-click › Open the first
-time. The Windows installer is not code-signed.
+Installers for macOS, Windows and Linux are on the [releases page](https://github.com/mcxen/notes/releases).
+The macOS app is ad-hoc signed and not notarized: right-click › Open the first time.
+The Windows installer is not code-signed.
 
-## Run it
+## Development
 
-Requires Go 1.27.3 or newer and Node.js 24 or newer.
-
-```sh
-go tool mygo dev         # the app, with the web app's dev server
-go tool mygo build       # a packaged app in build/
-```
-
-Browser-only development:
+Requires Go 1.27.3+ and Node.js 24+.
 
 ```sh
-cd web
-npm ci
-npm run dev              # http://127.0.0.1:8870, notes kept in the browser
+go tool mygo dev         # app with the web dev server
+go tool mygo build       # packaged app in build/
 ```
 
-## Vault format
+Browser only (notes kept in IndexedDB):
 
-```
-MyVault/
-├── pages/<page id>.json        the page and all of its paragraphs
-├── attachments/...             files, as they were uploaded
-└── .notes/
-    ├── vault.json              format version and vault id
-    ├── workspace.json          preferences and the list of roots
-    ├── history/<page>/<id>.json  checkpoints of a page
-    └── conflicts/              the other version of a page after a sync conflict
+```sh
+cd web && npm ci && npm run dev    # http://127.0.0.1:8870
 ```
 
-Files are written with the same bytes every time for the same content, and a
-save replaces the file in one step. Changes made to the folder by other
-programs (or by a sync tool) are merged in record by record; a paragraph or
-field with changes not yet saved keeps this window's value.
-
-## Sync
-
-**File › Connect to a Remote Folder…** keeps a vault in a WebDAV folder (for
-example Nextcloud, Synology or Jianguoyun) or an SMB share. The folder is
-copied into a working copy on this computer, which is what the window edits,
-and the two are synced:
-
-- a few seconds after an edit, every five minutes, when the window gains focus,
-  and on **File › Sync Now** (⇧⌘S / Ctrl+Shift+S);
-
-- a page both sides changed is merged paragraph by paragraph and field by
-  field; where the same field changed on both sides, this computer's value
-  is kept and the other version is saved under `.notes/conflicts/`;
-
-- any other file changed on both sides is kept twice, the second copy named
-  `name (冲突 device date).ext`;
-
-- a deletion moves the file to a `.trash/<date>/` folder on the side that
-  does not have it, rather than removing it.
-
-Passwords go to the system's credential store (Keychain, Credential Manager,
-Secret Service), never to the settings file. The settings window (⌘,) shows
-each remote vault's last sync, its recent syncs, the files sync moved out of
-the way (with Restore), and the conflicts it kept.
-
-## Tests
-
-`go build -tags e2e` adds MyGo's automation plugin, so a running app can be
-driven and captured with `mygo-automation` (`MYGO_AUTOMATION=<socket>`).
+Tests:
 
 ```sh
 go vet ./...
@@ -165,31 +64,55 @@ CGO_ENABLED=0 go test ./...
 cd web && npm test && npm run build
 ```
 
-The Go tests use temporary folders, and a WebDAV server running in-process.
-The SMB adapter is not yet tested against a live server.
+## Layout
 
-## Not in this version
+```
+main.go              starts the app
+mygo.json            app name, identifier, version, build commands
+frontend/            windows, menus, services, vault:// scheme
+internal/vault/      records, JSON files on disk, external changes, backup import
+internal/sync/       manifest, sync rounds, three-way page merge
+internal/storage/    WebDAV, SMB, local folder (tests)
+internal/settings/   recent vaults and remote folders
+web/                 React interface, tests, build
+```
 
-- The macOS app is not notarized and the Windows installer is not code-signed;
-  updates are checked against a signing key instead (see Download).
+## Vault format
 
-- The sync interval is fixed at five minutes.
+```
+MyVault/
+├── pages/<page id>.json        a page and its paragraphs
+├── attachments/...             uploaded files
+└── .notes/
+    ├── vault.json              format version, vault id
+    ├── workspace.json          preferences, roots
+    ├── history/<page>/<id>.json
+    └── conflicts/              losing version after a sync conflict
+```
 
-- A browser backup can be imported into a vault from the sidebar menu (Import
-  browser backup…). The desktop app does not export backups yet.
+Writes are deterministic and atomic. External changes are merged record by record.
 
-- The macOS windows were checked on a running app. Windows and Linux windows,
-  and real WebDAV services other than the in-process test server, have not
-  been checked on those systems. The SMB adapter has no live test yet.
+## Sync
+
+**File › Connect to a Remote Folder…** links a vault to WebDAV (Nextcloud, Synology, Jianguoyun…) or SMB.
+It syncs shortly after edits, every five minutes, on window focus, and via **Sync Now** (⇧⌘S / Ctrl+Shift+S).
+
+- Pages changed on both sides are merged per paragraph and field; on a field conflict this computer wins and the other version goes to `.notes/conflicts/`.
+- Other files changed on both sides are kept twice (`name (冲突 device date).ext`).
+- Deletions move the file to `.trash/<date>/` on the other side.
+
+Passwords are stored in the system credential store, never in settings.
+
+## Limitations
+
+- Not notarized (macOS) or code-signed (Windows); updates are verified by signing key.
+- Sync interval is fixed at five minutes.
+- Browser backups can be imported (sidebar menu), but the desktop app cannot export yet.
+- Only macOS has been verified on a running app; Windows, Linux, real WebDAV services and SMB are untested.
 
 ## License
 
-Notes is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+[AGPL-3.0](LICENSE). Adapted from Terminus Notes (`@terminus/notes` 0.0.1, via an existing fork); the original had no license.
+This is an independent adaptation, not an official release. See `NOTICE` for attribution; dependencies keep their own licenses.
 
-Adapted from Terminus Notes, published by Terminus as `@terminus/notes`, version 0.0.1, retrieved through an existing fork. The original editor and UI code are retained with a new local persistence layer, local file storage, backup and restore, and standalone build scripts. This project is an independent adaptation and is not presented as the original author's work or an official release.
-
-No license was included with the original source. See `NOTICE` for attribution; third-party dependencies retain their own licenses.
-
-
-
-Thanks To [LinuxDo](https://linux.do/) 
+Thanks to [LinuxDo](https://linux.do/)
