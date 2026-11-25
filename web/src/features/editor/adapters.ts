@@ -1,12 +1,13 @@
 import { BLOCK_ORDER_STEP, createBlock } from "../../core/block-tree";
 import { normalizeEmbed } from "../../core/embeds";
-import { type DescribeMention, inlinePlainText, inlineReadable } from "../../core/inline-content";
+import { type DescribeMention, inlinePlainText, inlineReadable, isKeptLink } from "../../core/inline-content";
 import { isMarkdownTableStart, markdownTableLines, tableFromCells, tableGrid, tableToMarkdown } from "../../core/simple-table";
 import { isImageType } from "../../core/files";
 import type { Block, BlockKind, BlockTree, InlineContent, InlineMarks, SimpleTable, StoredFile } from "../../core/types";
 import { blockShortcut } from "./block-registry";
 import { codeLanguage } from "./code-highlight";
 import { detectCodeLanguage } from "./detect-language";
+import { MAX_PASTED_IMAGES, type HtmlFragment, type ImageSlot } from "./html-paste";
 import { markdownInlineToContent } from "./inline-markdown";
 import { layout } from "./layout";
 import { readableDescriber } from "./mentions";
@@ -18,6 +19,7 @@ interface MarkdownDraft {
   language?: string;
   table?: SimpleTable;
   depth: number;
+  imageSrc?: string;
 }
 
 function wrapMarkdown(value: string, marks?: InlineMarks): string {
@@ -68,6 +70,47 @@ export function markdownShortcut(value: string): { kind: BlockKind; checked?: bo
 function indentationDepth(value: string): number {
   const whitespace = value.match(/^\s*/)?.[0] ?? "";
   return Math.floor(whitespace.replaceAll("\t", "  ").length / 2);
+}
+
+const MARKDOWN_IMAGE = /\[!\[([^\]\n]*)\]\((?:<([^>\n]+)>|((?:\([^)\s\n]*\)|[^)\s\n])+))(?:\s+(?:"[^"\n]*"|'[^'\n]*'))?\)\]\((?:<[^>\n]+>|(?:\([^)\s\n]*\)|[^)\s\n])+)\)|!\[([^\]\n]*)\]\((?:<([^>\n]+)>|((?:\([^)\s\n]*\)|[^)\s\n])+))(?:\s+(?:"[^"\n]*"|'[^'\n]*'))?\)/g;
+
+function imageSource(raw: string): string {
+  const trimmed = raw.trim().replace(/^<(.+)>$/, "$1").trim();
+  if (!trimmed) return "";
+  if (/^data:image\/(?:png|jpe?g|gif|webp);base64,/i.test(trimmed)) return trimmed;
+  return /^https?:\/\//i.test(trimmed) && trimmed.length < 4000 ? trimmed : "";
+}
+
+/** Strips Discourse's `|WxH` / `|WxH, 50%` suffix from image alt text. */
+function cleanImageAlt(alt: string): string {
+  const stripped = alt.trim().replace(/\|\d+x\d+(?:\s*,\s*\d+%)?$/, "").trim();
+  return stripped || alt.trim();
+}
+
+function pushTextOrImages(line: string, drafts: MarkdownDraft[]): void {
+  MARKDOWN_IMAGE.lastIndex = 0;
+  let tailStart = 0;
+  let match: RegExpExecArray | null;
+  while ((match = MARKDOWN_IMAGE.exec(line)) !== null) {
+    const alt = match[1] ?? match[4] ?? "";
+    const rawUrl = match[2] ?? match[3] ?? match[5] ?? match[6] ?? "";
+    const src = imageSource(rawUrl);
+    if (!src) continue;
+    const before = line.slice(tailStart, match.index).trim();
+    if (before) drafts.push({ kind: "text", content: markdownInlineToContent(before), depth: 0 });
+    const named = cleanImageAlt(alt) || (src.startsWith("data:") ? "image" : src);
+    const content: InlineContent = src.startsWith("data:") || !isKeptLink(src)
+      ? [{ text: named }]
+      : [{ text: named, marks: { link: src } }];
+    drafts.push({ kind: "text", content, depth: 0, imageSrc: src });
+    tailStart = match.index + match[0].length;
+  }
+  if (tailStart === 0) {
+    drafts.push({ kind: "text", content: markdownInlineToContent(line.trimStart()), depth: 0 });
+    return;
+  }
+  const rest = line.slice(tailStart).trim();
+  if (rest) drafts.push({ kind: "text", content: markdownInlineToContent(rest), depth: 0 });
 }
 
 function parseMarkdown(value: string, idFactory: () => string): MarkdownDraft[] {
@@ -162,13 +205,14 @@ function parseMarkdown(value: string, idFactory: () => string): MarkdownDraft[] 
       drafts.push({ kind: "divider", content: [], depth: 0 });
       continue;
     }
-    drafts.push({ kind: "text", content: markdownInlineToContent(line.trimStart()), depth: 0 });
+    pushTextOrImages(line, drafts);
   }
   return drafts;
 }
 
-export function markdownToBlockTree(value: string, idFactory: () => string): BlockTree {
+export function markdownToFragment(value: string, idFactory: () => string): HtmlFragment {
   const byId: Record<string, Block> = {};
+  const images: ImageSlot[] = [];
   const lastListAtDepth = new Map<number, string>();
   const siblingCounts = new Map<string, number>();
   for (const draft of parseMarkdown(value, idFactory)) {
@@ -186,6 +230,9 @@ export function markdownToBlockTree(value: string, idFactory: () => string): Blo
       ...(draft.table ? { table: draft.table } : {}),
     });
     byId[block.id] = block;
+    if (draft.imageSrc && images.length < MAX_PASTED_IMAGES) {
+      images.push({ blockId: block.id, src: draft.imageSrc, label: inlinePlainText(block.content) });
+    }
     if (listKind) {
       lastListAtDepth.set(draft.depth, block.id);
       for (const depth of [...lastListAtDepth.keys()]) if (depth > draft.depth) lastListAtDepth.delete(depth);
@@ -193,7 +240,11 @@ export function markdownToBlockTree(value: string, idFactory: () => string): Blo
       lastListAtDepth.clear();
     }
   }
-  return { by_id: byId };
+  return { tree: { by_id: byId }, images };
+}
+
+export function markdownToBlockTree(value: string, idFactory: () => string): BlockTree {
+  return markdownToFragment(value, idFactory).tree;
 }
 
 /** One line as Markdown; `number`, a numbered line's place in its list. */

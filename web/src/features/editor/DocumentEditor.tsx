@@ -64,7 +64,7 @@ import {
 import type { Block, BlockKind, BlockMutation, BlockTree, Embed, InlineContent, NotePage } from "../../core/types";
 import { imeComposing } from "../../core/keyboard";
 import { CardOffer, LinkHoverCard, useLinkHover, type CardOfferState, type HoveredLink } from "./LinkHoverCard";
-import { readBlocks, textToBlocks, writeBlocks, type CopiedBlocks } from "./block-clipboard";
+import { chooseWebOrMarkdownFragment, readBlocks, textToFragment, writeBlocks, type CopiedBlocks } from "./block-clipboard";
 import { htmlToFragment, type ImageSlot } from "./html-paste";
 import { editableHtml } from "./block-html";
 import { blockDefinition, DatabaseIcon, isSourceBlock, PageIcon, pageGlyph } from "./block-registry";
@@ -1136,16 +1136,19 @@ export function DocumentEditor({
       table: tableFromCells(grid.rows, (kind) => createId(kind === "column" ? "col" : "row"), { headerRow: grid.header }),
     }) } } : null;
     // A web page's HTML — its headings, links, lists and pictures — when the
-    // clipboard holds nothing of Notes' own and no table alone.
+    // clipboard holds nothing of Notes' own and no table alone; or Markdown
+    // when the HTML is only plain lines (e.g. copied from a forum or chat).
     const html = incoming || table ? null : htmlToFragment(data.getData("text/html"), () => createId("block"));
-    const blocks = incoming?.tree ?? table ?? html?.tree ?? textToBlocks(data.getData("text/plain"), () => createId("block"));
+    const markdown = incoming || table ? null : textToFragment(data.getData("text/plain"), () => createId("block"));
+    const web = chooseWebOrMarkdownFragment(html, markdown);
+    const blocks = incoming?.tree ?? table ?? web?.tree ?? null;
     const pages = store.getState().pages;
     const keep = (block: Block) => Boolean(incoming?.cut && block.kind === "page" && pages[block.id] && !composite.sources.has(block.id));
     if (!blocks) return null;
     const ids = new Map<string, string>();
     const fragment = reidentify(blocks, () => createId("block"), keep, ids);
     // The pictures a page named, on the lines that stand for them now.
-    const images = (html?.images ?? []).flatMap((image) => {
+    const images = (incoming || table ? [] : web?.images ?? []).flatMap((image) => {
       const blockId = ids.get(image.blockId);
       return blockId ? [{ ...image, blockId }] : [];
     });

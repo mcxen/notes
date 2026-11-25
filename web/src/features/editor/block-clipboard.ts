@@ -15,9 +15,10 @@ import { normalizeBlockTree, orderedBlocks } from "../../core/block-tree";
 import { normalizeEmbed } from "../../core/embeds";
 import { escapeHtml, inlinePlainText, inlineToHtml } from "../../core/inline-content";
 import { tableCells, tableGrid, tableToHtml } from "../../core/simple-table";
-import type { Block, BlockKind, BlockTree } from "../../core/types";
-import { blockTreeToMarkdown, markdownToBlockTree, readableTree } from "./adapters";
+import type { Block, BlockKind, BlockTree, InlineMarks } from "../../core/types";
+import { blockTreeToMarkdown, markdownToFragment, readableTree } from "./adapters";
 import { BLOCK_DEFINITIONS } from "./block-registry";
+import type { HtmlFragment } from "./html-paste";
 
 export const BLOCKS_MIME = "application/x-notes-blocks";
 
@@ -131,11 +132,42 @@ export function readBlocks(data: Pick<DataTransfer, "getData">): CopiedBlocks | 
   return { tree, cut: payload.cut === true, source: typeof payload.source === "string" ? payload.source : "" };
 }
 
-/** Text of more than one line as blocks — one per line, with Markdown read as
- *  the blocks it describes. A single line is not blocks: it is pasted among
- *  the words like anything typed. */
+/** Text of more than one line (or a single-line Markdown image) as blocks
+ *  and the pictures it names. A single line of plain words is not blocks: it
+ *  is pasted among the words like anything typed. */
+export function textToFragment(text: string, idFactory: () => string): HtmlFragment | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+  const fragment = markdownToFragment(text, idFactory);
+  if (!Object.keys(fragment.tree.by_id).length) return null;
+  if (!/\r?\n/.test(trimmed) && fragment.images.length === 0) return null;
+  return fragment;
+}
+
 export function textToBlocks(text: string, idFactory: () => string): BlockTree | null {
-  if (!/\r?\n/.test(text.trim())) return null;
-  const tree = markdownToBlockTree(text, idFactory);
-  return Object.keys(tree.by_id).length ? tree : null;
+  return textToFragment(text, idFactory)?.tree ?? null;
+}
+
+function isBareAutolink(text: string, marks?: InlineMarks): boolean {
+  if (!marks) return true;
+  const keys = Object.keys(marks);
+  if (keys.length === 0) return true;
+  if (keys.length !== 1 || !marks.link) return false;
+  return marks.link === text || marks.link.replace(/\/$/, "") === text.replace(/\/$/, "");
+}
+
+function isPlainTextFragment(fragment: HtmlFragment): boolean {
+  if (fragment.images.length > 0) return false;
+  return Object.values(fragment.tree.by_id).every(
+    (block) => block.kind === "text" && block.content.every((run) => isBareAutolink(run.text, run.marks)),
+  );
+}
+
+/** Prefers Markdown over HTML when the clipboard HTML has no rich elements of
+ *  its own (e.g. plain paragraphs/divs or auto-linked URLs from a webpage or
+ *  chat app) and the plain text carries Markdown structure or images. */
+export function chooseWebOrMarkdownFragment(html: HtmlFragment | null, markdown: HtmlFragment | null): HtmlFragment | null {
+  if (!html) return markdown;
+  if (markdown && isPlainTextFragment(html) && !isPlainTextFragment(markdown)) return markdown;
+  return html;
 }
