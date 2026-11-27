@@ -26,10 +26,13 @@ import {
   insertRow,
   MAX_TABLE_COLUMNS,
   MAX_TABLE_ROWS,
+  measureTableColumnDemands,
   moveColumn,
   moveRow,
   pasteCells,
+  resolveTableColumnWidths,
   setColumnWidth,
+  setColumnWidths,
   TABLE_COLUMN_WIDTH,
   tableCells,
   tableGrid,
@@ -159,8 +162,6 @@ const inRange = (range: CellRange | null, row: number, column: number) => Boolea
   && row >= Math.min(range!.anchor.row, range!.focus.row) && row <= Math.max(range!.anchor.row, range!.focus.row)
   && column >= Math.min(range!.anchor.column, range!.focus.column) && column <= Math.max(range!.anchor.column, range!.focus.column);
 
-const widthOf = (width: number | undefined) => width ?? TABLE_COLUMN_WIDTH.fallback;
-
 const newId = (kind: "column" | "row") => createId(kind === "column" ? "col" : "row");
 
 export const SimpleTable = memo(function SimpleTable({
@@ -173,8 +174,10 @@ export const SimpleTable = memo(function SimpleTable({
   actions: TableActions;
 }) {
   const grid = useMemo(() => tableGrid(block.table), [block.table]);
+  const stblRef = useRef<HTMLDivElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const cells = useRef(new Map<string, HTMLElement>());
+  const [containerWidth, setContainerWidth] = useState(0);
   const [range, setRange] = useState<CellRange | null>(null);
   const [menu, setMenu] = useState<TableMenu | null>(null);
   const [hover, setHover] = useState<{ row: number; column: number } | null>(null);
@@ -186,10 +189,25 @@ export const SimpleTable = memo(function SimpleTable({
     movingRef.current = next;
     setMovingState(next);
   };
-  const [sizing, setSizing] = useState<{ columnId: string; width: number } | null>(null);
+  const [sizing, setSizing] = useState<{ columnId: string; width: number; snapshot: readonly number[] } | null>(null);
+  const demandsRef = useRef<{ blockId: string; values: Record<string, number> }>({ blockId: "", values: {} });
   // A cell to take the caret once the change that makes it is drawn.
   const pending = useRef<{ row: string; column: string; at: "start" | "end" } | null>(null);
   const pointer = useRef<{ start: CellAt; moved: boolean } | null>(null);
+
+  useLayoutEffect(() => {
+    const element = stblRef.current;
+    if (!element) return;
+    const measure = () => {
+      const next = Math.floor(element.getBoundingClientRect().width);
+      setContainerWidth((current) => (current === next ? current : next));
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   const cellKey = (rowId: string, columnId: string) => `${rowId}:${columnId}`;
   const cellElement = (at: CellAt) => {
@@ -430,7 +448,8 @@ export const SimpleTable = memo(function SimpleTable({
    *  growing for what does not fit. */
   const pasteAt = (at: CellAt, pasted: InlineContent[][]) => {
     const laid = pasteCells(grid, at.row, at.column, pasted, newId);
-    write(laid.writes);
+    const autoSized = grid.columns.every((column) => column.width === undefined);
+    if (write(laid.writes) && autoSized) demandsRef.current = { blockId: "", values: {} };
     setRange({ anchor: at, focus: {
       row: Math.min(at.row + pasted.length - 1, MAX_TABLE_ROWS - 1),
       column: Math.min(at.column + Math.max(...pasted.map((row) => row.length)) - 1, MAX_TABLE_COLUMNS - 1),
@@ -595,23 +614,61 @@ export const SimpleTable = memo(function SimpleTable({
 
   /* ── A column's width, dragged by its right edge ────────────────────── */
 
+  if (demandsRef.current.blockId !== block.id) {
+    demandsRef.current = { blockId: block.id, values: {} };
+  }
+  const missingDemand = grid.columns.some((column) => !Object.hasOwn(demandsRef.current.values, column.id));
+  if (missingDemand || Object.keys(demandsRef.current.values).length !== grid.columns.length) {
+    const freshDemands = measureTableColumnDemands(grid);
+    const nextValues: Record<string, number> = {};
+    for (const column of grid.columns) {
+      nextValues[column.id] = Object.hasOwn(demandsRef.current.values, column.id)
+        ? demandsRef.current.values[column.id]
+        : (freshDemands[column.id] ?? 0);
+    }
+    demandsRef.current = { blockId: block.id, values: nextValues };
+  }
+
+  const baseWidths = resolveTableColumnWidths(grid.columns, containerWidth, demandsRef.current.values);
+  const widths = sizing
+    ? grid.columns.map((column, index) => (
+      column.id === sizing.columnId ? sizing.width : (sizing.snapshot[index] ?? baseWidths[index])
+    ))
+    : baseWidths;
+  const widthById = new Map(grid.columns.map((column, index) => [column.id, widths[index]]));
+  const lefts = widths.reduce<number[]>((edges, width, index) => [...edges, (edges[index] ?? 0) + width], [0]);
+  const total = lefts.at(-1) ?? 0;
+
   const startResize = (event: ReactPointerEvent<HTMLDivElement>, columnId: string, from: number) => {
     if (readOnly || event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
+    const snapshot = widths;
     let width = from;
-    setSizing({ columnId, width });
+    setSizing({ columnId, width, snapshot });
     const move = (next: PointerEvent) => {
       width = Math.round(Math.max(TABLE_COLUMN_WIDTH.min, Math.min(TABLE_COLUMN_WIDTH.max, from + next.clientX - startX)));
-      setSizing({ columnId, width });
+      setSizing({ columnId, width, snapshot });
     };
     const end = (commit: boolean) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("keydown", key, true);
       setSizing(null);
-      if (commit && width !== from) write([setColumnWidth(grid, columnId, width)]);
+      if (commit && width !== from) {
+        if (grid.columns.some((column) => column.width === undefined)) {
+          const allWidths = Object.fromEntries(
+            grid.columns.map((column, index) => [
+              column.id,
+              column.id === columnId ? width : (snapshot[index] ?? baseWidths[index]),
+            ]),
+          );
+          write([setColumnWidths(grid, allWidths)]);
+        } else {
+          write([setColumnWidth(grid, columnId, width)]);
+        }
+      }
     };
     const up = () => end(true);
     const key = (next: globalThis.KeyboardEvent) => {
@@ -623,10 +680,6 @@ export const SimpleTable = memo(function SimpleTable({
     window.addEventListener("pointerup", up);
     window.addEventListener("keydown", key, true);
   };
-
-  const widths = grid.columns.map((column) => (sizing?.columnId === column.id ? sizing.width : widthOf(column.width)));
-  const lefts = widths.reduce<number[]>((edges, width, index) => [...edges, (edges[index] ?? 0) + width], [0]);
-  const total = lefts.at(-1) ?? 0;
 
   /* Where the hovered row is, for its grip: measured from the drawn rows. */
   const [rowBoxes, setRowBoxes] = useState<Array<{ top: number; height: number }>>([]);
@@ -746,6 +799,7 @@ export const SimpleTable = memo(function SimpleTable({
 
   return (
     <div
+      ref={stblRef}
       className={`stbl ${readOnly ? "is-readonly" : ""}`}
       contentEditable={false}
       onMouseLeave={() => { if (!menu && !movingRef.current) setHover(null); }}
@@ -772,7 +826,7 @@ export const SimpleTable = memo(function SimpleTable({
         >
           <table className="stbl__table" style={{ width: total }} onPointerDown={onPointerDown}>
             <colgroup>
-              {shownColumns.map((column) => <col key={column.id} style={{ width: widthOf(sizing?.columnId === column.id ? sizing.width : column.width) }} />)}
+              {shownColumns.map((column) => <col key={column.id} style={{ width: widthById.get(column.id) }} />)}
             </colgroup>
             <tbody>
               {shownRows.map((row, rowIndex) => (

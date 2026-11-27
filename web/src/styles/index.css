@@ -4914,9 +4914,10 @@ pre.block__editable {
 .stbl {
   position: relative;
   z-index: 1;
-  /* A flex item of the block's row: without this it grows to the table's
-     width, and a table wider than the page runs off it, clipped, rather
-     than scrolling inside the scroller. */
+  /* Fill the block's row so the table measures the full column width and
+     never collapses to the left; `min-width: 0` still keeps a wider table
+     scrolling inside `.stbl__scroll` instead of overflowing the page. */
+  flex: 1;
   min-width: 0;
   margin: 2px 0 4px;
 }

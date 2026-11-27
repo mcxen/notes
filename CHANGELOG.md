@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.13
+
+- Pasted tables now fill the page width properly instead of collapsing into a narrow strip on the left. Simple tables without explicit column widths auto-fit the available column width proportionally to their cell content (scrolling horizontally when there are many columns), keep column boundaries steady while typing, and preserve sibling column widths smoothly when manually resized.
+
 ## 0.1.12
 
 - Clipboard watcher: grey ghost preview on empty paragraphs with Tab to adopt (and `⌥[` / `⌥]` to cycle recent items, `Esc` to dismiss).

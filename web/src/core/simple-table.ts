@@ -45,6 +45,7 @@ export const MAX_TABLE_ROWS = 200;
 export const TABLE_BYTE_BUDGET = 96 * 1024;
 export const TABLE_COLUMN_WIDTH = { min: 48, max: 1200, fallback: 120 } as const;
 export const ROW_ORDER_STEP = 1024;
+const AUTO_COLUMN_WIDTH = { min: 72, overflowMax: 260 } as const;
 
 const KEY_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const MACHINERY = new Set(["__proto__", "prototype", "constructor"]);
@@ -353,16 +354,169 @@ export function duplicateColumn(grid: TableGrid, columnId: string, copyId: strin
 }
 
 export function setColumnWidth(grid: TableGrid, columnId: string, width: number | undefined): TableWrite | null {
-  const kept = width === undefined ? undefined : normalizeWidth(width);
-  if (!grid.columns.some((column) => column.id === columnId)) return null;
-  return {
-    kind: "columns",
-    columns: grid.columns.map((column) => {
-      if (column.id !== columnId) return column;
-      const { width: _old, ...rest } = column;
-      return kept === undefined ? rest : { ...rest, width: kept };
-    }),
+  return setColumnWidths(grid, Object.fromEntries([[columnId, width]]));
+}
+
+/** Sets multiple column widths in one atomic columns write. */
+export function setColumnWidths(
+  grid: TableGrid,
+  widths: Readonly<Record<string, number | undefined>>,
+): TableWrite | null {
+  let matched = false;
+  const columns = grid.columns.map((column) => {
+    if (!Object.hasOwn(widths, column.id)) return column;
+    matched = true;
+    const raw = widths[column.id];
+    const kept = raw === undefined ? undefined : normalizeWidth(raw);
+    const { width: _old, ...rest } = column;
+    return kept === undefined ? rest : { ...rest, width: kept };
+  });
+  return matched ? { kind: "columns", columns } : null;
+}
+
+function isWideCodePoint(cp: number): boolean {
+  return (cp >= 0x1100 && cp <= 0x115f)
+    || (cp >= 0x2e80 && cp <= 0xa4cf)
+    || (cp >= 0xac00 && cp <= 0xd7a3)
+    || (cp >= 0xf900 && cp <= 0xfaff)
+    || (cp >= 0xfe10 && cp <= 0xfe6f)
+    || (cp >= 0xff00 && cp <= 0xff60)
+    || (cp >= 0xffe0 && cp <= 0xffe6)
+    || cp >= 0x1f300;
+}
+
+/** Estimates each column's single-line content width demand in CSS pixels;
+ *  columns without non-whitespace text yield `0`. */
+export function measureTableColumnDemands(grid: TableGrid): Record<string, number> {
+  const demands: Record<string, number> = {};
+  for (const column of grid.columns) {
+    let hasText = false;
+    let maxLinePx = 0;
+    for (const row of grid.rows) {
+      const text = inlinePlainText(row.cells[column.id] ?? []);
+      if (!text.trim()) continue;
+      hasText = true;
+      for (const line of text.split("\n")) {
+        let linePx = 0;
+        for (const ch of line) {
+          const cp = ch.codePointAt(0) ?? 0;
+          if (cp === 0x20 || cp === 0x09) linePx += 4.5;
+          else if (isWideCodePoint(cp)) linePx += 14;
+          else linePx += 8;
+        }
+        if (linePx > maxLinePx) maxLinePx = linePx;
+      }
+    }
+    demands[column.id] = hasText ? Math.ceil(maxLinePx + 24) : 0;
+  }
+  return demands;
+}
+
+/** Water-fills `extra` pixels across columns below `cap` proportionally to
+ *  `weights`, then rounds with largest-remainder so the integer sum is exact. */
+function distribute(base: readonly number[], weights: readonly number[], extra: number, cap: number): number[] {
+  if (!base.length) return [];
+  const out = base.map((value) => Math.min(cap, value));
+  const totalTarget = Math.min(
+    out.reduce((sum, value) => sum + value, 0) + Math.max(0, Math.round(extra)),
+    base.length * cap,
+  );
+  let remaining = Math.max(0, totalTarget - out.reduce((sum, value) => sum + value, 0));
+
+  while (remaining > 1e-6) {
+    const open: number[] = [];
+    for (let i = 0; i < out.length; i += 1) {
+      if (out[i] < cap - 1e-6) open.push(i);
+    }
+    if (!open.length) break;
+
+    const weightSum = open.reduce((sum, i) => sum + (weights[i] > 0 ? weights[i] : 0), 0);
+    let hitCap = false;
+    for (const i of open) {
+      const share = weightSum > 0 ? (weights[i] > 0 ? weights[i] / weightSum : 0) : 1 / open.length;
+      const add = remaining * share;
+      if (out[i] + add >= cap - 1e-6) {
+        remaining -= cap - out[i];
+        out[i] = cap;
+        hitCap = true;
+      }
+    }
+    if (hitCap) continue;
+
+    for (const i of open) {
+      const share = weightSum > 0 ? (weights[i] > 0 ? weights[i] / weightSum : 0) : 1 / open.length;
+      out[i] += remaining * share;
+    }
+    remaining = 0;
+  }
+
+  const floored = out.map((value) => Math.min(cap, Math.floor(value)));
+  const deficit = Math.max(0, totalTarget - floored.reduce((sum, value) => sum + value, 0));
+  if (deficit > 0) {
+    const order = out
+      .map((value, index) => ({ index, rem: value - floored[index] }))
+      .filter((item) => floored[item.index] < cap)
+      .sort((a, b) => b.rem - a.rem || a.index - b.index);
+    for (let k = 0; k < deficit && k < order.length; k += 1) {
+      floored[order[k].index] += 1;
+    }
+  }
+  return floored;
+}
+
+/** Resolves rendered CSS pixel widths for every column in `columns`. */
+export function resolveTableColumnWidths(
+  columns: readonly TableColumn[],
+  containerWidth: number,
+  demands?: Readonly<Record<string, number>>,
+): number[] {
+  if (!columns.length) return [];
+  const AUTO_MIN = AUTO_COLUMN_WIDTH.min;
+  const AUTO_OVERFLOW_MAX = AUTO_COLUMN_WIDTH.overflowMax;
+  const FALLBACK = TABLE_COLUMN_WIDTH.fallback;
+  const MAX = TABLE_COLUMN_WIDTH.max;
+
+  const demandOf = (column: TableColumn): number => {
+    const raw = demands && Object.hasOwn(demands, column.id) ? demands[column.id] : 0;
+    return typeof raw === "number" && Number.isFinite(raw) && raw > 0 ? raw : 0;
   };
+  const overflowWidth = (demand: number) => (
+    demand > 0 ? Math.min(AUTO_OVERFLOW_MAX, Math.max(FALLBACK, Math.ceil(demand))) : FALLBACK
+  );
+
+  if (columns.some((column) => column.width !== undefined)) {
+    return columns.map((column) => (
+      column.width !== undefined ? (normalizeWidth(column.width) ?? FALLBACK) : overflowWidth(demandOf(column))
+    ));
+  }
+
+  const colDemands = columns.map(demandOf);
+  if (!Number.isFinite(containerWidth) || containerWidth <= 0) {
+    return colDemands.map(overflowWidth);
+  }
+
+  const floor = colDemands.map((demand) => (
+    demand === 0 ? FALLBACK : Math.min(FALLBACK, Math.max(AUTO_MIN, Math.ceil(demand)))
+  ));
+  const target = Math.min(Math.floor(containerWidth), columns.length * MAX);
+  const sumFloor = floor.reduce((sum, width) => sum + width, 0);
+
+  if (sumFloor >= target) {
+    return colDemands.map((demand, index) => (
+      demand === 0 ? FALLBACK : Math.min(AUTO_OVERFLOW_MAX, Math.max(floor[index], Math.ceil(demand)))
+    ));
+  }
+
+  const uncapped = colDemands.map((demand) => (
+    demand === 0 ? FALLBACK : Math.min(MAX, Math.max(AUTO_MIN, Math.ceil(demand)))
+  ));
+  const sumUncapped = uncapped.reduce((sum, width) => sum + width, 0);
+
+  if (sumUncapped >= target) {
+    const need = uncapped.map((width, index) => Math.max(0, width - floor[index]));
+    return distribute(floor, need, target - sumFloor, MAX);
+  }
+  return distribute(uncapped, uncapped, target - sumUncapped, MAX);
 }
 
 /** Words pasted into the table from a cell: a grid of them laid over the
